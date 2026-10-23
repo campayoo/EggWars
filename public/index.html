@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🥚 SHELL SHOCKERS 3D — Arcade Sci-Fi FPS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- LOBBY / MENÚ PRINCIPAL (ARCADE SCI-FI OVERHAUL)                 -->
+<!-- ================================================================ -->
+<div id="menu-overlay">
+  <div class="lobby-card">
+    <header class="lobby-header">
+      <div class="logo-container">
+        <span class="logo-icon">🥚</span>
+        <div class="logo-text">
+          <h1>SHELL SHOCKERS</h1>
+          <span class="badge-edition">CYBER MULTIPLAYER 3D</span>
+        </div>
+      </div>
+      <p class="lobby-desc">FPS Multijugador Low-Poly de Alta Velocidad en Tiempo Real</p>
+    </header>
+
+    <div class="lobby-content">
+      <!-- Columna 1: Nickname & Modos & Mapas -->
+      <div class="lobby-section">
+        <div class="field-group">
+          <label class="section-title"><span class="icon">👤</span> IDENTIFICACIÓN</label>
+          <div class="input-wrap">
+            <input type="text" id="nickname-input" placeholder="Tu Nombre de Batalla..." maxlength="16" autocomplete="off"/>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="section-title"><span class="icon">⚔️</span> MODO DE JUEGO</label>
+          <div class="mode-grid">
+            <button class="mode-card active" data-mode="ffa">
+              <span class="mode-icon">☠️</span>
+              <div class="mode-info">
+                <strong>TODOS VS TODOS</strong>
+                <small>Elimina a cualquiera para ganar</small>
+              </div>
+            </button>
+            <button class="mode-card" data-mode="tdm">
+              <span class="mode-icon">🏴</span>
+              <div class="mode-info">
+                <strong>DUELO POR EQUIPOS</strong>
+                <small>Equipo Rojo vs Equipo Azul</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="section-title"><span class="icon">🗺️</span> SELECCIÓN DE ESCENARIO</label>
+          <div class="maps-grid">
+            <div class="map-tile active" data-map="cybergrid">
+              <div class="map-header">
+                <span class="map-badge">SCI-FI</span>
+                <strong>⚡ Cyber-Grid</strong>
+              </div>
+              <p class="map-snippet">Tron sci-fi, rejilla neón, pasarelas y plataformas flotantes.</p>
+            </div>
+
+            <div class="map-tile" data-map="volcano">
+              <div class="map-header">
+                <span class="map-badge volcano-badge">PELIGRO</span>
+                <strong>🌋 Isla Volcánica</strong>
+              </div>
+              <p class="map-snippet">Mar de lava mortal, puentes de piedra y columnas de basalto.</p>
+            </div>
+
+            <div class="map-tile" data-map="toyroom">
+              <div class="map-header">
+                <span class="map-badge toy-badge">MICRO</span>
+                <strong>🧸 Giant Toyroom</strong>
+              </div>
+              <p class="map-snippet">Bloques Lego 3D, castillos de naipes y dominós gigantes.</p>
+            </div>
+          </div>
+          <div class="config-status" id="config-status">Cargando estado...</div>
+        </div>
+      </div>
+
+      <!-- Columna 2: Personalización & Skin Painter -->
+      <div class="lobby-section">
+        <label class="section-title"><span class="icon">🎨</span> TALLER DE PERSONALIZACIÓN</label>
+
+        <div class="custom-card">
+          <div class="custom-controls">
+            <div class="ctrl-row">
+              <span>Color de Cáscara</span>
+              <input type="color" id="color-picker" value="#ff6b6b"/>
+            </div>
+
+            <div class="ctrl-row">
+              <span>Sombrero / Casco</span>
+              <select id="hat-select">
+                <option value="none">Sin accesorio</option>
+                <option value="tophat">🎩 Sombrero de Copa</option>
+                <option value="helmet">⛑️ Casco Militar</option>
+                <option value="cap">🧢 Gorra Urbana</option>
+              </select>
+            </div>
+
+            <div class="ctrl-row">
+              <span>Rostro / Gafas</span>
+              <select id="glasses-select">
+                <option value="none">Sin lentes</option>
+                <option value="sunglasses">🕶️ Gafas de Sol</option>
+                <option value="mask">🎭 Antifaz de Asalto</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Lienzo de Textura Personalizada -->
+          <div class="painter-box">
+            <div class="painter-header">
+              <span>🖌️ Pintura de Rostro / Skin</span>
+              <small>Dibuja tu diseño libre</small>
+            </div>
+            <div class="painter-workspace">
+              <canvas id="texture-canvas" width="128" height="128" title="Dibuja sobre el avatar"></canvas>
+              <div class="painter-palette">
+                <input type="color" id="brush-color" value="#00ffcc" title="Color de brocha"/>
+                <input type="range" id="brush-size" min="2" max="22" value="6" title="Grosor"/>
+                <button id="painter-clear" title="Borrar todo">🗑️ Limpiar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón de acción principal -->
+    <div class="lobby-footer">
+      <button id="join-btn" class="play-btn">
+        <span class="play-glow"></span>
+        <span class="play-text">💥 ¡ENTRAR A LA ARENA!</span>
+      </button>
+      <div class="keybinds-bar">
+        <span><strong>WASD</strong> Mover</span>
+        <span><strong>Clic Izq</strong> Disparo Continuo</span>
+        <span><strong>Clic Der</strong> Zoom ADS</span>
+        <span><strong>1, 2, 3</strong> Armas</span>
+        <span><strong>R</strong> Recargar</span>
+        <span><strong>Q</strong> Granada</span>
+        <span><strong>T</strong> Chat Flotante</span>
+        <span><strong>B</strong> Emote</span>
+        <span><strong>TAB</strong> Marcador</span>
+        <span><strong>ESC</strong> Pausa</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- MENÚ DE PAUSA (GLASSMORPHISM CON SENSIBILIDAD)                   -->
+<!-- ================================================================ -->
+<div id="pause-overlay" class="hidden">
+  <div class="pause-card">
+    <div class="pause-header">
+      <h2>⏸️ JUEGO EN PAUSA</h2>
+      <p>Presiona ESC o haz clic en Reanudar para continuar el combate</p>
+    </div>
+
+    <div class="pause-body">
+      <!-- Selector rápido de armas -->
+      <div class="pause-block">
+        <label>ARMAMENTO RÁPIDO:</label>
+        <div class="pause-weapon-grid">
+          <button class="opt-btn" id="pause-wep-rifle">1. 🔫 Fusil Automático</button>
+          <button class="opt-btn" id="pause-wep-shotgun">2. 💥 Escopeta Abanico</button>
+          <button class="opt-btn" id="pause-wep-sniper">3. 🎯 Francotirador</button>
+        </div>
+      </div>
+
+      <!-- Ajuste de Sensibilidad del Ratón -->
+      <div class="pause-block">
+        <div class="slider-row">
+          <label for="mouse-sens-slider">Sensibilidad de Cámara:</label>
+          <span id="sens-value-text">1.0x</span>
+        </div>
+        <input type="range" id="mouse-sens-slider" min="0.4" max="2.5" step="0.1" value="1.0"/>
+      </div>
+    </div>
+
+    <div class="pause-footer">
+      <button id="resume-btn" class="btn-action resume">▶️ REANUDAR PARTIDA</button>
+      <button id="exit-lobby-btn" class="btn-action exit">🚪 SALIR AL LOBBY</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TABLA DE PUNTUACIONES / SCOREBOARD (TECLA TAB)                   -->
+<!-- ================================================================ -->
+<div id="scoreboard-overlay" class="hidden">
+  <div class="scoreboard-card">
+    <div class="sb-header">
+      <h3>📊 TABLA DE POSICIONES</h3>
+      <span id="sb-game-info">TODOS VS TODOS</span>
+    </div>
+    <table class="sb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>JUGADOR</th>
+          <th>EQUIPO</th>
+          <th>KILLS</th>
+          <th>MUERTES</th>
+          <th>K/D</th>
+        </tr>
+      </thead>
+      <tbody id="scoreboard-entries">
+        <!-- Rellenado dinámicamente -->
+      </tbody>
+    </table>
+    <div class="sb-footer">Mantén presionada la tecla <strong>TAB</strong> para ver las estadísticas</div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- OVERLAYS DE EVENTOS (MUERTE & FIN DE RONDA)                      -->
+<!-- ================================================================ -->
+<div id="death-overlay" class="hidden">
+  <div class="event-card death-theme">
+    <div class="skull-anim">💀</div>
+    <h2>¡HAS SIDO ELIMINADO!</h2>
+    <p id="killed-by-text">Eliminado por alguien...</p>
+    <div class="respawn-loader">
+      <div class="respawn-bar"></div>
+    </div>
+    <span class="respawn-hint">Reapareciendo en breve...</span>
+  </div>
+</div>
+
+<div id="gameover-overlay" class="hidden">
+  <div class="event-card victory-theme">
+    <h2>🏆 ¡RONDA CONCLUIDA!</h2>
+    <p id="gameover-text">El ganador ha alcanzado el límite de eliminaciones</p>
+    <span class="respawn-hint">Reiniciando la arena...</span>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- HUD DENTRO DEL JUEGO                                             -->
+<!-- ================================================================ -->
+<div id="hud" class="hidden">
+  <!-- Mira central dinámica -->
+  <div id="crosshair">
+    <div class="ch-line ch-top"></div>
+    <div class="ch-line ch-bottom"></div>
+    <div class="ch-line ch-left"></div>
+    <div class="ch-line ch-right"></div>
+    <div class="ch-dot"></div>
+  </div>
+
+  <!-- Barra de Salud Moderna -->
+  <div id="health-card">
+    <div class="health-meta">
+      <span class="hp-icon">❤️</span>
+      <span class="hp-label">SALUD</span>
+      <span id="health-text">100 HP</span>
+    </div>
+    <div class="health-bar-track">
+      <div id="health-bar"></div>
+    </div>
+  </div>
+
+  <!-- Marcador Personal Rápido -->
+  <div id="quick-score">
+    <div class="qs-item"><span class="icon">🎯</span> <span id="kill-count">0</span></div>
+    <div class="qs-item"><span class="icon">💀</span> <span id="death-count">0</span></div>
+  </div>
+
+  <!-- Marcador de Equipos TDM (Centro Superior) -->
+  <div id="team-score" class="hidden">
+    <div class="ts-badge ts-red">ROJO <strong id="team-red-score">0</strong></div>
+    <span class="ts-vs">VS</span>
+    <div class="ts-badge ts-blue">AZUL <strong id="team-blue-score">0</strong></div>
+  </div>
+
+  <!-- Kill Feed (Esquina Superior Derecha) -->
+  <div id="kill-feed"></div>
+
+  <!-- Lista Rápida de Jugadores (Debajo del Kill Feed) -->
+  <div id="player-list">
+    <div class="pl-header">ARENA PLAYERS</div>
+    <div id="player-list-entries"></div>
+  </div>
+
+  <!-- Selector Inferior de Armas -->
+  <div id="weapon-bar">
+    <div class="wb-slot active" data-weapon="rifle">
+      <span class="wb-key">1</span>
+      <span class="wb-name">Fusil</span>
+    </div>
+    <div class="wb-slot" data-weapon="shotgun">
+      <span class="wb-key">2</span>
+      <span class="wb-name">Escopeta</span>
+    </div>
+    <div class="wb-slot" data-weapon="sniper">
+      <span class="wb-key">3</span>
+      <span class="wb-name">Sniper</span>
+    </div>
+    <div id="weapon-cooldown-bar"></div>
+  </div>
+
+  <!-- Tarjeta de Arma Activa y Munición (Esquina Inferior Derecha) -->
+  <div id="ammo-card">
+    <div class="weapon-display">
+      <span id="active-weapon-icon">🔫</span>
+      <span id="active-weapon-name">FUSIL</span>
+    </div>
+    <div class="ammo-numbers">
+      <span id="ammo-current">30</span>
+      <span class="ammo-slash">/</span>
+      <span id="ammo-max">30</span>
+    </div>
+    <div id="reload-hint" class="hidden">PULSA [R] PARA RECARGAR</div>
+  </div>
+
+  <!-- Indicador de Granada -->
+  <div id="grenade-indicator" title="Lanzar granada con tecla Q">
+    <span>💣</span>
+    <span class="grenade-key-label">Q</span>
+    <div id="grenade-cd-ring">
+      <svg viewBox="0 0 36 36">
+        <circle id="grenade-cd-circle" cx="18" cy="18" r="16" fill="none"
+                stroke="#00ffcc" stroke-width="3" stroke-dasharray="100 100"
+                stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Input Flotante de Chat Rápido (Tecla T) -->
+  <div id="chat-bar-container" class="hidden">
+    <span class="chat-prefix">💬 Chat:</span>
+    <input type="text" id="chat-input" placeholder="Escribe tu mensaje y pulsa Enter..." maxlength="50" autocomplete="off"/>
+  </div>
+
+  <!-- Flash de Daño -->
+  <div id="damage-flash"></div>
+
+  <!-- Notificación Flotante de Emote / Headshot -->
+  <div id="center-toast" class="hidden"></div>
+
+  <!-- Indicador para Capturar Ratón -->
+  <div id="pointer-lock-hint" class="hidden">Haz clic para capturar el ratón</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SCRIPTS                                                          -->
+<!-- ================================================================ -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/maps.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>
