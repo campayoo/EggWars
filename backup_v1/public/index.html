@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🥚 SHELL SHOCKERS — FPS Multijugador Oficial 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<!-- Canvas 3D de Fondo interactivo para el Menú / Lobby -->
+<div id="lobby-bg-container"></div>
+
+<!-- Modal de nickname eliminado: nombre pedido al pulsar JUGAR -->
+
+<!-- ================================================================ -->
+<!-- 2. LOBBY Y MENÚ PRINCIPAL (CON TABS: BROWSER, PERSONALIZAR, ETC)-->
+<!-- ================================================================ -->
+<div id="menu-overlay">
+  <!-- Barra Superior del Menú -->
+  <header class="shell-top-bar">
+    <div class="brand-badge">
+      <span class="brand-egg">🥚</span>
+      <div class="brand-text">
+        <h1>SHELL SHOCKERS</h1>
+        <small>THE WORLD'S TOP EGG-BASED SHOOTER</small>
+      </div>
+    </div>
+
+    <!-- Navegación por pestañas del menú -->
+    <nav class="shell-nav-tabs">
+      <button class="nav-tab active" data-tab="play">🎮 JUGAR & SALAS</button>
+      <button class="nav-tab" data-tab="customize">🎨 PERSONALIZAR HUEVO</button>
+      <button class="nav-tab" data-tab="weapons">🔫 CLASES DE ARMAS</button>
+    </nav>
+
+    <!-- Perfil del Jugador con Nickname editable -->
+    <div class="user-profile-pill">
+      <span class="user-status-dot"></span>
+      <span id="current-user-display" class="user-nickname-text">SoldadoHuevo</span>
+      <button id="btn-edit-nickname" class="btn-edit-icon" title="Cambiar Nickname">✏️</button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal de Pestañas -->
+  <main class="shell-main-view">
+    
+    <!-- PESTAÑA 1: JUGAR & NAVEGADOR DE SALAS (SERVER BROWSER) -->
+    <section id="tab-play" class="tab-pane active">
+      <div class="browser-layout">
+        
+        <!-- Columna Izquierda: Servidores / Lista de Partidas -->
+        <div class="browser-list-container">
+          <div class="browser-header">
+            <h3>🌐 NAVEGADOR DE PARTIDAS (SERVER BROWSER)</h3>
+            <div class="browser-actions">
+              <button id="btn-refresh-rooms" class="shell-btn-secondary">🔄 Actualizar</button>
+              <button id="btn-open-create-room" class="shell-btn-primary">+ Crear Sala</button>
+            </div>
+          </div>
+
+          <div class="rooms-table-wrap">
+            <table class="rooms-table">
+              <thead>
+                <tr>
+                  <th>NOMBRE DE LA SALA</th>
+                  <th>ESCENARIO</th>
+                  <th>MODO</th>
+                  <th>JUGADORES</th>
+                  <th>ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody id="rooms-list-body">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Partida Rápida & Arma Seleccionada -->
+        <div class="quick-play-panel">
+          <div class="quick-play-card">
+            <h3 class="panel-subtitle">⚡ ENTRAR EN ACCIÓN</h3>
+            
+            <div class="selected-weapon-preview">
+              <span id="lobby-weapon-icon" class="preview-wep-icon">🔫</span>
+              <div class="preview-wep-info">
+                <span class="preview-wep-tag">ARMA PRINCIPAL:</span>
+                <strong id="lobby-weapon-name">EggK-47 (Fusil Automático)</strong>
+              </div>
+            </div>
+
+            <div class="quick-room-info">
+              <span>SALA SELECCIONADA:</span>
+              <strong id="selected-room-name-label">Arena Dirt Oficial #1</strong>
+            </div>
+
+            <div class="nickname-lobby-row">
+              <label for="nickname-input" style="font-size:0.75rem;font-weight:800;letter-spacing:1px;color:#f1c40f;">🥚 TU NOMBRE:</label>
+              <input type="text" id="nickname-input" placeholder="SoldadoHuevo" maxlength="14" autocomplete="off"
+                style="padding:6px 10px;border-radius:8px;border:2px solid #f1c40f;background:#1a1a2e;color:#fff;font-weight:700;font-size:0.9rem;width:100%;margin-bottom:8px;"/>
+            </div>
+            <button id="join-btn" class="shell-play-btn">
+              <span class="btn-shine"></span>
+              <span class="btn-label">PLAY NOW!</span>
+            </button>
+
+            <div class="quick-keybinds-note">
+              <span><strong>WASD</strong> Mover / Escalar</span>
+              <span><strong>Clic Izq</strong> Disparo</span>
+              <span><strong>Clic Der</strong> Zoom ADS</span>
+              <span><strong>Q</strong> Granada</span>
+              <span><strong>R</strong> Recargar</span>
+              <span><strong>ESC</strong> Pausa</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: PERSONALIZAR HUEVO (VISTA PREVIA 3D EN TIEMPO REAL) -->
+    <section id="tab-customize" class="tab-pane hidden">
+      <div class="customize-layout">
+        <!-- Controles de Customización -->
+        <div class="customize-options-card">
+          <h3 class="box-title">🎨 TALLER DE PERSONALIZACIÓN</h3>
+          
+          <div class="custom-row">
+            <span>Color del Huevo:</span>
+            <input type="color" id="color-picker" value="#ffffff"/>
+          </div>
+
+          <div class="custom-row">
+            <span>Sombrero / Accesorio:</span>
+            <select id="hat-select">
+              <option value="none">Sin Sombrero</option>
+              <option value="tophat">🎩 Chistera Elegante</option>
+              <option value="helmet">⛑️ Casco Militar</option>
+              <option value="cap">🧢 Gorra Deportiva</option>
+              <option value="crown">👑 Corona Real</option>
+              <option value="cowboy">🤠 Sombrero Vaquero</option>
+            </select>
+          </div>
+
+          <div class="custom-row">
+            <span>Gafas / Ojos:</span>
+            <select id="glasses-select">
+              <option value="none">Ojos Normales</option>
+              <option value="sunglasses">🕶️ Gafas de Sol</option>
+              <option value="mask">🎭 Antifaz Ninja</option>
+              <option value="goggles">🥽 Gafas de Buzo</option>
+            </select>
+          </div>
+
+          <!-- Lienzo de Dibujo Libre 2D -->
+          <div class="skin-paint-wrap">
+            <div class="paint-title">
+              <span>Dibuja tu diseño libre sobre el cascarón:</span>
+              <button id="painter-clear" class="btn-clear-paint">Limpiar</button>
+            </div>
+            <div class="paint-box">
+              <canvas id="texture-canvas" width="128" height="128"></canvas>
+              <div class="paint-tools">
+                <input type="color" id="brush-color" value="#ff3838" title="Color de pincel"/>
+                <input type="range" id="brush-size" min="2" max="24" value="8" title="Grosor"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista Previa 3D Rotatoria -->
+        <div class="customize-preview-card">
+          <span class="preview-tag">VISTA PREVIA 3D EN VIVO</span>
+          <canvas id="egg-preview-canvas" width="260" height="260"></canvas>
+          <span class="preview-hint">Rotación automática en 360° con iluminación Three.js</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 3: SELECCIÓN DE CLASE DE ARMAS -->
+    <section id="tab-weapons" class="tab-pane hidden">
+      <div class="weapons-class-layout">
+        <h3 class="weapons-class-title">SELECCIONA TU CLASE DE COMBATE</h3>
+        <p class="weapons-class-desc">Elige el arma con la que aparecerás en la arena</p>
+
+        <div class="class-cards-grid">
+          <!-- Clase 1: Fusil -->
+          <div class="class-card active" data-weapon="rifle">
+            <div class="class-icon">🔫</div>
+            <div class="class-name">EggK-47</div>
+            <div class="class-type">FUSIL DE ASALTO AUTOMÁTICO</div>
+            <ul class="class-stats">
+              <li><span>Cadencia:</span> <strong>Muy Rápida (110ms)</strong></li>
+              <li><span>Daño:</span> <strong>22 HP / disparo</strong></li>
+              <li><span>Cargador:</span> <strong>30 Balas</strong></li>
+              <li><span>Especialidad:</span> <strong>Versátil a cualquier distancia</strong></li>
+            </ul>
+            <button class="class-select-btn">EQUIPAR CLASE</button>
+          </div>
+
+          <!-- Clase 2: Escopeta -->
+          <div class="class-card" data-weapon="shotgun">
+            <div class="class-icon">💥</div>
+            <div class="class-name">Scrambler</div>
+            <div class="class-type">ESCOPETA DE 2 CAÑONES</div>
+            <ul class="class-stats">
+              <li><span>Cadencia:</span> <strong>Media (750ms)</strong></li>
+              <li><span>Daño:</span> <strong>Devastador en corto (17x6 HP)</strong></li>
+              <li><span>Cargador:</span> <strong>6 Cartuchos</strong></li>
+              <li><span>Especialidad:</span> <strong>Letal en distancias cortas</strong></li>
+            </ul>
+            <button class="class-select-btn">EQUIPAR CLASE</button>
+          </div>
+
+          <!-- Clase 3: Francotirador -->
+          <div class="class-card" data-weapon="sniper">
+            <div class="class-icon">🎯</div>
+            <div class="class-name">Free RANGER</div>
+            <div class="class-type">RIFLE DE FRANCOTIRADOR</div>
+            <ul class="class-stats">
+              <li><span>Cadencia:</span> <strong>Lenta (1300ms)</strong></li>
+              <li><span>Daño:</span> <strong>85 HP (157 HP Headshot)</strong></li>
+              <li><span>Cargador:</span> <strong>5 Disparos</strong></li>
+              <li><span>Especialidad:</span> <strong>Precisión quirúrgica y zoom ADS</strong></li>
+            </ul>
+            <button class="class-select-btn">EQUIPAR CLASE</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================================================================ -->
+<!-- MODAL: CREAR NUEVA SALA DE JUEGO                                -->
+<!-- ================================================================ -->
+<div id="create-room-modal" class="modal-backdrop hidden">
+  <div class="create-room-card">
+    <div class="modal-top">
+      <h3>🛠️ CREAR NUEVA PARTIDA</h3>
+      <button id="btn-close-create-room" class="btn-close-modal">✖</button>
+    </div>
+    
+    <div class="modal-form-body">
+      <div class="form-group">
+        <label for="create-room-name">Nombre de la Sala:</label>
+        <input type="text" id="create-room-name" placeholder="Ej: Duelo de Reyes" maxlength="22"/>
+      </div>
+
+      <div class="form-group">
+        <label for="create-room-map">Seleccionar Escenario:</label>
+        <select id="create-room-map">
+            <option value="feedlot" selected>Feedlot (Instalación militar y pasarelas)</option>
+            <option value="castle">Castle / Ruins (Fortaleza medieval y escalinatas)</option>
+            <option value="dirt">Dirt (Clásico campo abierto y contenedores)</option>
+            <option value="fort">Fort (Dos fortalezas enfrentadas y almenas)</option>
+            <option value="space">Space (Estación orbital y baja gravedad)</option>
+          </select>
+      </div>
+
+      <div class="form-group">
+        <label for="create-room-mode">Modo de Combate:</label>
+        <select id="create-room-mode">
+          <option value="ffa">Free For All (Todos contra Todos)</option>
+          <option value="tdm">Team Deathmatch (Rojo vs Azul)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="create-room-max-players">Máximo de Jugadores:</label>
+        <select id="create-room-max-players">
+          <option value="4">4 Jugadores</option>
+          <option value="8" selected>8 Jugadores (Recomendado)</option>
+          <option value="12">12 Jugadores</option>
+          <option value="16">16 Jugadores (Caos Total)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="btn-confirm-create-room" class="shell-btn-primary">CREAR Y ENTRAR 💥</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- MENÚ DE PAUSA                                                    -->
+<!-- ================================================================ -->
+<div id="pause-overlay" class="hidden">
+  <div class="pause-box">
+    <h2>⏸️ PAUSA</h2>
+    <div class="pause-controls">
+      <label>Sensibilidad de Cámara: <strong id="sens-value-text">1.0x</strong></label>
+      <input type="range" id="mouse-sens-slider" min="0.4" max="2.5" step="0.1" value="1.0"/>
+    </div>
+    <div class="pause-actions">
+      <button id="resume-btn" class="pause-btn resume">REANUDAR</button>
+      <button id="exit-lobby-btn" class="pause-btn exit">SALIR AL LOBBY</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TABLA DE CLASIFICACIÓN (TAB)                                     -->
+<!-- ================================================================ -->
+<div id="scoreboard-overlay" class="hidden">
+  <div class="shell-scoreboard">
+    <div class="sb-top">
+      <h2>TABLA DE POSICIONES</h2>
+      <span id="sb-game-info">DIRT • TODOS VS TODOS</span>
+    </div>
+    <table class="sb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>JUGADOR</th>
+          <th>EQUIPO</th>
+          <th>KILLS</th>
+          <th>MUERTES</th>
+          <th>K/D</th>
+        </tr>
+      </thead>
+      <tbody id="scoreboard-entries"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- OVERLAY DE MUERTE & FIN DE PARTIDA                               -->
+<!-- ================================================================ -->
+<div id="death-overlay" class="hidden">
+  <div class="death-box">
+    <div class="broken-egg">🍳</div>
+    <h2 class="crack-title">¡TE HAN ROTO EL CASCARÓN!</h2>
+    <p id="killed-by-text">Eliminado...</p>
+    <div class="respawn-timer-bar"><div class="fill"></div></div>
+  </div>
+</div>
+
+<div id="gameover-overlay" class="hidden">
+  <div class="death-box victory-box">
+    <div class="trophy-icon">🏆</div>
+    <h2>¡RONDA FINALIZADA!</h2>
+    <p id="gameover-text">El ganador ha alcanzado el límite de eliminaciones</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- HUD DENTRO DE LA PARTIDA (SHELL SHOCKERS STYLE)                 -->
+<!-- ================================================================ -->
+<div id="hud" class="hidden">
+  <div id="crosshair">
+    <div class="ch-part ch-u"></div>
+    <div class="ch-part ch-d"></div>
+    <div class="ch-part ch-l"></div>
+    <div class="ch-part ch-r"></div>
+    <div class="ch-core"></div>
+    <div id="hitmarker" class="hitmarker hidden">
+      <div class="hm-line hm-1"></div>
+      <div class="hm-line hm-2"></div>
+    </div>
+  </div>
+
+  <!-- Mini Ranking Izquierda (Shell Shockers style) -->
+  <div id="ss-left-leaderboard">
+    <div class="ss-lb-row team-red">
+      <span class="ss-lb-name">SBS</span>
+      <span class="ss-lb-score">7</span>
+    </div>
+    <div class="ss-lb-row team-red">
+      <span class="ss-lb-name">NoobBird16</span>
+      <span class="ss-lb-score">5</span>
+    </div>
+    <div class="ss-lb-row team-red">
+      <span class="ss-lb-name">Shooter</span>
+      <span class="ss-lb-score">1</span>
+    </div>
+    <div class="ss-lb-row you" id="ss-lb-my-row">
+      <span class="ss-lb-name" id="ss-lb-my-name">ShellPro</span>
+      <span class="ss-lb-score" id="ss-lb-my-score">0</span>
+    </div>
+  </div>
+
+  <!-- Indicador Central Superior (Marcador Equipos & Calavera Kills) -->
+  <div id="ss-top-match-info">
+    <div class="ss-team-pill red" id="ss-team-red-pill">
+      <span class="ss-team-letter">R</span>
+      <span class="ss-team-count" id="ss-red-count">0</span>
+    </div>
+    <div class="ss-kill-skull">
+      <span class="skull-icon">💀</span>
+      <span class="skull-val" id="ss-kills-val">x0</span>
+    </div>
+    <div class="ss-team-pill blue" id="ss-team-blue-pill">
+      <span class="ss-team-letter">B</span>
+      <span class="ss-team-count" id="ss-blue-count">0</span>
+    </div>
+  </div>
+
+  <!-- Indicador Superior Derecho: Monedas / Ping & FPS -->
+  <div id="ss-top-right-stats">
+    <div class="ss-egg-coins">🥚 10</div>
+    <div class="ss-fps-ping-box">
+      <div>FPS: <span id="ss-fps-val">60</span></div>
+      <div>PING: <span id="ss-ping-val">18ms</span></div>
+    </div>
+  </div>
+
+  <!-- Círculo de Salud Inferior Central (Original Shell Shockers) -->
+  <div id="ss-health-circle">
+    <svg class="ss-hp-svg" viewBox="0 0 100 100">
+      <circle class="ss-hp-bg" cx="50" cy="50" r="42"></circle>
+      <circle id="ss-hp-bar" class="ss-hp-progress" cx="50" cy="50" r="42"></circle>
+    </svg>
+    <div class="ss-hp-number" id="health-text">100</div>
+  </div>
+
+  <!-- Contenedores originales ocultos para mantener compatibilidad de IDs -->
+  <div id="shell-health-widget" style="display:none;"><div id="health-bar"></div></div>
+  <div id="grenade-indicator" style="display:none;"><circle id="grenade-cd-circle"></circle></div>
+  <div id="quick-score" style="display:none;"><span id="kill-count">0</span><span id="death-count">0</span></div>
+  <div id="team-score" style="display:none;"><span id="team-red-score">0</span><span id="team-blue-score">0</span></div>
+
+  <!-- Widget de Munición y Granadas (Inferior Derecho) -->
+  <div id="shell-ammo-widget">
+    <div class="ss-grenades-row">
+      <span class="ss-grenade-icon active">🥚</span>
+      <span class="ss-grenade-icon active">🥚</span>
+      <span class="ss-grenade-icon">🥚</span>
+    </div>
+    <div class="ammo-digits">
+      <span id="ammo-current">30</span><span class="ammo-div">/</span><span id="ammo-max">240</span>
+    </div>
+    <div class="ammo-visual-list" id="ammo-bullet-icons"></div>
+    <div id="reload-hint" class="hidden">PULSA [R] PARA RECARGAR</div>
+    <div class="weapon-tag-label" id="active-weapon-name">EggK-47</div>
+  </div>
+
+  <!-- Kill Feed Arriba a la Derecha -->
+  <div id="kill-feed"></div>
+
+  <!-- Barra de Chat -->
+  <div id="chat-bar-container" class="hidden">
+    <span class="chat-prefix">💬 HuevoChat:</span>
+    <input type="text" id="chat-input" placeholder="Escribe tu mensaje y pulsa Enter..." maxlength="45" autocomplete="off"/>
+  </div>
+
+  <div id="damage-flash"></div>
+  <div id="center-toast" class="hidden"></div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SCRIPTS MODULARES                                                -->
+<!-- ================================================================ -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/maps.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>

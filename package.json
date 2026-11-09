@@ -1,16 +1,29 @@
 {
-  "name": "shell-shockers-local",
-  "version": "1.0.0",
-  "description": "Juego FPS 3D multijugador online estilo Shell Shockers (low-poly) para LAN",
+  "name": "egg-wars",
+  "version": "5.0.0",
+  "description": "EGG WARS — FPS 3D multijugador de huevos para LAN: 34 mapas, 4 modos de juego",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "node tools/build.js",
+    "start:prod": "node server.js --prod",
+    "test": "node tests/validate-maps.js && node tests/playtest.js && node tests/fuzz-physics.js 20 && node tests/server-test.js"
+  },
+  "devDependencies": {
+    "terser": "^5.31.0"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   },
-  "keywords": ["fps", "multiplayer", "threejs", "socketio", "game"],
-  "license": "MIT"
+  "keywords": [
+    "fps",
+    "multiplayer",
+    "threejs",
+    "socketio",
+    "game"
+  ],
+  "private": true,
+  "license": "UNLICENSED"
 }
