@@ -3,7 +3,9 @@ process.env.PORT = 3999;
 process.env.DATA_DIR = require('fs').mkdtempSync(require('os').tmpdir() + '/ss-data-');
 const { GameRoom } = require('../server/gameRoom');
 const srv = require('../server/server.js');
-const place = (roomId, id, x, y, z) => Object.assign(srv.rooms[roomId].players[id], { x, y, z, lastMoveAt: Date.now() });
+const place = (roomId, id, x, y, z) => Object.assign(srv.rooms[roomId].players[id], { x, y, z, lastMoveAt: Date.now(), hist: [] });
+// Punto de impacto real sobre el huevo (cuerpo o cabeza), como lo manda el cliente
+const hitPt = (roomId, id, head) => { const q = srv.rooms[roomId].players[id]; return [q.x, q.y + (head ? 1.45 : 0.75), q.z]; };
 const ioc = require('../node_modules/socket.io/client-dist/socket.io.js');
 const assert = (c, m) => { if (!c) { console.log('  ✗ ' + m); process.exitCode = 1; } else console.log('  ✓ ' + m); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -118,20 +120,20 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   await wait(1800); // esperar protección de spawn
   let hit = null; const onHit = d => { hit = d; };
   b.on('player:hit', onHit);
-  a.emit('player:shoot', { targets: [{ id: b.id, headshot: true }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, headshot: true, p: hitPt(RID, b.id, true) }] });
   await wait(300);
   assert(hit === null, 'disparo a través de muros rechazado');
 
   // Línea de visión limpia: ambos en campo abierto
   place(RID, a.id, 6, 0, 12); place(RID, b.id, 6, 0, 2);
   await wait(1500);
-  a.emit('player:shoot', { targets: [{ id: b.id, headshot: false }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, headshot: false, p: hitPt(RID, b.id, false) }] });
   await wait(300);
   assert(hit && hit.damage === 90 && hit.hp === 10, 'impacto de sniper 90 (hp ' + (hit && hit.hp) + ')');
 
   // Cooldown: disparar otra vez inmediatamente no debe contar
   hit = null;
-  a.emit('player:shoot', { targets: [{ id: b.id }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, p: hitPt(RID, b.id, false) }] });
   await wait(200);
   assert(hit === null, 'cooldown del sniper respetado');
 
@@ -139,7 +141,7 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   // Kill → TDM suma punto
   await wait(1200);
   const killedP = once(b, 'player:killed');
-  a.emit('player:shoot', { targets: [{ id: b.id }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, p: hitPt(RID, b.id, false) }] });
   const k = await killedP;
   assert(k.killerId === a.id && k.targetId === b.id, 'baja registrada');
   const st2 = await once(a, 'game:state');
@@ -194,20 +196,21 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   const fired = await firedP;
   assert(fired.shooterId === a.id && fired.ms > 0, 'cohete disparado (' + fired.ms + ' ms de vuelo)');
   const boom = await boomP;
-  const dmgB = (boom.damages.find(x => x.playerId === b.id) || {}).damage || 0;
-  assert(boom.kind === 'rpegg' && dmgB >= 90, 'impacto directo del cohete: ' + dmgB);
+  const dmgB = 1000 - srv.rooms[RID].players[b.id].hp;
+  assert(boom.kind === 'rpegg' && dmgB >= 100, 'impacto directo del cohete: ' + dmgB + ' de daño (elimina)');
   Object.assign(srv.rooms[RID].players[a.id], { primary: 'sniper', weapon: 'sniper', lastShot: 0, shotLog: [] });
   srv.rooms[RID].players[b.id].hp = 100;
   if (!srv.rooms[RID].players[b.id].alive) { srv.rooms[RID].respawn(srv.rooms[RID].players[b.id], true); }
 
-  // Fin de ronda con límite 2
+  // Fin de ronda con límite 2 (el Crackshot sólo tiene 3 balas: recarga simulada)
+  srv.rooms[RID].players[a.id].ammo.sniper = 3;
   place(RID, b.id, 0, 0, 8);
   await wait(1800);
-  a.emit('player:shoot', { targets: [{ id: b.id }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, p: hitPt(RID, b.id, false) }] });
   await wait(1400);
   b.emit('player:respawn-request'); // aún no puede (cuenta atrás)
   const overP = once(a, 'game:over', 3000);
-  a.emit('player:shoot', { targets: [{ id: b.id }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, p: hitPt(RID, b.id, false) }] });
   const over = await overP;
   assert(over.winnerTeam === 'red' && over.standings.length === 2, 'game:over: ' + over.reason);
 
@@ -230,7 +233,7 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   hit = null;
   place(RID, a.id, 6, 0, 12); place(RID, b.id, 6, 0, 2);
   srv.rooms[RID].players[b.id].spawnProtectUntil = 0;
-  a.emit('player:shoot', { targets: [{ id: b.id }] });
+  a.emit('player:shoot', { targets: [{ id: b.id, p: hitPt(RID, b.id, false) }] });
   await wait(250);
   assert(hit === null, 'en pausa no se puede disparar');
   const bx = srv.rooms[RID].players[b.id].z;
@@ -326,7 +329,7 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   // Granada simulada
   const room3 = new GameRoom(fakeIo, { id: 'g', code: 'GGGG', name: 'g', map: 'blue', mode: 'ffa', timeLimit: 0 });
   room3.handlePlayerJoin(sock('g1'), { nickname: 'G1' });
-  Object.assign(room3.players.g1, { x: 0, y: 0, z: 8 });
+  Object.assign(room3.players.g1, { x: 0, y: 0, z: 8, grenades: 3 });
   room3.handleGrenadeThrow(sock('g1'), { dirX: 0, dirY: 0.3, dirZ: -1 });
   const g = Object.values(room3.grenades)[0];
   let minY = 99, maxZ = -99;
@@ -334,6 +337,67 @@ function once(s, ev, ms = 3000) { return new Promise((res, rej) => { const t = s
   assert(minY >= 0.1, 'granada no atraviesa el suelo (minY ' + minY.toFixed(2) + ')');
   assert(Object.keys(room3.grenades).length === 1 || true, 'granada viva');
   room3.destroy();
+
+  // ---- ANTI-TRAMPAS ----
+  const ac = new GameRoom(fakeIo, { id: 'ac', code: 'ACAC', name: 'ac', map: 'blue', mode: 'ffa', timeLimit: 0 });
+  ac.handlePlayerJoin(sock('c1'), { nickname: 'Tramposo', weapon: 'rifle' });
+  ac.handlePlayerJoin(sock('c2'), { nickname: 'Victima' });
+  const c1 = ac.players.c1, c2 = ac.players.c2;
+  const AC = require('../server/anticheat.js');
+  const reset = (p, x, y, z) => { Object.assign(p, { x, y, z }); AC.resetPlayer(p, Date.now()); };
+  const sleep = ms => { const e = Date.now() + ms; while (Date.now() < e) { /* espera activa */ } };
+  // 1) Volar: subir 0,3 m en cada paquete sin tocar el suelo
+  reset(c1, 0, 0, 22);
+  let flewTo = 0;
+  for (let i = 0; i < 40; i++) { sleep(30); ac.handlePlayerMove('c1', { x: 0, y: c1.y + 0.3, z: 22 }); flewTo = c1.y; }
+  assert(flewTo < 2.6, 'no se puede volar (llegó a y=' + flewTo.toFixed(2) + ')');
+  // 2) Flotar: quedarse quieto en el aire
+  reset(c1, 0, 0, 22);
+  sleep(30); ac.handlePlayerMove('c1', { x: 0, y: 1.2, z: 22 });
+  let hovered = true;
+  for (let i = 0; i < 70; i++) { sleep(30); ac.handlePlayerMove('c1', { x: 0, y: 1.2, z: 22 }); }
+  hovered = c1.y > 1.1;
+  sleep(30); ac.handlePlayerMove('c1', { x: 0, y: 1.2, z: 22.1 });
+  assert(!(hovered && c1.z > 22.05), 'no se puede flotar en el aire');
+  // 3) Velocidad: 3 m por paquete (90 m/s) rechazado; andar normal aceptado
+  reset(c1, 0, 0, 22);
+  sleep(33); ac.handlePlayerMove('c1', { x: 3, y: 0, z: 22 });
+  sleep(33); ac.handlePlayerMove('c1', { x: 6, y: 0, z: 22 });
+  assert(c1.x < 3.1, 'speedhack rechazado (x=' + c1.x.toFixed(2) + ')');
+  reset(c1, 0, 0, 22);
+  for (let i = 1; i <= 10; i++) { sleep(33); ac.handlePlayerMove('c1', { x: i * 0.24, y: 0, z: 22 }); }
+  assert(Math.abs(c1.x - 2.4) < 1e-6, 'andar a velocidad normal se acepta');
+  // 4) Cabeza falsa: el cliente dice "headshot" pero el punto está en el cuerpo
+  reset(c1, 6, 0, 22); reset(c2, 6, 0, 14); c2.spawnProtectUntil = 0; c2.hp = 100; c1.lastShot = 0;
+  ac.state = 'playing';
+  ac.handlePlayerShoot(sock('c1'), { targets: [{ id: 'c2', headshot: true, p: [6, 0.7, 14] }] });
+  assert(c2.hp === 100 - 23, 'el servidor decide la cabeza: cuerpo = 23 de daño (hp ' + c2.hp + ')');
+  // 5) Impacto inventado: punto lejos del objetivo
+  c2.hp = 100; c1.lastShot = 0; c1.shotLog = [];
+  ac.handlePlayerShoot(sock('c1'), { targets: [{ id: 'c2', p: [9, 0.7, 14] }] });
+  assert(c2.hp === 100, 'impacto falso (fuera del huevo) rechazado');
+  // 6) Munición infinita: el rifle (30 balas) no dispara la bala 31 sin recargar
+  c2.hp = 100000; let shots = 0;
+  for (let i = 0; i < 40; i++) {
+    c1.lastShot = 0; c1.shotLog = []; const before = c2.hp;
+    ac.handlePlayerShoot(sock('c1'), { targets: [{ id: 'c2', p: [6, 0.7, 14] }] });
+    if (c2.hp < before) shots++;
+  }
+  assert(shots <= 30, 'sin munición infinita (' + shots + ' disparos con daño de 40)');
+  // 7) Granadas: no se regeneran solas; se recogen del suelo (máx 3)
+  reset(c1, 0, 0, 22); c1.grenades = 0;
+  for (let i = 0; i < 5; i++) ac.tick();
+  assert(c1.grenades === 0, 'las granadas no se regeneran solas');
+  const gp = ac.gpacks[0];
+  assert(ac.gpacks.length >= 3, 'blue tiene ' + ac.gpacks.length + ' granadas en el suelo');
+  Object.assign(c1, { x: gp.x, y: gp.y, z: gp.z });
+  ac.tick();
+  assert(c1.grenades === 1 && !gp.active, 'granada recogida del suelo (+1)');
+  c1.grenades = 3; const gp2 = ac.gpacks[1];
+  Object.assign(c1, { x: gp2.x, y: gp2.y, z: gp2.z });
+  ac.tick();
+  assert(c1.grenades === 3 && gp2.active, 'con 3 granadas no se recogen más');
+  ac.destroy();
 
   a.close(); b.close();
   console.log(process.exitCode ? 'FALLOS' : 'TODO OK');

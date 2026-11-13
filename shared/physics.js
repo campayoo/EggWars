@@ -17,7 +17,7 @@
     ACCEL_GROUND: 70,     // aceleración en el suelo
     ACCEL_AIR: 16,        // control en el aire
     JUMP: 8.4,            // velocidad vertical del salto
-    CLIMB: 4.6,           // velocidad en escaleras de mano
+    CLIMB: 5.4,           // velocidad en escaleras de mano
     MAX_FALL: 45,
     SUBSTEP: 1 / 120,
     COYOTE: 0.1,          // margen para saltar justo después de dejar un borde
@@ -161,9 +161,16 @@
 
     if (st.ladderCD > 0) st.ladderCD -= dt;
     const lad = st.ladderCD > 0 ? null : findLadder(w, st);
-    const wantsLadder = lad && (input.fwd !== 0 || !st.onGround || st.onLadder);
+    // ¿Hacia dónde MIRA el jugador respecto a la escalera? (1 = de frente, -1 = de espaldas)
+    const look = lad ? (-sy * lad.fx - cy * lad.fz) : 0;
+    const moveTo = lad ? (wx * lad.fx + wz * lad.fz) : 0;
+    // Engancharse: ya estaba subiendo, o anda hacia la escalera, o la agarra en el aire, o salta en ella.
+    // Pasar por al lado andando NO te engancha.
+    const wantsLadder = lad && (st.onLadder || moveTo > 0.1 || (!st.onGround && input.fwd !== 0) || (input.jump && look > -0.2));
     const wasLadder = st.onLadder;
-    st.onLadder = !!(lad && wantsLadder && !(st.onGround && input.fwd < 0));
+    // Soltarse abajo: retroceder (S) mirándola, o alejarse de espaldas
+    const leaving = st.onGround && ((input.fwd < 0 && look > -0.5) || (input.fwd > 0 && look < -0.5));
+    st.onLadder = !!(lad && wantsLadder && !leaving);
 
     if (st.onLadder) {
       // ¿El jugador empuja hacia la pared de la escalera?
@@ -175,9 +182,12 @@
         st.onLadder = false; st.ladderCD = 0.35;
         ev.jumped = true;
       } else {
+        // W sube y S baja, mires como mires (salvo de espaldas, que se invierte); Espacio también sube
         let climb = 0;
-        if (towards > 0.2 || input.jump) climb = P.CLIMB;
-        else if (towards < -0.2) climb = -P.CLIMB;
+        const dirLook = look < -0.5 ? -1 : 1;
+        if (input.fwd > 0) climb = P.CLIMB * dirLook;
+        else if (input.fwd < 0) climb = -P.CLIMB * dirLook;
+        else if (input.jump) climb = P.CLIMB;
         st.vy = climb;
         // Sólo movimiento lateral (perpendicular a la escalera): pulsar W no te
         // saca del volumen aunque no haya pared detrás (escaleras en bordes de losa)
@@ -189,16 +199,19 @@
         const k = P.RADIUS + 0.03;
         if (lad.fx !== 0) { const target = lad.x - lad.fx * k; st.vx += Math.max(-4, Math.min(4, (target - st.x) * 12)); }
         else { const target = lad.z - lad.fz * k; st.vz += Math.max(-4, Math.min(4, (target - st.z) * 12)); }
-        // Tampoco salirse por los lados del volumen de la escalera
-        if (lad.fx !== 0) { const cz = (lad.minZ + lad.maxZ) / 2; if (Math.abs(st.z - cz) > 0.3) st.vz += (cz - st.z) * 6; }
-        else { const cx = (lad.minX + lad.maxX) / 2; if (Math.abs(st.x - cx) > 0.3) st.vx += (cx - st.x) * 6; }
+        // Centrar en la escalera: al subir o bajar se va al centro (así la salida de arriba
+        // siempre coincide con el hueco del pretil y no rebotas en bucle); parado, sólo un poco de margen
+        const lim = climb !== 0 ? 0.02 : 0.25, gain = climb !== 0 ? 10 : 6;
+        if (lad.fx !== 0) { const off = st.z - lad.z; if (Math.abs(off) > lim) { if (climb !== 0) st.vz = 0; st.vz += Math.max(-4, Math.min(4, -off * gain)); } }
+        else { const off = st.x - lad.x; if (Math.abs(off) > lim) { if (climb !== 0) st.vx = 0; st.vx += Math.max(-4, Math.min(4, -off * gain)); } }
         // Al llegar arriba: salir hacia donde HAYA suelo (delante si es una pared;
         // atrás o a un lado si la escalera sale por una trampilla de azotea)
         if (climb > 0 && st.y + climb * dt >= lad.maxY - 0.05) {
           const d = ladderExit(w, st, lad);
           const fwdExit = d[0] === lad.fx && d[1] === lad.fz;
-          st.vx = d[0] * (fwdExit ? 3.2 : 4.2); st.vz = d[1] * (fwdExit ? 3.2 : 4.2); st.vy = 2.6;
-          if (!fwdExit) { st.exitT = 0.45; st.exitX = d[0]; st.exitZ = d[1]; st.onLadder = false; st.ladderCD = 0.5; }
+          st.vx = d[0] * (fwdExit ? 3.6 : 4.2); st.vz = d[1] * (fwdExit ? 3.6 : 4.2); st.vy = 2.6;
+          // Un instante de ayuda hacia el suelo de arriba (aunque mires de lado no te caes por el borde)
+          st.exitT = fwdExit ? 0.32 : 0.45; st.exitX = d[0]; st.exitZ = d[1]; st.onLadder = false; st.ladderCD = 0.5;
         }
       }
     } else {

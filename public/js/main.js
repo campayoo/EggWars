@@ -178,7 +178,7 @@
   let roundState = 'playing';
   let adminId = null, roundHold = false, suppressPauseScreen = false, adminPlayersSig = '';
   let cfg = { mode: 'ffa', map: 'castle', scoreLimit: 25, timeLimit: 10, teams: false };
-  const me = { id: null, team: null, alive: false, hp: 100, kills: 0, deaths: 0, score: 0, grenades: RULES.GRENADE_MAX, prot: false };
+  const me = { id: null, team: null, alive: false, hp: 100, kills: 0, deaths: 0, score: 0, grenades: RULES.GRENADE_START || 0, prot: false };
   let st = Phys.newState(0, 0, 0);
   let yaw = 0, pitch = 0;
   let lastState = null;
@@ -449,9 +449,10 @@
   let sunFollow = null;
   function setupSunFollow() {
     const h = mapData.halfSize + 6;
-    const S = 30;
+    const S = 34;   // el sol está más bajo: la sombra se estira, así que el recuadro es algo mayor
     if (h <= S + 2 || settings.quality === 'low') { sunFollow = null; return; }
-    const dir = lights.sun.position.clone().normalize();
+    // Dirección del sol respecto a su objetivo (aunque ya estuviera desplazado siguiendo al jugador)
+    const dir = lights.sun.position.clone().sub(lights.sun.target.position).normalize();
     const cam = lights.sun.shadow.camera;
     cam.left = -S; cam.right = S; cam.top = S; cam.bottom = -S; cam.updateProjectionMatrix();
     sunFollow = { dir, S };
@@ -474,6 +475,10 @@
     // Relleno teñido con el color del cielo del mapa (más frío de día, más tenue de noche/espacio)
     { const th = mapData.def.theme; lights.fill.color.setHex(th.hemiSky || 0xcfe6ff); lights.fill.intensity = th.stars ? 0.18 : 0.3;
       const sp = lights.sun.position; lights.fill.position.set(-sp.x, Math.abs(sp.y) * 0.6 + 10, -sp.z); }
+    // ÑEMANAVE: la decoración de la nave de Huevo Impostor (texturas, gallinas, nidos…)
+    if (mapData.def && mapData.def.indoor && window.NaveDecor) {
+      try { mapRoot.traverse(o => { if (o.isLineSegments) o.visible = false; }); window.NaveDecor.build(mapRoot, mapData); } catch (e) { console.warn('Decoración de la ÑEMANAVE:', e); }
+    }
     if (settings.quality === 'low') mapRoot.traverse(o => { if (o.userData && o.userData.detail) o.visible = false; });
     world = Phys.createWorld(mapData);
     currentMapId = id;
@@ -481,6 +486,7 @@
     lights.sun.target.position.set(0, 0, 0);
     if (inGame) setupSunFollow(); else sunFollow = null;
     buildObjectiveVisuals();
+    applyDrawDistance();
     // Compilar ya todos los shaders del mapa: sin tirones la primera vez que se ve algo
     try { renderer.compile(scene, camera); } catch (e) { /* no crítico */ }
     sunMoved = true;
@@ -621,6 +627,7 @@
     const w = WEAPONS[currentWeapon];
     if (isReloading || ammo[currentWeapon] >= w.maxAmmo || !me.alive) return;
     isReloading = true;
+    socket.emit('player:reload');          // el servidor lleva la cuenta de las balas
     reloadEndsAt = performance.now() + w.reloadTime;
     playSound('reload');
     reloadHint.textContent = 'RECARGANDO…';
@@ -858,6 +865,11 @@
         rp.body.position.y = moving ? Math.abs(Math.sin(rp.walk)) * 0.12 : Math.sin(rp.walk) * 0.025;
         rp.body.rotation.z = moving ? Math.sin(rp.walk) * 0.08 : 0;
       }
+      // Animación de lanzar granada: inclinarse hacia delante y volver
+      if (rp.throwT > 0) {
+        rp.throwT = Math.max(0, rp.throwT - dt);
+        rp.body.rotation.x = -Math.sin((1 - rp.throwT / 0.4) * Math.PI) * 0.35;
+      } else if (rp.body.rotation.x) rp.body.rotation.x = 0;
       rp.shield.visible = !!rp.prot;
       if (rp.prot) rp.shield.material.opacity = 0.12 + Math.sin(t * 8) * 0.06;
       if (rp.bubble && t > rp.bubble.until) { rp.root.remove(rp.bubble.sprite); disposeTree(rp.bubble.sprite); rp.bubble = null; }
@@ -990,7 +1002,7 @@
     scene.add(muzzleLight, boomLight);
   }
   function muzzleFlashLight(pos) {
-    if (settings.quality !== 'high' || !muzzleLight) return;
+    if ((settings.quality !== 'high' && settings.quality !== 'ultra') || !muzzleLight) return;
     muzzleLight.position.copy(pos);
     muzzleLight.intensity = 3.2;
   }
@@ -1009,13 +1021,25 @@
   // Al morir: trozos curvos de cáscara que rebotan, gotas de yema y un charco de huevo frito
   function shellBurst(pos, color) {
     const base = pos.clone().add(new THREE.Vector3(0, 0.8, 0));
-    const shellMat = new THREE.MeshLambertMaterial({ color: color || 0xfff6e0, side: THREE.DoubleSide, transparent: true });
-    const n = settings.quality === 'low' ? 6 : 12;
+    // 1) "¡Crac!": el huevo se aplasta y se hincha un instante antes de romperse
+    const ghost = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), new THREE.MeshLambertMaterial({ color: color || 0xfff6e0, transparent: true }));
+    ghost.position.copy(base);
+    addEffect(ghost, 0.13, (e, dt, k) => { ghost.scale.set(0.82 + k * 0.45, 1.05 - k * 0.35, 0.82 + k * 0.45); ghost.material.opacity = 1 - k * 0.3; });
+    // Onda blanca del estallido
+    const pop = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    pop.position.copy(base); pop.lookAt(camera.position);
+    addEffect(pop, 0.35, (e, dt, k) => { pop.scale.setScalar(1 + k * 5); pop.material.opacity = 0.9 * (1 - k); });
+    // 2) Cáscaras: de su color por fuera y blancas por dentro
+    const shellMat = new THREE.MeshLambertMaterial({ color: color || 0xfff6e0, side: THREE.FrontSide, transparent: true });
+    const innerMat = new THREE.MeshLambertMaterial({ color: 0xfffaf0, side: THREE.BackSide, transparent: true });
+    const n = settings.quality === 'low' ? 7 : 14;
     for (let i = 0; i < n; i++) {
       const a0 = Math.random() * Math.PI * 2, t0 = Math.random() * Math.PI * 0.7;
-      const shard = new THREE.Mesh(new THREE.SphereGeometry(0.42, 5, 4, a0, 0.6 + Math.random() * 0.5, t0, 0.5 + Math.random() * 0.4), shellMat);
+      const geo = new THREE.SphereGeometry(0.44, 6, 5, a0, 0.6 + Math.random() * 0.6, t0, 0.5 + Math.random() * 0.45);
+      const shard = new THREE.Mesh(geo, shellMat);
+      shard.add(new THREE.Mesh(geo, innerMat));
       shard.position.copy(base);
-      shard.castShadow = settings.quality === 'high';
+      shard.castShadow = settings.quality === 'high' || settings.quality === 'ultra';
       const v = new THREE.Vector3((Math.random() - 0.5) * 6, 2.5 + Math.random() * 4, (Math.random() - 0.5) * 6);
       const spin = new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10);
       const floorY = pos.y + 0.03;
@@ -1025,11 +1049,25 @@
           shard.rotation.x += spin.x * dt; shard.rotation.y += spin.y * dt; shard.rotation.z += spin.z * dt;
           if (shard.position.y < floorY) { shard.position.y = floorY; v.y = -v.y * 0.3; v.x *= 0.5; v.z *= 0.5; spin.multiplyScalar(0.4); if (Math.abs(v.y) < 0.6) v.set(0, 0, 0); }
         }
-        if (k > 0.75) shellMat.opacity = (1 - k) / 0.25;
+        if (k > 0.75) shellMat.opacity = innerMat.opacity = (1 - k) / 0.25;
       });
     }
-    puff(base, 0xf9c80e, 10, 0.12, 3.5);
-    puff(base, 0xffffff, 6, 0.1, 2.5);
+    puff(base, 0xf9c80e, 12, 0.12, 4);
+    puff(base, 0xffffff, 8, 0.1, 3);
+    // 3) La yema cae, rebota un poco y se aplasta contra el suelo
+    const yolkBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), new THREE.MeshPhongMaterial({ color: 0xf5b21b, shininess: 80, transparent: true }));
+    yolkBall.position.copy(base);
+    const yv = new THREE.Vector3((Math.random() - 0.5) * 0.8, 2.2, (Math.random() - 0.5) * 0.8);
+    let landed = false;
+    addEffect(yolkBall, 0.9, (e, dt, k) => {
+      if (!landed) {
+        yv.y -= 18 * dt; yolkBall.position.addScaledVector(yv, dt);
+        if (yolkBall.position.y <= pos.y + 0.12) { landed = true; yolkBall.position.y = pos.y + 0.08; }
+      } else {
+        yolkBall.scale.set(yolkBall.scale.x + dt * 6, Math.max(0.15, yolkBall.scale.y - dt * 8), yolkBall.scale.z + dt * 6);
+        yolkBall.material.opacity = Math.max(0, yolkBall.material.opacity - dt * 3);
+      }
+    });
     const white = new THREE.Mesh(new THREE.CircleGeometry(0.85, 18), new THREE.MeshBasicMaterial({ color: 0xfdfaf0, transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     const yolk = new THREE.Mesh(new THREE.CircleGeometry(0.36, 16), new THREE.MeshBasicMaterial({ color: 0xf5b21b, transparent: true, opacity: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }));
     const splat = new THREE.Group(); splat.add(white, yolk);
@@ -1050,9 +1088,32 @@
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 32), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(x, y + 0.05, z);
     addEffect(ring, 0.5, (e, dt, k) => { ring.scale.setScalar(1 + k * 7); ring.material.opacity = 0.8 * (1 - k); });
-    if (boomLight && settings.quality === 'high') { boomLight.position.set(x, y + 0.6, z); boomLight.intensity = 9; }
+    if (boomLight && (settings.quality === 'high' || settings.quality === 'ultra')) { boomLight.position.set(x, y + 0.6, z); boomLight.intensity = 9; }
     puff(new THREE.Vector3(x, y, z), 0xffc060, 8, 0.18, 7);
     puff(new THREE.Vector3(x, y, z), 0x555555, 12, 0.3, 6);
+    // Trozos que salen volando
+    const deb = new THREE.MeshLambertMaterial({ color: 0x3a3a3a, transparent: true });
+    for (let i = 0; i < (settings.quality === 'low' ? 4 : 9); i++) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), deb);
+      c.position.set(x, y + 0.2, z);
+      const v = new THREE.Vector3((Math.random() - 0.5) * 12, 4 + Math.random() * 6, (Math.random() - 0.5) * 12);
+      addEffect(c, 1.2, (e, dt, k) => {
+        v.y -= 20 * dt; c.position.addScaledVector(v, dt);
+        if (c.position.y < y) { c.position.y = y; v.multiplyScalar(0.3); v.y = Math.abs(v.y); }
+        c.rotation.x += dt * 9; c.rotation.y += dt * 7; deb.opacity = k > 0.7 ? (1 - k) / 0.3 : 1;
+      });
+    }
+    // Columna de humo que sube y se deshace
+    if (settings.quality !== 'low') for (let i = 0; i < 4; i++) {
+      const sm = new THREE.Mesh(new THREE.SphereGeometry(0.6, 10, 8), new THREE.MeshLambertMaterial({ color: 0x6b6b6b, transparent: true, opacity: 0.55, depthWrite: false }));
+      sm.position.set(x + (Math.random() - 0.5) * 0.8, y + 0.4 + i * 0.4, z + (Math.random() - 0.5) * 0.8);
+      const life = 1.6 + i * 0.25;
+      addEffect(sm, life, (e, dt, k) => { sm.position.y += dt * (1.2 + i * 0.3); sm.scale.setScalar(1 + k * 2.2); sm.material.opacity = 0.55 * (1 - k); });
+    }
+    // Marca quemada en el suelo
+    const scorch = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    scorch.rotation.x = -Math.PI / 2; scorch.position.set(x, (world ? Phys.supportBelow(world, x, z, y + 0.5) : y) + 0.03, z);
+    addEffect(scorch, 9, (e, dt, k) => { scorch.material.opacity = 0.45 * (k > 0.7 ? (1 - k) / 0.3 : 1); });
     const d = camera.position.distanceTo(s.position);
     if (d < 14) camShake = Math.max(camShake, (1 - d / 14) * 0.5);
   }
@@ -1151,7 +1212,8 @@
         const rp = Object.values(remotePlayers).find(p => p.hit === h.object);
         if (rp) {
           const head = (h.point.y - rp.root.position.y) > HEAD_Y;
-          targets.push({ id: rp.id, headshot: head });
+          // El servidor comprueba el punto de impacto contra la posición real del objetivo
+          targets.push({ id: rp.id, headshot: head, p: [+h.point.x.toFixed(2), +h.point.y.toFixed(2), +h.point.z.toFixed(2)] });
           anyHit = true; anyHead = anyHead || head;
           puff(h.point, 0xf9c80e, 4, 0.07, 2);
         }
@@ -1198,8 +1260,47 @@
     $('grenade-charge').classList.add('hidden');
     throwGrenade(power);
   }
+  // Granada en la mano (primera persona): se ve al cargar y sale lanzada al soltar
+  let fpGrenade = null, throwAnimT = 0;
+  function buildFpGrenade() {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), new THREE.MeshLambertMaterial({ color: 0x4f7a3a }));
+    body.scale.y = 1.25; g.add(body);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.03, 8), new THREE.MeshLambertMaterial({ color: 0x9aa3ab }));
+    cap.position.y = 0.075; g.add(cap);
+    const pin = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.004, 5, 10), new THREE.MeshLambertMaterial({ color: 0xffc94d }));
+    pin.position.set(-0.02, 0.09, 0); pin.rotation.y = Math.PI / 2; g.add(pin);
+    const glove = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshLambertMaterial({ color: 0xfff3dc }));
+    glove.scale.set(1.1, 0.8, 1.2); glove.position.set(0.02, -0.04, 0.03); g.add(glove);
+    g.visible = false;
+    g.traverse(o => { o.renderOrder = 10; });
+    camera.add(g);
+    return g;
+  }
+  function animateFpGrenade(dt) {
+    if (!fpGrenade) fpGrenade = buildFpGrenade();
+    if (throwAnimT > 0) throwAnimT = Math.max(0, throwAnimT - dt);
+    if (grenadeCharge && me.alive) {
+      const p = grenadePower();
+      fpGrenade.visible = true;
+      fpGrenade.position.set(-0.24 + p * 0.03, -0.27 + p * 0.07, -0.42 + p * 0.1);
+      fpGrenade.rotation.set(-p * 0.5, 0, p * 0.5);
+      return -0.1 * p;   // el arma baja un poco mientras cargas
+    }
+    if (throwAnimT > 0) {
+      const k = 1 - throwAnimT / 0.3;
+      fpGrenade.visible = k < 0.55;
+      fpGrenade.position.set(-0.2 + k * 0.12, -0.2 + Math.sin(k * Math.PI) * 0.1, -0.34 - k * 0.8);
+      fpGrenade.rotation.set(-0.5 - k * 3, 0, 0.5);
+      return -0.1 * (1 - k);
+    }
+    fpGrenade.visible = false;
+    return 0;
+  }
+
   function throwGrenade(power) {
     if (!canAct() || me.grenades <= 0) return;
+    throwAnimT = 0.3;
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     socket.emit('player:grenade-throw', { dirX: dir.x, dirY: dir.y, dirZ: dir.z, vx: st.vx, vz: st.vz, power: power || 1 });
     firedSinceSpawn = true;
@@ -1300,6 +1401,7 @@
       const s = Math.sin(Math.min(1, k) * Math.PI);
       ty -= s * 0.12; rx -= s * 0.6; rz = s * 0.4;
     }
+    ty += animateFpGrenade(dt);
     let ry = 0;
     if (meleeAnim > 0) {
       meleeAnim = Math.max(0, meleeAnim - dt * 3.2);
@@ -1337,7 +1439,7 @@
   // ===========================================================================
   // OBJETIVOS (King of the Coop / Capture the Spatula)
   // ===========================================================================
-  let coopVis = null, spatulaVis = null, baseVis = [], packVis = [];
+  let coopVis = null, spatulaVis = null, baseVis = [], packVis = [], gpackVis = [];
   function buildSpatulaModel() {
     const g = new THREE.Group();
     const gold = new THREE.MeshLambertMaterial({ color: 0xf5c518, emissive: 0x4d3a00 });
@@ -1350,7 +1452,7 @@
   }
   function buildObjectiveVisuals() {
     while (objRoot.children.length) { const c = objRoot.children[0]; objRoot.remove(c); disposeTree(c); }
-    coopVis = null; spatulaVis = null; baseVis = []; packVis = [];
+    coopVis = null; spatulaVis = null; baseVis = []; packVis = []; gpackVis = [];
     if (!mapData) return;
     // Botiquines (+vida)
     (mapData.healthPacks || []).forEach(p => {
@@ -1365,6 +1467,25 @@
       glow.rotation.x = -Math.PI / 2; glow.position.y = -0.5; g.add(glow);
       objRoot.add(g);
       packVis.push(g);
+    });
+    // Granadas en el suelo (se recogen pasando por encima; máximo 3)
+    (mapData.grenadePacks || []).forEach(p => {
+      const g = new THREE.Group();
+      g.position.set(p.x, p.y + 0.45, p.z);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshLambertMaterial({ color: 0x4f7a3a }));
+      body.scale.set(1, 1.25, 1); body.castShadow = true; g.add(body);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.205, 0.06, 14), new THREE.MeshLambertMaterial({ color: 0x2f4a22 }));
+      g.add(band);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.1, 10), new THREE.MeshLambertMaterial({ color: 0x9aa3ab }));
+      cap.position.y = 0.28; g.add(cap);
+      const lever = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.03), new THREE.MeshLambertMaterial({ color: 0x9aa3ab }));
+      lever.position.set(0.1, 0.2, 0); lever.rotation.z = -0.35; g.add(lever);
+      const pin = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 6, 12), new THREE.MeshLambertMaterial({ color: 0xffc94d }));
+      pin.position.set(-0.07, 0.32, 0); pin.rotation.y = Math.PI / 2; g.add(pin);
+      const glow = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.5, 24), new THREE.MeshBasicMaterial({ color: 0x9be36b, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      glow.rotation.x = -Math.PI / 2; glow.position.y = -0.4; g.add(glow);
+      objRoot.add(g);
+      gpackVis.push(g);
     });
     if (cfg.mode === 'kotc') {
       const g = new THREE.Group();
@@ -1398,6 +1519,12 @@
   }
 
   function updateObjectives(t) {
+    const gp = lastState && lastState.gpacks;
+    gpackVis.forEach((g, i) => {
+      g.visible = !gp || gp[i] !== '0';
+      g.rotation.y = t * 1.8 + i;
+      g.position.y = mapData.grenadePacks[i].y + 0.45 + Math.sin(t * 2.6 + i) * 0.08;
+    });
     const packs = lastState && lastState.packs;
     packVis.forEach((g, i) => {
       g.visible = !packs || packs[i] !== '0';
@@ -1485,10 +1612,18 @@
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), lam(0x2d3436));
     m.scale.y = 1.25; m.castShadow = true;
     const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.03, 6, 14), lam(0xe74c3c)); band.rotation.x = Math.PI / 2; m.add(band);
+    // Luz de aviso que parpadea cada vez más rápido
+    const blink = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3b2f }));
+    blink.position.y = 0.2; m.add(blink);
     m.position.set(d.x, d.y, d.z);
     scene.add(m);
-    grenades[d.id] = { mesh: m, sim: { x: d.x, y: d.y, z: d.z, vx: d.vx || 0, vy: d.vy || 0, vz: d.vz || 0 }, server: null };
+    grenades[d.id] = { mesh: m, blink, born: performance.now(), trailAt: 0, sim: { x: d.x, y: d.y, z: d.z, vx: d.vx || 0, vy: d.vy || 0, vz: d.vz || 0 }, server: null };
+    // Quien la lanza se inclina hacia delante (animación de lanzamiento)
+    const rp = remotePlayers[d.ownerId];
+    if (rp) rp.throwT = 0.4;
   }
+  const TRAIL_MAT = new THREE.MeshBasicMaterial({ color: 0xd8d8d8, transparent: true, opacity: 0.5, depthWrite: false });
+  const TRAIL_GEO = new THREE.SphereGeometry(0.07, 6, 5);
   function removeGrenade(id) {
     const g = grenades[id]; if (!g) return;
     scene.remove(g.mesh); disposeTree(g.mesh); delete grenades[id];
@@ -1502,6 +1637,17 @@
       }
       g.mesh.position.set(g.sim.x, g.sim.y, g.sim.z);
       g.mesh.rotation.x += dt * 8; g.mesh.rotation.z += dt * 5;
+      const age = (performance.now() - g.born) / RULES.GRENADE_FUSE_MS;
+      g.blink.visible = Math.sin(age * age * 70) > 0;
+      // Estela de humo mientras vuela
+      const spd = Math.hypot(g.sim.vx, g.sim.vy, g.sim.vz);
+      if (spd > 2 && settings.quality !== 'low' && performance.now() - g.trailAt > 45) {
+        g.trailAt = performance.now();
+        const tm = new THREE.Mesh(TRAIL_GEO, TRAIL_MAT.clone());
+        tm.position.copy(g.mesh.position);
+        tm.userData.shared = true;   // geometría compartida: sólo se libera el material
+        addEffect(tm, 0.5, (e, dt2, k) => { tm.scale.setScalar(1 + k * 2.5); tm.material.opacity = 0.5 * (1 - k); });
+      }
     }
   }
 
@@ -1795,6 +1941,9 @@
     sel('create-room-limit', cfg.scoreLimit);
     sel('create-room-time', cfg.timeLimit);
     sel('create-room-max-players', cfg.maxPlayers || 8);
+    $('create-room-bots').value = String(cfg.bots || 0); createState.botsTouched = true;
+    createState.botDifficulty = cfg.botDifficulty || 'normal';
+    refreshCreate();
     $('create-room-max-players').dataset.touched = '1';
     $('create-room-modal').classList.add('admin-mode');
     $('create-room-modal').classList.remove('hidden');
@@ -1959,25 +2108,35 @@
     document.body.classList.toggle('hide-fps', !settings.showFps);
     if (!isAiming) { currentFov = settings.fov; camera.fov = settings.fov; camera.updateProjectionMatrix(); }
     const q = settings.quality;
-    // Resolución interna: en media/baja nunca por encima de la nativa (las gráficas integradas van justas de píxeles)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, q === 'high' ? 1.5 : 1));
+    // Resolución interna: ultra hasta 2× (pantallas retina), alta 1,5×, media nativa y baja un 15 % por debajo
+    // de la nativa (las gráficas integradas van justas de píxeles: es lo que más FPS da)
+    const dpr = window.devicePixelRatio || 1;
+    renderer.setPixelRatio(q === 'ultra' ? Math.min(dpr, 2) : q === 'high' ? Math.min(dpr, 1.5) : q === 'mid' ? Math.min(dpr, 1) : Math.min(dpr, 1) * 0.85);
     renderer.shadowMap.enabled = q !== 'low';
-    renderer.shadowMap.type = q === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    renderer.shadowMap.type = q === 'high' || q === 'ultra' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     // Luces de efectos (fogonazo/explosión) sólo en calidad alta: cuestan en cada píxel
-    if (muzzleLight) { muzzleLight.visible = q === 'high'; boomLight.visible = q === 'high'; }
+    if (muzzleLight) { muzzleLight.visible = q === 'high' || q === 'ultra'; boomLight.visible = q === 'high' || q === 'ultra'; }
     // Hierba y partículas ambientales fuera en calidad baja
     if (mapRoot) mapRoot.traverse(o => { if (o.userData && o.userData.detail) o.visible = q !== 'low'; });
     // Anisotropía según calidad (la textura del suelo se clona al construir el mapa → recargar)
     const maxAniso = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1;
-    window.MapRenderer.setAnisotropy(Math.min(maxAniso, q === 'high' ? 8 : q === 'mid' ? 4 : 1));
+    window.MapRenderer.setAnisotropy(Math.min(maxAniso, q === 'ultra' ? 16 : q === 'high' ? 8 : q === 'mid' ? 4 : 1));
     renderer.toneMapping = q === 'low' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
-    const size = q === 'high' ? 2048 : 1024;
+    const size = q === 'ultra' ? 4096 : q === 'high' ? 2048 : 1024;
     if (lights.sun.shadow.mapSize.x !== size) {
       lights.sun.shadow.mapSize.set(size, size);
       if (lights.sun.shadow.map) { lights.sun.shadow.map.dispose(); lights.sun.shadow.map = null; }
     }
     scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); });
+    applyDrawDistance();
+  }
+  // Distancia de visión según la calidad (la niebla del mapa se aleja o se acerca):
+  // en baja se ve algo menos lejos (menos píxeles con detalle), en ultra bastante más
+  function applyDrawDistance() {
+    if (!scene || !scene.fog || !mapData || !mapData.def) return;
+    const f = mapData.def.theme.fog, k = { ultra: 1.4, high: 1, mid: 0.92, low: 0.78 }[settings.quality] || 1;
+    scene.fog.near = f[0] * k; scene.fog.far = f[1] * k;
   }
   function openSettings() {
     draft = { s: Object.assign({}, settings), b: Object.assign({}, binds) };
@@ -2073,10 +2232,7 @@
 
   function resetSunFull() {
     if (!mapData || !lights) return;
-    const h = mapData.halfSize + 6, cam = lights.sun.shadow.camera;
-    cam.left = -h; cam.right = h; cam.top = h; cam.bottom = -h; cam.updateProjectionMatrix();
-    lights.sun.target.position.set(0, 0, 0);
-    lights.sun.position.set(h * 0.7, 70, h * 0.45);
+    window.MapRenderer.fitSun(lights, mapData);
   }
   function exitToLobby() {
     resetSunFull();
@@ -2274,11 +2430,27 @@
     buildObjectiveVisuals();
   }
 
+  // Modo sin conexión (GitHub Pages): las salas y los bots corren en el navegador (public/js/offline.js)
+  const OFFLINE = !!(window.EGG_OFFLINE && window.EggOffline);
+  function setupOfflineUI() {
+    document.body.classList.add('egg-offline');
+    document.querySelectorAll('.logo-tag, .brand-text small').forEach(e => { e.textContent = 'VS BOTS'; });
+    const help = document.querySelector('.auth-form[data-form="ip"] .auth-help');
+    if (help) help.innerHTML = '<b>Modo sin conexión:</b> juegas contra bots en este navegador. Elige tu nombre; tu huevo y tus estadísticas se guardan en este equipo.';
+    ipNeedsName = true;
+    $('ip-name').classList.remove('hidden');
+    $('btn-ip').textContent = 'JUGAR CONTRA BOTS';
+    const head = document.querySelector('#panel-rooms .panel-head > span');
+    if (head) head.textContent = 'SALAS CON BOTS';
+  }
+
   function initNetworking() {
-    socket = io({ transports: ['websocket', 'polling'] });
+    if (OFFLINE) setupOfflineUI();
+    socket = OFFLINE ? window.EggOffline.connect() : io({ transports: ['websocket', 'polling'] });
     socket.on('connect', () => {
       $('conn-dot').classList.add('online'); $('auth-conn').classList.add('online');
-      setText($('conn-text'), 'Conectado al servidor'); setText($('auth-conn-text'), 'Conectado al servidor');
+      const ct = OFFLINE ? 'Sin conexión · partidas contra bots' : 'Conectado al servidor';
+      setText($('conn-text'), ct); setText($('auth-conn-text'), ct);
       socket.emit('rooms:get');
       const token = store.get('token', null);
       if (token) socket.emit('auth:token', { token }); else showAuth('login');
@@ -2341,7 +2513,7 @@
 
     socket.on('you:joined', d => {
       me.id = d.id; me.team = d.team; me.alive = true; me.hp = 100;
-      me.kills = 0; me.deaths = 0; me.score = 0; me.grenades = RULES.GRENADE_MAX;
+      me.kills = 0; me.deaths = 0; me.score = 0; me.grenades = RULES.GRENADE_START || 0;
       roundState = d.state || 'playing';
       adminId = d.adminId || null;
       clearRemotePlayers();
@@ -2477,7 +2649,8 @@
         if (!isPointerLocked) lockPointer();
         setTimeout(() => { if (inGame && me.alive && !isPointerLocked && !rsMode) showRespawnScreen('pause'); }, 600);
         Object.keys(ammo).forEach(k => { ammo[k] = WEAPONS[k].maxAmmo; });
-      spawnedAt = performance.now(); firedSinceSpawn = false;
+        cancelReload(); reloadHint.classList.add('hidden');   // morir recargando no bloquea el arma al reaparecer
+        $('grenade-charge').classList.add('hidden'); throwAnimT = 0;
         spawnedAt = performance.now(); firedSinceSpawn = false; burstLeft = 0; grenadeCharge = null;
         if (pendingPrimary) { primaryWeapon = pendingPrimary; pendingPrimary = null; }
         currentWeapon = primaryWeapon;
@@ -2499,6 +2672,15 @@
         playSound('pickup');
         showHealPopup(d.amount);
       } else if (pk) playSoundAt('pickup', pk.x, pk.y, pk.z, 0.5);
+    });
+    socket.on('pickup:grenade', d => {
+      const gp = mapData && mapData.grenadePacks[d.id];
+      if (lastState && lastState.gpacks) lastState.gpacks = lastState.gpacks.substring(0, d.id) + '0' + lastState.gpacks.substring(d.id + 1);
+      if (d.playerId === me.id) {
+        me.grenades = d.g; updateGrenadeHUD();
+        playSound('pickup');
+        showToast('💣 +1 granada (' + d.g + '/' + RULES.GRENADE_MAX + ')');
+      } else if (gp) playSoundAt('pickup', gp.x, gp.y, gp.z, 0.5);
     });
     socket.on('you:correct', d => {
       // El servidor rechazó nuestra posición (atravesar pared / teletransporte): volver a la última válida
@@ -2628,6 +2810,7 @@
       if (mine) { st = Phys.newState(mine.x, mine.y, mine.z); yaw = mine.rotY || 0; pitch = 0; }
       me.alive = true; me.hp = 100; me.kills = me.deaths = me.score = 0; deathCam = null;
       Object.keys(ammo).forEach(k => { ammo[k] = WEAPONS[k].maxAmmo; });
+      cancelReload(); reloadHint.classList.add('hidden'); grenadeCharge = null; $('grenade-charge').classList.add('hidden');
       spawnedAt = performance.now(); firedSinceSpawn = false;
       updateAmmoHUD(); updateHealthUI();
       for (const id in remotePlayers) { remotePlayers[id].snaps.length = 0; remotePlayers[id].alive = true; }
@@ -2680,6 +2863,7 @@
   // ---- Pantalla de acceso ----
   function showAuth(tab) {
     $('auth-screen').classList.remove('hidden');
+    if (OFFLINE) tab = 'ip';   // sin conexión: sólo el nombre
     switchAuthTab(tab || 'login');
   }
   function hideAuth() { $('auth-screen').classList.add('hidden'); $('auth-error').classList.add('hidden'); }
@@ -2731,9 +2915,12 @@
     store.set('custom', custom);
     eggs = account.eggs || 0;
     if (account.challenges) loadChallenges(account.challenges); else loadChallenges();
-    ipNeedsName = false;
-    $('ip-name').classList.add('hidden');
-    $('btn-ip').textContent = 'ENTRAR CON MI IP';
+    if (OFFLINE) setupOfflineUI();   // sin conexión el formulario siempre pide el nombre
+    else {
+      ipNeedsName = false;
+      $('ip-name').classList.add('hidden');
+      $('btn-ip').textContent = 'ENTRAR CON MI IP';
+    }
     hideAuth();
     updateAccountCard();
     loadPaintFromCustom();
@@ -3079,7 +3266,7 @@
   }
 
   // ---- Modal de crear partida ----
-  const createState = { map: 'castle', mode: 'ffa', sizeFilter: 'all' };
+  const createState = { map: 'castle', mode: 'ffa', sizeFilter: 'all', botDifficulty: 'normal', botsTouched: false };
   let createMode = 'create'; // 'create' (nueva sala) o 'admin' (cambiar la partida en curso)
   function buildCreateModal() {
     const grid = $('map-grid');
@@ -3088,7 +3275,10 @@
       const card = document.createElement('button');
       card.className = 'map-card';
       card.dataset.map = def.id; card.dataset.size = def.size;
-      card.innerHTML = `<canvas width="336" height="208"></canvas><div class="map-card-name">${escapeHtml(def.name)}</div><div class="map-card-meta">${{ S: 'Arena', M: 'Mediano', L: 'Grande' }[def.size]} · hasta ${def.players}</div>`;
+      card.innerHTML = `<div class="map-card-img"><canvas width="336" height="208"></canvas>`
+        + `<span class="map-badge size-${def.size}">${{ S: 'Arena', M: 'Mediano', L: 'Grande' }[def.size]}</span>`
+        + `<span class="map-badge players">👥 ${def.players}</span><span class="map-check">✓</span></div>`
+        + `<div class="map-card-name">${escapeHtml(def.name)}</div>`;
       card.title = def.desc;
       card.addEventListener('click', () => { createState.map = def.id; refreshCreate('map'); playSound('click'); });
       grid.appendChild(card);
@@ -3098,7 +3288,9 @@
     Object.values(MODES).forEach(m => {
       const b = document.createElement('button');
       b.className = 'mode-card'; b.dataset.mode = m.id;
-      b.innerHTML = `<span class="mode-short">${m.short}</span><span class="mode-name">${escapeHtml(m.name)}</span>`;
+      const ico = { ffa: '🥚', tdm: '⚔️', kotc: '👑', cts: '🍳' }[m.id] || '🎮';
+      b.innerHTML = `<span class="mode-ico">${ico}</span><span class="mode-txt"><span class="mode-short">${m.short}</span><span class="mode-name">${escapeHtml(m.name)}</span></span>`;
+      b.title = m.desc;
       b.addEventListener('click', () => { createState.mode = m.id; refreshCreate(true); playSound('click'); });
       mg.appendChild(b);
     });
@@ -3109,6 +3301,12 @@
     }));
     $('create-room-time').innerHTML = TIME_LIMITS.map(t => `<option value="${t}" ${t === 10 ? 'selected' : ''}>${t ? t + ' min' : 'Sin límite'}</option>`).join('');
     ['create-room-max-players', 'create-room-limit', 'create-room-time', 'create-room-private'].forEach(id => $(id).addEventListener('change', () => refreshCreate()));
+    // Bots: cuántos y dificultad
+    $('create-room-bots').addEventListener('input', () => { createState.botsTouched = true; refreshCreate(); });
+    $('create-room-botdiff').addEventListener('click', e => {
+      const b = e.target.closest('[data-diff]'); if (!b) return;
+      createState.botDifficulty = b.dataset.diff; refreshCreate(); playSound('click');
+    });
     refreshCreate(true);
   }
   function refreshCreate(modeChanged) {
@@ -3120,7 +3318,6 @@
       window.MapRenderer.preview(c.dataset.map, c.querySelector('canvas'), { mode: createState.mode, inset: false });
     });
     document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('active', c.dataset.mode === createState.mode));
-    setText($('mode-desc'), mode.desc);
     if (modeChanged === true) {
       $('create-room-limit').innerHTML = mode.limits.map(l => `<option value="${l}" ${l === mode.defLimit ? 'selected' : ''}>${l}</option>`).join('');
       setText($('create-room-limit-label'), mode.id === 'ffa' || mode.id === 'tdm' ? 'Bajas para ganar' : 'Capturas para ganar');
@@ -3133,7 +3330,21 @@
     const lim = $('create-room-limit').value, tl = $('create-room-time').value;
     const big = $('create-preview');
     if (big && big.dataset.map !== createState.map + createState.mode) { big.dataset.map = createState.map + createState.mode; window.MapRenderer.preview(createState.map, big, { mode: createState.mode }); }
-    $('create-summary').innerHTML = `<b>${escapeHtml(def.name)}</b> · ${escapeHtml(mode.name)} · ${mp.value} jugadores · meta ${lim} · ${tl === '0' ? 'sin tiempo' : tl + ' min'}${$('create-room-private').checked ? ' · 🔒 privada' : ''}<br><small>${escapeHtml(def.desc)}</small>`;
+    setText($('create-hero-name'), def.name);
+    setText($('create-hero-desc'), def.desc);
+    // Bots: como mucho las plazas menos una (la tuya); sin conexión se proponen unos cuantos de entrada
+    const maxP = parseInt(mp.value, 10) || 8, br = $('create-room-bots');
+    br.max = String(Math.max(0, maxP - 1));
+    if (!createState.botsTouched && window.EGG_OFFLINE) br.value = String(Math.min(maxP - 1, 7));
+    if (+br.value > maxP - 1) br.value = String(maxP - 1);
+    const nb = +br.value;
+    setText($('create-room-bots-val'), nb ? `${nb} bot${nb > 1 ? 's' : ''}` : 'Sin bots');
+    $('create-room-botdiff').querySelectorAll('button').forEach(b => { b.classList.toggle('active', b.dataset.diff === createState.botDifficulty); b.disabled = !nb; });
+    const chip = t => `<span class="sum-chip">${t}</span>`;
+    $('create-summary').innerHTML = chip(`🗺️ ${escapeHtml(def.name)}`) + chip(`🎮 ${escapeHtml(mode.short)}`) + chip(`👥 ${mp.value}`)
+      + chip(`🎯 ${lim}`) + chip(`⏱️ ${tl === '0' ? '∞' : tl + ' min'}`)
+      + (nb ? chip(`🤖 ${nb} · ${{ easy: 'fácil', normal: 'normal', hard: 'difícil' }[createState.botDifficulty]}`) : '')
+      + ($('create-room-private').checked ? chip('🔒 privada') : '');
   }
   function openCreate(isPrivate) {
     createMode = 'create';
@@ -3229,6 +3440,7 @@
           maxPlayers: parseInt($('create-room-max-players').value, 10),
           scoreLimit: parseInt($('create-room-limit').value, 10),
           timeLimit: parseInt($('create-room-time').value, 10),
+          bots: parseInt($('create-room-bots').value, 10) || 0, botDifficulty: createState.botDifficulty,
         } });
         $('create-room-modal').classList.add('hidden');
         return;
@@ -3242,6 +3454,7 @@
         scoreLimit: parseInt($('create-room-limit').value, 10),
         timeLimit: parseInt($('create-room-time').value, 10),
         isPrivate: $('create-room-private').checked,
+        bots: parseInt($('create-room-bots').value, 10) || 0, botDifficulty: createState.botDifficulty,
       });
     });
 
@@ -3305,8 +3518,15 @@
     setText($('home-weapon-name'), w.name);
     setText($('rs-weapon-name'), w.name + (pendingPrimary ? ' · al reaparecer' : ''));
     setText($('home-weapon-desc'), `${w.type} · ${w.desc}`);
-    const statHtml = w.stat ? [['Daño', 'dmg'], ['Cadencia', 'rate'], ['Alcance', 'range'], ['Movilidad', 'mob']].map(([l, k]) =>
-      `<div class="wstat"><span>${l}</span><i>${'<b></b>'.repeat(w.stat[k])}${'<u></u>'.repeat(5 - w.stat[k])}</i></div>`).join('') : '';
+    // Barras y cifras calculadas con los datos REALES del arma (los mismos que usa el servidor)
+    const info = window.GameData.weaponInfo(sel);
+    const bars = [['Daño', 'dmg'], ['Cadencia', 'rate'], ['Alcance', 'range'], ['Movilidad', 'mob']].map(([l, k]) =>
+      `<div class="wstat"><span>${l}</span><i>${'<b></b>'.repeat(info.bars[k])}${'<u></u>'.repeat(5 - info.bars[k])}</i></div>`).join('');
+    const dmgTxt = w.projectile
+      ? `💥 ${w.projectile.direct} impacto directo · hasta ${w.projectile.maxDmg} de explosión`
+      : `🎯 ${info.body}${w.pellets > 1 ? ' (' + w.pellets + ' perdigones)' : ''} cuerpo · ${info.head} cabeza`;
+    const killTxt = w.projectile ? 'Elimina de 1 impacto directo' : `Elimina en ${info.killBody} al cuerpo · ${info.killHead} a la cabeza`;
+    const statHtml = bars + `<div class="wnums"><span>${dmgTxt}</span><span>${killTxt}</span><span>🔄 ${info.mag} balas · ${(info.reload / 1000).toFixed(1)} s recarga · ${info.sps} disparos/s</span></div>`;
     ['home-weapon-stats', 'rs-weapon-stats'].forEach(id => { const el = $(id); if (el) el.innerHTML = statHtml; });
   }
 
@@ -3385,7 +3605,7 @@
     if (fps < 42) slowSamples++; else slowSamples = Math.max(0, slowSamples - 1);
     if (slowSamples < 6) return; // ~3 s seguidos por debajo de 42 FPS
     slowSamples = 0;
-    const next = settings.quality === 'high' ? 'mid' : settings.quality === 'mid' ? 'low' : null;
+    const next = settings.quality === 'ultra' ? 'high' : settings.quality === 'high' ? 'mid' : settings.quality === 'mid' ? 'low' : null;
     if (!next) {
       // Ya en baja: bajar la resolución interna un poco (hasta 70 %) para recuperar fluidez
       const pr = renderer.getPixelRatio();
@@ -3395,7 +3615,7 @@
     settings.quality = next;
     store.set('settings', settings);
     applySettings();
-    showToast(`⚙️ Calidad ${next === 'mid' ? 'media' : 'baja'} para que vaya más fluido`);
+    showToast(`⚙️ Calidad ${next === 'high' ? 'alta' : next === 'mid' ? 'media' : 'baja'} para que vaya más fluido`);
   }
   // El bucle nunca se detiene: si un fotograma falla, se registra y el juego sigue
   let loopErrors = 0;
@@ -3447,7 +3667,7 @@
     // Sombras: el mapa no se mueve, así que el mapa de sombras se recalcula sólo
     // cada pocos fotogramas (calidad media/baja) o cuando el sol se recoloca
     shadowTick++;
-    const every = settings.quality === 'high' ? 1 : 2;
+    const every = settings.quality === 'high' || settings.quality === 'ultra' ? 1 : 2;
     if (sunMoved || shadowTick % every === 0) { renderer.shadowMap.needsUpdate = true; sunMoved = false; }
     renderer.render(scene, camera);
     if (!inGame) renderPreview(t);

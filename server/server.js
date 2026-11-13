@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const { Server } = require('socket.io');
 const { GameRoom, clampNum } = require('./gameRoom');
+const { ImpostorRoom } = require('./impostorRoom');
 const MapDefs = require('../shared/mapdefs.js');
 const { MODES, TIME_LIMITS, WEAPONS } = require('../shared/gamedata.js');
 const Accounts = require('./accounts');
@@ -71,6 +72,9 @@ if (PROD) {
   // Desarrollo: sólo los archivos que necesita la página (nunca server/, data/, tests/…)
   app.use(express.static(path.join(__dirname, '..', 'public'), staticOpts));
   app.use('/shared', express.static(path.join(__dirname, '..', 'shared'), staticOpts));
+  // Para probar la versión de GitHub Pages (npm run build:pages) en http://localhost:3000/pages/
+  const PAGES = path.join(__dirname, '..', 'gh-pages');
+  if (fs.existsSync(PAGES)) app.use('/pages', express.static(PAGES, staticOpts));
 }
 // Cualquier otra ruta: 404 sin pistas
 app.use((req, res) => res.status(404).type('text').send('No encontrado'));
@@ -86,6 +90,13 @@ const accountRoom = new Map(); // clave de cuenta -> roomId
 
 // Estadísticas por cuenta: las suma el servidor (no se pueden falsear desde el cliente)
 const statHooks = {
+  // Anti-trampas: se avisa en la consola del servidor (una vez por minuto y jugador)
+  onCheat(p, why) {
+    const now = Date.now();
+    if (p._cheatLogAt && now - p._cheatLogAt < 60000) return;
+    p._cheatLogAt = now;
+    console.warn(`⚠️  Posibles trampas de "${p.nickname}"${p.account ? ' (' + p.account + ')' : ''}: ${why}`);
+  },
   onKill(killer, target, weapon, headshot) {
     if (killer && killer.account) {
       const d = { kills: 1, bestStreak: killer.streak || 0, kw: {} };
@@ -105,9 +116,12 @@ const statHooks = {
   },
 };
 
+// Jugadores de verdad de una sala (los bots no cuentan para "llena" ni para "vacía")
+const humans = r => (r.humanCount ? r.humanCount() : r.getPlayersCount());
+
 function roomSummary(r) {
   if (!r) return null;
-  return { roomId: r.id, roomName: r.name, mapName: r.mapData.name, modeName: r.mode.name, players: r.getPlayersCount(), max: r.maxPlayers };
+  return { roomId: r.id, roomName: r.name, mapName: r.mapData.name, modeName: r.mode.name, players: humans(r), max: r.maxPlayers };
 }
 function friendsPayload(k) {
   const u = Accounts.get(k);
@@ -140,7 +154,8 @@ function newCode() {
 function createRoom(opts) {
   const id = opts.id || ('room-' + Date.now().toString(36) + Math.floor(Math.random() * 1000));
   if (rooms[id]) return rooms[id];
-  const room = new GameRoom(io, Object.assign({}, opts, { id, code: newCode(), hooks: statHooks }));
+  const Cls = opts.mode === 'impostor' ? ImpostorRoom : GameRoom;   // el modo Huevo Impostor tiene su propia clase
+  const room = new Cls(io, Object.assign({}, opts, { id, code: newCode(), hooks: statHooks }));
   rooms[id] = room;
   return room;
 }
@@ -151,21 +166,28 @@ function createDefaultRooms() {
   createRoom({ id: 'room-moonbase-kotc', name: 'Moonbase • King of the Coop', map: 'moonbase', mode: 'kotc', maxPlayers: 12, isDefault: true });
   createRoom({ id: 'room-shipyard-cts', name: 'Shipyard • Capture the Spatula', map: 'shipyard', mode: 'cts', maxPlayers: 12, isDefault: true });
   createRoom({ id: 'room-feedlot-ffa', name: 'Feedlot • Todos contra Todos', map: 'feedlot', mode: 'ffa', maxPlayers: 12, isDefault: true });
+  createRoom({ id: 'room-nave-impostor', name: 'Nave Yema • Huevo Impostor', mode: 'impostor', maxPlayers: 10, isDefault: true });
 }
 
 function getRoomsList() {
   return Object.values(rooms)
-    .filter(r => !r.isPrivate)
+    .filter(r => !r.isPrivate && r.kind !== 'impostor')
     .map(r => r.listInfo())
     .sort((a, b) => (b.playersCount - a.playersCount) || (a.isDefault === b.isDefault ? 0 : a.isDefault ? 1 : -1));
 }
 
 let listDirty = false;
+function getImpostorRoomsList() {
+  return Object.values(rooms).filter(r => !r.isPrivate && r.kind === 'impostor').map(r => r.listInfo())
+    .sort((a, b) => (b.playersCount - a.playersCount) || (a.isDefault === b.isDefault ? 0 : a.isDefault ? 1 : -1));
+}
+
 function broadcastRoomsList() { listDirty = true; }
 setInterval(() => {
   if (!listDirty) return;
   listDirty = false;
   io.emit('rooms:list', getRoomsList());
+  io.emit('imp:rooms', getImpostorRoomsList());
 }, 500);
 
 // Limpieza de salas creadas por jugadores que se han quedado vacías
@@ -173,7 +195,7 @@ setInterval(() => {
   const now = Date.now();
   for (const id in rooms) {
     const r = rooms[id];
-    if (!r.isDefault && r.getPlayersCount() === 0 && r.emptySince && now - r.emptySince > EMPTY_ROOM_TTL_MS) {
+    if (!r.isDefault && humans(r) === 0 && r.emptySince && now - r.emptySince > EMPTY_ROOM_TTL_MS) {
       r.destroy();
       delete rooms[id];
       broadcastRoomsList();
@@ -312,7 +334,7 @@ io.on('connection', (socket) => {
     }
     const host = account ? Accounts.displayName(account) : (data.host || 'Huevo').toString();
     const v = GameRoom.validateSettings(data, { mode: 'ffa', map: 'castle', maxPlayers: 8, name: `Sala de ${host.substring(0, 12)}` });
-    const r = createRoom({ name: v.name, map: v.map, mode: v.mode, maxPlayers: v.maxPlayers, scoreLimit: v.scoreLimit, timeLimit: v.timeLimit, isPrivate: !!data.isPrivate, ownerAccount: account });
+    const r = createRoom({ name: v.name, map: v.map, mode: v.mode, maxPlayers: v.maxPlayers, scoreLimit: v.scoreLimit, timeLimit: v.timeLimit, isPrivate: !!data.isPrivate, ownerAccount: account, bots: v.bots, botDifficulty: v.botDifficulty });
     broadcastRoomsList();
     socket.emit('rooms:created', { roomId: r.id, code: r.code, name: r.name, isPrivate: r.isPrivate });
   });
@@ -330,8 +352,8 @@ io.on('connection', (socket) => {
     } else if (data.roomId === 'quick' || !data.roomId) {
       // Partida rápida: la sala pública con más gente que tenga hueco (del modo elegido)
       const wantMode = MODES[data.mode] ? data.mode : null;
-      target = Object.values(rooms).filter(r => !r.isPrivate && r.getPlayersCount() < r.maxPlayers && (!wantMode || r.config.mode === wantMode))
-        .sort((a, b) => b.getPlayersCount() - a.getPlayersCount())[0] || null;
+      target = Object.values(rooms).filter(r => !r.isPrivate && r.kind !== 'impostor' && humans(r) < r.maxPlayers && (!wantMode || r.config.mode === wantMode))
+        .sort((a, b) => humans(b) - humans(a))[0] || null;
       if (!target && wantMode && Object.keys(rooms).length < MAX_ROOMS) {
         const pool = MapDefs.LIST.filter(m => m.size !== 'S');
         const def = pool[Math.floor(Math.random() * pool.length)];
@@ -339,12 +361,17 @@ io.on('connection', (socket) => {
       }
     }
     if (!target) { socket.emit('rooms:error', { message: 'La sala ya no existe. Elige otra.' }); return; }
+    // Las salas de Huevo Impostor sólo se abren desde su propia página (y viceversa)
+    if ((target.kind === 'impostor') !== !!data.impostor) {
+      socket.emit('rooms:error', { message: target.kind === 'impostor' ? 'Esa sala es de 🔪 Huevo Impostor: entra desde el botón HUEVO IMPOSTOR del menú.' : 'Esa sala no es de Huevo Impostor.' });
+      return;
+    }
     if (!account) { socket.emit('rooms:error', { message: 'Inicia sesión para jugar' }); return; }
     if (target.isKicked(account)) { socket.emit('rooms:error', { message: 'Te han expulsado de esa sala. Espera un par de minutos.' }); return; }
     const user = Accounts.get(account);
     if (data.custom) Accounts.saveProfile(account, { custom: data.custom });
     data = Object.assign({}, data, { nickname: user.username, account, custom: user.custom });
-    if (target.id !== currentRoomId && target.getPlayersCount() >= target.maxPlayers) {
+    if (target.id !== currentRoomId && humans(target) >= target.maxPlayers) {
       socket.emit('rooms:error', { message: 'La sala está completa.' });
       return;
     }
@@ -362,6 +389,7 @@ io.on('connection', (socket) => {
 
   socket.on('player:move', (d) => { const r = room(); if (r) r.handlePlayerMove(socket.id, d); });
   socket.on('player:weapon-switch', (d) => { const r = room(); if (r && d) r.handleWeaponSwitch(socket, d.weapon); });
+  socket.on('player:reload', () => { const r = room(); if (r) r.handleReload(socket); });
   socket.on('player:shoot', (d) => { const r = room(); if (r) r.handlePlayerShoot(socket, d); });
   socket.on('player:grenade-throw', (d) => { const r = room(); if (r) r.handleGrenadeThrow(socket, d); });
   socket.on('player:rocket', (d) => { const r = room(); if (r) r.handleRocket(socket, d); });
@@ -370,6 +398,20 @@ io.on('connection', (socket) => {
   socket.on('player:chat', (d) => { const r = room(); if (r && d) r.handlePlayerChat(socket, d.message); });
   socket.on('player:respawn-request', () => { const r = room(); if (r) r.handleRespawnRequest(socket.id); });
   socket.on('player:emote', (d) => { const r = room(); if (r) r.handlePlayerEmote(socket, d && d.emoteType); });
+
+  // ---- Modo Huevo Impostor (sala propia: server/impostorRoom.js) ----
+  socket.on('imp:rooms', () => socket.emit('imp:rooms', getImpostorRoomsList()));
+  socket.on('imp:act', (d) => { const r = room(); if (r && r.kind === 'impostor') r.handleImpostor(socket, d); });
+  socket.on('imp:create', (data) => {
+    data = data || {};
+    if (!account) { socket.emit('rooms:error', { message: 'Inicia sesión para jugar' }); return; }
+    if (Object.keys(rooms).length >= MAX_ROOMS) { socket.emit('rooms:error', { message: 'Hay demasiadas salas abiertas. Únete a una existente.' }); return; }
+    const host = Accounts.displayName(account);
+    const v = ImpostorRoom.validateSettings(data, { name: `Nave de ${host.substring(0, 12)}` });
+    const r = createRoom(Object.assign({}, v, { mode: 'impostor', isPrivate: !!data.isPrivate, ownerAccount: account }));
+    broadcastRoomsList();
+    socket.emit('imp:created', { roomId: r.id, code: r.code, name: r.name, isPrivate: r.isPrivate });
+  });
 
   // Admin de la sala: pausar / reanudar / terminar / empezar / reiniciar / ajustes / expulsar
   let adminTimes = [];
@@ -429,6 +471,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  🌐 Local:  http://localhost:${PORT}`);
   ips.forEach(ip => console.log(`  📡 LAN:    http://${ip}:${PORT}`));
   console.log(`  🗺️  ${MapDefs.LIST.length} mapas · modos: ${Object.keys(MODES).join(', ')}`);
+  console.log(`  🔪 Huevo Impostor: http://localhost:${PORT}/impostor.html`);
   console.log('========================================================');
 });
 

@@ -6,6 +6,8 @@ const MapDefs = require('../shared/mapdefs.js');
 const Phys = require('../shared/physics.js');
 const { WEAPONS, PRIMARY_KEYS, MELEE, MODES, RULES, TIME_LIMITS, falloff, minInterval } = require('../shared/gamedata.js');
 const Cosmetics = require('../shared/cosmetics.js');
+const AC = require('./anticheat.js');
+const { BotManager } = require('./bots.js');
 
 const TICK_RATE = 30;
 const TICK_MS = 1000 / TICK_RATE;
@@ -51,6 +53,9 @@ class GameRoom {
     this.grenadeIdSeq = 0;
     this.emptySince = Date.now();
     this.startRound(false);
+    // Bots (v6.2): opts.bots = cuántos quiere la sala; ocupan las plazas que dejan libres los jugadores
+    this.botMgr = null;
+    if (opts.bots) this.setBots(opts.bots, opts.botDifficulty);
     this.tickInterval = setInterval(() => {
       try { this.tick(); } catch (e) { console.error(`[sala ${this.id}] error en tick`, e && e.stack || e); }
     }, TICK_MS);
@@ -59,7 +64,20 @@ class GameRoom {
   destroy() {
     if (this.tickInterval) clearInterval(this.tickInterval);
     this.tickInterval = null;
+    if (this.botMgr) { this.botMgr.destroy(); this.botMgr = null; }
   }
+
+  /** Número de bots y dificultad ('easy' | 'normal' | 'hard') */
+  setBots(n, difficulty) {
+    n = Math.max(0, Math.min(17, Math.round(Number(n) || 0)));
+    if (!this.botMgr && !n) return;
+    if (!this.botMgr) this.botMgr = new BotManager(this, { difficulty });
+    else if (difficulty) this.botMgr.setDifficulty(difficulty);
+    this.botMgr.setCount(n);
+  }
+  botCount() { return this.botMgr ? this.botMgr.count() : 0; }
+  /** Jugadores de verdad (sin contar bots) */
+  humanCount() { let n = 0; for (const id in this.players) if (!this.players[id].bot) n++; return n; }
 
   get mode() { return MODES[this.config.mode]; }
   getPlayersCount() { return Object.keys(this.players).length; }
@@ -80,7 +98,9 @@ class GameRoom {
     const timeLimit = TIME_LIMITS.includes(tl) ? tl : (TIME_LIMITS.includes(cur.timeLimit) ? cur.timeLimit : 10);
     const maxPlayers = Math.round(clampNum(data.maxPlayers, 2, 18, cur.maxPlayers || 8));
     const name = (typeof data.name === 'string' ? data.name.trim() : '').substring(0, 24) || cur.name || '';
-    return { mode, map, scoreLimit, timeLimit, maxPlayers, name };
+    const bots = Math.round(clampNum(data.bots, 0, maxPlayers - 1, cur.bots || 0));
+    const botDifficulty = ['easy', 'normal', 'hard'].includes(data.botDifficulty) ? data.botDifficulty : (cur.botDifficulty || 'normal');
+    return { mode, map, scoreLimit, timeLimit, maxPlayers, name, bots, botDifficulty };
   }
 
   /** El admin es el creador de la sala si está dentro; si no, quien lleve más tiempo. */
@@ -88,6 +108,7 @@ class GameRoom {
     let best = null;
     for (const id in this.players) {
       const p = this.players[id];
+      if (p.bot) continue;   // un bot nunca es el admin
       if (this.ownerAccount && p.account === this.ownerAccount) return id;
       if (!best || p.joinedAt < best.joinedAt) best = p;
     }
@@ -113,6 +134,8 @@ class GameRoom {
       maxPlayers: this.maxPlayers,
       isPrivate: this.isPrivate,
       gravity: this.mapData.gravity,
+      bots: this.botMgr ? this.botMgr.target || 0 : 0,
+      botDifficulty: this.botMgr ? this.botMgr.diffName : 'normal',
       teams: this.mode.teams,
     };
   }
@@ -126,7 +149,8 @@ class GameRoom {
       mapName: this.mapData.name,
       mode: this.config.mode,
       modeName: this.mode.name,
-      playersCount: this.getPlayersCount(),
+      playersCount: this.humanCount(),
+      bots: this.botCount(),
       maxPlayers: this.maxPlayers,
       scoreLimit: this.config.scoreLimit,
       timeLimit: this.config.timeLimit,
@@ -152,6 +176,7 @@ class GameRoom {
     this.spatula = { state: 'home', x: sp.x, y: sp.y, z: sp.z, carrier: null, droppedAt: 0 };
     for (const gid in this.grenades) delete this.grenades[gid];
     this.packs = (this.mapData.healthPacks || []).map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, active: true, respawnAt: 0 }));
+    this.gpacks = (this.mapData.grenadePacks || []).map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, active: true, respawnAt: 0 }));
     if (!announce) return;
     const positions = {};
     for (const id in this.players) {
@@ -245,6 +270,7 @@ class GameRoom {
     for (const gid in this.grenades) this.grenades[gid].detonateAt += d;
     if (this.rockets) for (const r of this.rockets) r.at += d;
     for (const pk of this.packs) if (!pk.active) pk.respawnAt += d;
+    for (const gp of this.gpacks) if (!gp.active) gp.respawnAt += d;
     if (this.spatula.droppedAt) this.spatula.droppedAt += d;
     if (this.coop) this.coop.activeAt += d;
     this.state = 'playing';
@@ -258,7 +284,7 @@ class GameRoom {
     const hadTeams = this.mode.teams;
     this.config = { mode: s.mode, map: s.map, scoreLimit: s.scoreLimit, timeLimit: s.timeLimit };
     if (s.name) this.name = s.name;
-    this.maxPlayers = Math.max(s.maxPlayers, this.getPlayersCount());
+    this.maxPlayers = Math.max(s.maxPlayers, this.humanCount());
     if (mapChanged) {
       this.mapData = MapDefs.build(this.config.map);
       this.world = Phys.createWorld(this.mapData);
@@ -270,6 +296,7 @@ class GameRoom {
     } else if (!this.mode.teams) {
       for (const id in this.players) this.players[id].team = null;
     }
+    if (s.bots !== undefined) this.setBots(s.bots, s.botDifficulty);
     this.io.to(this.id).emit('room:notice', { text: `⚙️ ${byName || 'El admin'} cambió la partida: ${this.mapData.name} · ${this.mode.name}` });
     this.startRound(true);
   }
@@ -302,7 +329,7 @@ class GameRoom {
         this.startRound(true);
         return { ok: '¡Nueva ronda!' };
       case 'settings': {
-        const cur = Object.assign({ name: this.name, maxPlayers: this.maxPlayers }, this.config);
+        const cur = Object.assign({ name: this.name, maxPlayers: this.maxPlayers, bots: this.botMgr ? this.botMgr.target || 0 : 0, botDifficulty: this.botMgr ? this.botMgr.diffName : 'normal' }, this.config);
         const s = GameRoom.validateSettings(d.settings, cur);
         this.applySettings(s, who);
         return { ok: 'Ajustes aplicados', changed: true };
@@ -350,8 +377,9 @@ class GameRoom {
     p.spawnedAt = Date.now();
     if (p.weapon !== p.primary) { p.weapon = p.primary; this.io.to(this.id).emit('player:weapon-switched', { playerId: p.id, weapon: p.weapon }); }
     p.spawnProtectUntil = Date.now() + RULES.SPAWN_PROTECT_MS;
-    p.grenades = RULES.GRENADE_MAX;
+    p.grenades = RULES.GRENADE_START;   // las granadas NO se regalan: se recogen del suelo
     p.lastMoveAt = Date.now(); p.moveStrikes = 0;
+    AC.resetPlayer(p, Date.now());
     if (emit) this.io.to(this.id).emit('player:respawn', { id: p.id, x: p.x, y: p.y, z: p.z, rotY: p.rotY });
   }
 
@@ -432,7 +460,7 @@ class GameRoom {
       x: 0, y: 0, z: 0, rotX: 0, rotY: 0,
       hp: RULES.MAX_HP, kills: 0, deaths: 0, score: 0, streak: 0,
       alive: true, respawnAt: null,
-      lastShot: 0, lastGrenade: 0, grenades: RULES.GRENADE_MAX, grenadeRegenAt: 0,
+      lastShot: 0, lastGrenade: 0, grenades: RULES.GRENADE_START,
       spawnProtectUntil: 0, chatTimes: [],
       account: data.account || null,
       custom,
@@ -460,6 +488,8 @@ class GameRoom {
       custom: p.custom, weapon,
     });
     this.io.to(this.id).emit('room:notice', { text: `🥚 ${nickname} entró${team ? ` (equipo ${team === 'red' ? 'Rojo' : 'Azul'})` : ''}` });
+    // Un jugador de verdad ocupa la plaza de un bot si la sala está llena
+    if (!socket.bot && this.botMgr) this.botMgr.balance();
   }
 
   handlePlayerMove(socketId, data) {
@@ -468,28 +498,36 @@ class GameRoom {
     const num = v => typeof v === 'number' && isFinite(v);
     if (num(data.rotX)) p.rotX = Math.max(-1.6, Math.min(1.6, data.rotX));
     if (num(data.rotY)) p.rotY = data.rotY;
-    if (this.state === 'paused') { p.lastMoveAt = Date.now(); return; }
+    if (this.state === 'paused') { p.lastMoveAt = p.mvAt = p.airAt = Date.now(); return; }
     if (!num(data.x) || !num(data.y) || !num(data.z)) return;
     const lim = this.getHalfSize() - Phys.P.RADIUS;
     const nx = Math.max(-lim, Math.min(lim, data.x));
     const nz = Math.max(-lim, Math.min(lim, data.z));
     const ny = Math.max(-60, Math.min(80, data.y));
     const now = Date.now();
-    const dtS = Math.max(0.033, Math.min(1, (now - (p.lastMoveAt || now)) / 1000));
-    const dist = Math.hypot(nx - p.x, nz - p.z), dy = Math.abs(ny - p.y);
-    // Anti-teletransporte y anti-atravesar paredes: se ignoran posiciones imposibles
-    const tooFast = dist > Math.max(2.5, RULES.MAX_SPEED * dtS) || dy > Math.max(4, 50 * dtS);
-    const inside = Phys.blockedAt(this.world, nx, ny + 0.06, nz);
-    if (tooFast || inside) {
-      if (++p.moveStrikes >= 4) {
-        p.moveStrikes = 0;
-        this.io.to(socketId).emit('you:correct', { x: p.x, y: p.y, z: p.z });
+    // Anti-trampas: velocidad, paredes, vuelo, flotar (ver server/anticheat.js)
+    const bad = AC.checkMove(p, nx, ny, nz, now, this.world);
+    if (bad) {
+      p.cheatScore = (p.cheatScore || 0) + 1;
+      // Devolver al jugador a su última posición válida (como mucho 5 veces por segundo)
+      if (now - (p.lastCorrectAt || 0) > 200) {
+        p.lastCorrectAt = now;
+        this.io.to(socketId).emit('you:correct', { x: p.x, y: p.y, z: p.z, why: bad });
       }
+      if (p.cheatScore > 150 && this.hooks.onCheat) { try { this.hooks.onCheat(p, bad); } catch (e) { /* */ } }
       return;
     }
-    p.moveStrikes = 0;
+    p.cheatScore = Math.max(0, (p.cheatScore || 0) - 0.25);
     p.lastMoveAt = now;
     p.x = nx; p.y = ny; p.z = nz;
+    AC.record(p, now);
+  }
+
+  /** El cliente avisa de que recarga: el servidor lleva la cuenta de las balas. */
+  handleReload(socket) {
+    const p = this.players[socket.id];
+    if (!p || !p.alive) return;
+    AC.startReload(p, Date.now());
   }
 
   handleWeaponSwitch(socket, weapon) {
@@ -528,6 +566,7 @@ class GameRoom {
     if (this.state === 'paused') return;
     const now = Date.now();
     if (!this.fireAllowed(shooter, wep, now)) return;
+    if (!AC.useAmmo(shooter, now)) return;   // sin balas o recargando: el disparo no existe
     shooter.spawnProtectUntil = 0; // disparar quita la protección
 
     socket.to(this.id).emit('player:shot-fired', { shooterId: socket.id, weapon: shooter.weapon, ex: data.ex, ey: data.ey, ez: data.ez });
@@ -554,7 +593,10 @@ class GameRoom {
       }
       if (!losCache[t.id]) continue;
 
-      const head = !!t.headshot;
+      // El impacto (y si es en la cabeza) lo decide el servidor con la posición real del objetivo
+      const hit = AC.checkHit(this.world, shooter, target, t.p ? { x: +t.p[0], y: +t.p[1], z: +t.p[2] } : null, now);
+      if (!hit) continue;
+      const head = hit.head;
       const dmg = Math.max(1, Math.round(wep.damage * (head ? wep.headMult : 1) * falloff(wep, dist)));
       this.applyDamage(target, dmg, shooter, shooter.weapon, head);
     }
@@ -608,7 +650,6 @@ class GameRoom {
     const now = Date.now();
     if (p.grenades <= 0 || now - p.lastGrenade < RULES.GRENADE_MIN_INTERVAL) return;
     p.lastGrenade = now;
-    if (p.grenades === RULES.GRENADE_MAX) p.grenadeRegenAt = now + RULES.GRENADE_REGEN_MS;
     p.grenades--;
     p.spawnProtectUntil = 0;
 
@@ -664,7 +705,12 @@ class GameRoom {
     delete this.players[socketId];
     this.io.to(this.id).emit('player:left', { id: socketId });
     this.io.to(this.id).emit('room:notice', { text: `👋 ${p.nickname} salió` });
-    if (this.getPlayersCount() === 0) this.emptySince = Date.now();
+    if (this.botMgr) {
+      // Bot expulsado por el admin: uno menos que mantener
+      if (p.bot && this.botMgr.bots[socketId]) { delete this.botMgr.bots[socketId]; this.botMgr.target = Math.max(0, (this.botMgr.target || 0) - 1); }
+      else if (!p.bot) this.botMgr.balance();   // vuelve a rellenar con bots la plaza que deja un jugador
+    }
+    if (this.humanCount() === 0) this.emptySince = Date.now();
   }
 
   // ---------------------------------------------------------------------------
@@ -777,11 +823,6 @@ class GameRoom {
 
     for (const id in this.players) {
       const p = this.players[id];
-      // Regenerar granadas
-      if (p.grenades < RULES.GRENADE_MAX && now >= p.grenadeRegenAt) {
-        p.grenades++;
-        p.grenadeRegenAt = now + RULES.GRENADE_REGEN_MS;
-      }
       // Caída al vacío
       if (p.alive && p.y < this.mapData.killY) this.killPlayer(p, null, 'void', false, '🌌 El Vacío');
       // Reaparición: el jugador pulsa JUGAR; si no lo hace, se le reaparece a los 45 s
@@ -804,6 +845,21 @@ class GameRoom {
       }
     }
 
+    // Granadas en el suelo: se recogen de una en una (máximo RULES.GRENADE_MAX)
+    for (const gp of this.gpacks) {
+      if (!gp.active) { if (now >= gp.respawnAt) gp.active = true; continue; }
+      for (const id in this.players) {
+        const p = this.players[id];
+        if (!p.alive || p.grenades >= RULES.GRENADE_MAX) continue;
+        if (Math.hypot(p.x - gp.x, p.z - gp.z) <= 1.25 && p.y >= gp.y - 0.6 && p.y <= gp.y + 1.4) {
+          p.grenades++;
+          gp.active = false; gp.respawnAt = now + RULES.GRENADE_PACK_RESPAWN_MS;
+          this.io.to(this.id).emit('pickup:grenade', { id: gp.id, playerId: p.id, g: p.grenades });
+          break;
+        }
+      }
+    }
+
     if (this.state === 'playing') {
       if (this.config.mode === 'kotc') this.tickKotc(dt, now);
       else if (this.config.mode === 'cts') this.tickCts(now);
@@ -820,6 +876,7 @@ class GameRoom {
       teamScores: this.teamScores,
       mode: this.modeState(),
       packs: this.packs.map(p => (p.active ? 1 : 0)).join(''),
+      gpacks: this.gpacks.map(p => (p.active ? 1 : 0)).join(''),
       timeLeft: this.roundEndsAt ? Math.max(0, Math.ceil((this.roundEndsAt - ref) / 1000)) : null,
       state: this.state,
       hold: this.hold,
@@ -834,7 +891,7 @@ class GameRoom {
   }
 
   /** Explosión genérica (granadas y cohetes): daño por distancia con línea de visión. */
-  explodeAt(id, x, y, z, ownerId, team, radius, maxDmg, weapon) {
+  explodeAt(id, x, y, z, ownerId, team, radius, maxDmg, weapon, skipId, dir) {
     const owner = this.players[ownerId];
     const damages = [];
     if (this.state === 'playing') {
@@ -844,12 +901,20 @@ class GameRoom {
         const isSelf = pid === ownerId;
         if (!isSelf && this.mode.teams && team && team === p.team) continue;
         if (!isSelf && p.spawnProtectUntil > Date.now()) continue;
+        if (pid === skipId) continue;   // ya recibió el impacto directo
         const cy = p.y + 0.8;
-        const dist = Math.hypot(p.x - x, cy - y, p.z - z);
+        // Distancia al punto más cercano del cuerpo del huevo (no a su centro)
+        const ny = Math.max(p.y + 0.3, Math.min(p.y + 1.5, y));
+        const dist = Math.max(0, Math.hypot(p.x - x, ny - y, p.z - z) - 0.45);
         if (dist >= radius) continue;
-        if (!Phys.lineOfSight(this.world, x, y + 0.25, z, p.x, cy, p.z)
-          && !Phys.lineOfSight(this.world, x, y + 0.25, z, p.x, p.y + 1.4, p.z)) continue;
-        let dmg = Math.round(maxDmg * (1 - dist / radius));
+        // La explosión se mira desde un poco antes del punto de impacto (no desde dentro de la pared)
+        const bx = dir ? x - dir.dx * 0.3 : x, by = (dir ? y - dir.dy * 0.3 : y) + 0.25, bz = dir ? z - dir.dz * 0.3 : z;
+        if (!Phys.lineOfSight(this.world, bx, by, bz, p.x, cy, p.z)
+          && !Phys.lineOfSight(this.world, bx, by, bz, p.x, p.y + 1.4, p.z)
+          && !Phys.lineOfSight(this.world, bx, by, bz, p.x, p.y + 0.3, p.z)) continue;
+        // Caída suave: cerca hace casi todo el daño
+        const k = dist / radius;
+        let dmg = Math.round(maxDmg * (1 - k * k));
         if (isSelf) dmg = Math.round(dmg * 0.5);
         if (dmg <= 0) continue;
         damages.push({ playerId: pid, damage: dmg });
@@ -869,6 +934,7 @@ class GameRoom {
     if (!wep || !wep.projectile) return;
     const now = Date.now();
     if (!this.fireAllowed(p, wep, now)) return;
+    if (!AC.useAmmo(p, now)) return;
     p.spawnProtectUntil = 0;
     let dx = Number(data.dx) || 0, dy = Number(data.dy) || 0, dz = Number(data.dz) || 0;
     const L = Math.hypot(dx, dy, dz);
@@ -876,7 +942,8 @@ class GameRoom {
     dx /= L; dy /= L; dz /= L;
     const ox = p.x, oy = p.y + EYE - 0.1, oz = p.z;
     let t = Phys.raycast(this.world, ox, oy, oz, dx, dy, dz, wep.range);
-    // ¿Choca antes con algún huevo? (esfera aproximada)
+    // ¿Choca antes con algún huevo? (esfera aproximada). Si es así: impacto directo garantizado
+    let directId = null;
     for (const id in this.players) {
       const q = this.players[id];
       if (!q.alive || id === p.id) continue;
@@ -884,14 +951,14 @@ class GameRoom {
       const proj = cx * dx + cy * dy + cz * dz;
       if (proj < 0 || proj > t) continue;
       const d2 = cx * cx + cy * cy + cz * cz - proj * proj;
-      if (d2 < 0.62 * 0.62) t = Math.max(0, proj - Math.sqrt(0.62 * 0.62 - d2));
+      if (d2 < 0.62 * 0.62) { const tt = Math.max(0, proj - Math.sqrt(0.62 * 0.62 - d2)); if (tt < t) { t = tt; directId = id; } }
     }
     t = Math.max(0.3, t - 0.08);
     const ix = ox + dx * t, iy = oy + dy * t, iz = oz + dz * t;
     const id = 'r' + (this.grenadeIdSeq++);
     const ms = Math.round(t / wep.projectile.speed * 1000);
     if (!this.rockets) this.rockets = [];
-    this.rockets.push({ id, ownerId: p.id, team: p.team, x: ix, y: iy, z: iz, at: now + ms, wep });
+    this.rockets.push({ id, ownerId: p.id, team: p.team, x: ix, y: iy, z: iz, at: now + ms, wep, directId, dx, dy, dz });
     this.io.to(this.id).emit('rocket:fired', { id, shooterId: p.id, ox, oy, oz, ix: +ix.toFixed(2), iy: +iy.toFixed(2), iz: +iz.toFixed(2), ms });
   }
 
@@ -900,7 +967,13 @@ class GameRoom {
     const due = this.rockets.filter(r => now >= r.at);
     if (!due.length) return;
     this.rockets = this.rockets.filter(r => now < r.at);
-    for (const r of due) this.explodeAt(r.id, r.x, r.y, r.z, r.ownerId, r.team, r.wep.projectile.radius, r.wep.projectile.maxDmg, 'rpegg');
+    for (const r of due) {
+      // Impacto directo: daño fijo al huevo alcanzado aunque se haya movido durante el vuelo
+      const t = r.directId && this.players[r.directId];
+      const direct = t && t.alive && !(this.mode.teams && r.team && t.team === r.team) && !(t.spawnProtectUntil > now) ? t : null;
+      if (direct) this.applyDamage(direct, r.wep.projectile.direct, this.players[r.ownerId] || null, 'rpegg', false);
+      this.explodeAt(r.id, r.x, r.y, r.z, r.ownerId, r.team, r.wep.projectile.radius, r.wep.projectile.maxDmg, 'rpegg', direct ? direct.id : null, r);
+    }
   }
 
   // ---------------------------------------------------------------------------

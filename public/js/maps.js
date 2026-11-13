@@ -31,6 +31,194 @@ window.MapRenderer = (function () {
     ANISO = n;
     Object.keys(texCache).forEach(k => { texCache[k].anisotropy = n; texCache[k].needsUpdate = true; });
   }
+  // <tex> Dibujo de los patrones procedurales (todo «envuelve» por los bordes: sin costuras al repetir)
+  function paintPattern(g, m, N, R) {
+    const c = m.color;
+    const wrap = (x, y, r, fn) => {      // dibuja también en el lado opuesto si toca un borde
+      for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) {
+        if (x + ox + r < 0 || x + ox - r > N || y + oy + r < 0 || y + oy - r > N) continue;
+        fn(x + ox, y + oy);
+      }
+    };
+    const speck = (n, a, b, smin, smax) => {
+      for (let i = 0; i < n; i++) {
+        g.fillStyle = shade(c, a + R() * (b - a));
+        const sz = (smin || 1) + R() * ((smax || 3) - (smin || 1));
+        const x = R() * N, y = R() * N;
+        wrap(x, y, sz, (X, Y) => g.fillRect(X, Y, sz, sz));
+      }
+    };
+    // Manchas suaves grandes (desgaste, humedad, sol): rompen la repetición
+    const blotch = (n, rmin, rmax, dark, light) => {
+      for (let i = 0; i < n; i++) {
+        const x = R() * N, y = R() * N, r = rmin + R() * (rmax - rmin);
+        const d = R() < 0.6;
+        const a = d ? dark : light;
+        wrap(x, y, r, (X, Y) => {
+          const gr = g.createRadialGradient(X, Y, 0, X, Y, r);
+          gr.addColorStop(0, d ? `rgba(30,22,14,${a})` : `rgba(255,250,235,${a})`);
+          gr.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = gr; g.fillRect(X - r, Y - r, r * 2, r * 2);
+        });
+      }
+    };
+    const line = (x0, y0, x1, y1, col, w) => { g.strokeStyle = col; g.lineWidth = w || 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
+    // Junta con volumen: línea oscura + filo claro debajo (parece hundida)
+    const jointH = (x0, x1, y, w, k) => { line(x0, y, x1, y, shade(c, k || 0.62), w); line(x0, y + w * 0.5 + 0.6, x1, y + w * 0.5 + 0.6, shade(c, 1.12), 0.8); };
+    const jointV = (x, y0, y1, w, k) => { line(x, y0, x, y1, shade(c, k || 0.62), w); line(x + w * 0.5 + 0.6, y0, x + w * 0.5 + 0.6, y1, shade(c, 1.1), 0.8); };
+    // Veta de madera: líneas onduladas finas
+    const grain = (x0, y0, w, h, vertical) => {
+      const n = 3 + Math.floor(R() * 3);
+      for (let k = 0; k < n; k++) {
+        const o = (vertical ? w : h) * (0.15 + 0.7 * R()), amp = 0.6 + R() * 1.2, ph = R() * 6;
+        g.strokeStyle = shade(c, 0.78 + R() * 0.1); g.lineWidth = 0.7; g.beginPath();
+        for (let t = 0; t <= 1.0001; t += 0.05) {
+          const L = vertical ? h : w, q = Math.sin(t * 9 + ph) * amp;
+          const X = vertical ? x0 + o + q : x0 + t * L, Y = vertical ? y0 + t * L : y0 + o + q;
+          if (t === 0) g.moveTo(X, Y); else g.lineTo(X, Y);
+        }
+        g.stroke();
+      }
+      if (R() < 0.45) {   // nudo
+        const kx = vertical ? x0 + w * (0.3 + R() * 0.4) : x0 + R() * w, ky = vertical ? y0 + R() * h : y0 + h * (0.3 + R() * 0.4);
+        g.fillStyle = shade(c, 0.62); g.beginPath(); g.ellipse(kx, ky, vertical ? 1.4 : 2.6, vertical ? 2.6 : 1.4, 0, 0, 7); g.fill();
+        g.strokeStyle = shade(c, 0.75); g.lineWidth = 0.6; g.beginPath(); g.ellipse(kx, ky, vertical ? 2.4 : 4, vertical ? 4 : 2.4, 0, 0, 7); g.stroke();
+      }
+    };
+    g.fillStyle = hex(c); g.fillRect(0, 0, N, N);
+    switch (m.pattern) {
+      case 'noise': {
+        // En colores muy claros (nieve, arena) la variación es más suave: si no, parece sucio
+        const lum = (((c >> 16) & 255) * 0.3 + ((c >> 8) & 255) * 0.59 + (c & 255) * 0.11) / 255;
+        const k = lum > 0.75 ? 0.4 : lum > 0.6 ? 0.7 : 1;
+        blotch(9, 14, 34, 0.14 * k, 0.1);
+        speck(700, 1 - 0.2 * k, 1 + 0.16 * k, 1, 3);
+        speck(160, 1 - 0.3 * k, 1 - 0.1 * k, 2, 5);
+        if (c === MB.MATERIALS.asphalt.color) for (let i = 0; i < 4; i++) { let x = R() * N, y = R() * N; g.strokeStyle = shade(c, 0.6); g.lineWidth = 0.8; g.beginPath(); g.moveTo(x, y); for (let q = 0; q < 6; q++) { x += (R() - 0.5) * 16; y += (R() - 0.5) * 16; g.lineTo(x, y); } g.stroke(); }
+        break;
+      }
+      case 'blocks':
+        for (let row = 0; row < 4; row++) {
+          const y = row * 32, off = row % 2 ? 32 : 0, tint = [0.88 + R() * 0.2, 0.88 + R() * 0.2];
+          for (let k = -1; k < 2; k++) {
+            const x = off + k * 64;
+            g.fillStyle = shade(c, tint[(k + 2) % 2]); g.fillRect(x + 2, y + 2, 60, 28);
+            // canto superior iluminado y sombra abajo: cada bloque con relieve
+            g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x + 2, y + 2, 60, 2);
+            g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(x + 2, y + 28, 60, 2);
+            if (R() < 0.35) { g.fillStyle = shade(c, 0.7); const cx = x + 4 + R() * 54, cy = y + 4 + R() * 22; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 4, cy + 1); g.lineTo(cx + 1, cy + 4); g.fill(); }
+          }
+        }
+        blotch(6, 14, 30, 0.13, 0.08);
+        speck(380, 0.86, 1.1, 1, 2.5);
+        for (let row = 0; row < 4; row++) {
+          const y = row * 32, off = row % 2 ? 32 : 0;
+          jointH(0, N, y, 2.6, 0.6);
+          for (let x = off; x <= N; x += 64) jointV(x, y, y + 32, 2.6, 0.6);
+        }
+        break;
+      case 'brick': {
+        const mortar = shade(c, 0.55);
+        for (let row = 0; row < 8; row++) {
+          const y = row * 16, off = row % 2 ? 16 : 0, tint = [0, 1, 2, 3].map(() => 0.82 + R() * 0.28);
+          for (let x = off - 32; x < N; x += 32) {
+            g.fillStyle = shade(c, tint[(((x - off) / 32) % 4 + 4) % 4]); g.fillRect(x + 1, y + 1, 30, 14);
+            g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(x + 1, y + 1, 30, 1.5);
+          }
+        }
+        blotch(6, 12, 28, 0.15, 0.07);
+        speck(260, 0.82, 1.12, 1, 2);
+        // mortero más claro y grisáceo, como los ladrillos de verdad
+        g.strokeStyle = 'rgba(205,195,180,0.55)';
+        for (let row = 0; row < 8; row++) {
+          const y = row * 16, off = row % 2 ? 16 : 0;
+          line(0, y, N, y, mortar, 2); line(0, y, N, y, 'rgba(200,190,175,0.45)', 1.2);
+          for (let x = off; x <= N; x += 32) { line(x, y, x, y + 16, mortar, 2); line(x, y, x, y + 16, 'rgba(200,190,175,0.45)', 1.2); }
+        }
+        break;
+      }
+      case 'planks':
+        for (let row = 0; row < 6; row++) {
+          const y = row * (N / 6), h = N / 6;
+          g.fillStyle = shade(c, 0.84 + R() * 0.24); g.fillRect(0, y, N, h);
+          grain(0, y, N, h, false);
+          // testa de la tabla (corte) y clavos
+          const cut = R() * N;
+          line(cut, y, cut, y + h, shade(c, 0.58), 1.5);
+          g.fillStyle = shade(c, 0.45); [cut - 4, cut + 4].forEach(x => { g.fillRect(((x % N) + N) % N, y + 4, 1.5, 1.5); g.fillRect(((x % N) + N) % N, y + h - 5, 1.5, 1.5); });
+          jointH(0, N, y, 2, 0.52);
+        }
+        blotch(5, 16, 32, 0.12, 0.06);
+        break;
+      case 'planksV':
+        for (let col = 0; col < 6; col++) {
+          const x = col * (N / 6), w = N / 6;
+          g.fillStyle = shade(c, 0.84 + R() * 0.24); g.fillRect(x, 0, w, N);
+          grain(x, 0, w, N, true);
+          jointV(x, 0, N, 2, 0.52);
+        }
+        blotch(5, 16, 32, 0.12, 0.06);
+        break;
+      case 'straw':
+        speck(200, 0.9, 1.1);
+        for (let i = 0; i < 260; i++) { const x = R() * N, y = R() * N; line(x, y, x + 8 + R() * 14, y + (R() - 0.5) * 5, shade(c, 0.7 + R() * 0.45), 1.4); }
+        for (let k = 0; k < 10; k++) { g.fillStyle = 'rgba(80,50,10,' + (0.05 * (10 - k) / 10) + ')'; g.fillRect(0, k * 2, N, 2); g.fillRect(0, N - k * 2 - 2, N, 2); }
+        [N * 0.3, N * 0.7].forEach(x => { line(x, 0, x, N, shade(c, 0.5), 5); line(x + 2, 0, x + 2, N, shade(c, 1.15), 1.2); });
+        break;
+      case 'tiles':
+        for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) { g.fillStyle = shade(c, 0.93 + R() * 0.12); g.fillRect(tx * 64, ty * 64, 64, 64); }
+        blotch(4, 14, 30, 0.08, 0.06);
+        speck(150, 0.94, 1.06);
+        for (let i = 0; i <= N; i += 64) { line(i, 0, i, N, shade(c, 0.76), 2); line(0, i, N, i, shade(c, 0.76), 2); }
+        break;
+      case 'ribs':
+        for (let x = 0; x < N; x += 16) { g.fillStyle = shade(c, 1.12); g.fillRect(x, 0, 6, N); g.fillStyle = shade(c, 0.76); g.fillRect(x + 6, 0, 2, N); g.fillStyle = shade(c, 0.92); g.fillRect(x + 8, 0, 8, N); }
+        // churretes de óxido/suciedad que bajan desde arriba
+        for (let i = 0; i < 7; i++) {
+          const x = R() * N, w = 2 + R() * 5, h = 30 + R() * 80, y = R() * N;
+          const gr = g.createLinearGradient(0, y, 0, y + h);
+          gr.addColorStop(0, 'rgba(70,40,20,0.22)'); gr.addColorStop(1, 'rgba(70,40,20,0)');
+          g.fillStyle = gr; wrap(x, y, Math.max(w, h), (X, Y) => g.fillRect(X, Y, w, h));
+        }
+        blotch(4, 14, 30, 0.1, 0.06);
+        speck(120, 0.8, 1.05);
+        break;
+      case 'panels':
+        blotch(3, 18, 34, 0.06, 0.06);
+        speck(80, 0.95, 1.05);
+        line(0, 1, N, 1, shade(c, 0.7), 3); line(1, 0, 1, N, shade(c, 0.7), 3);
+        line(0, 64, N, 64, shade(c, 0.82), 1.5);
+        g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(4, 4, N - 8, 3);
+        g.fillStyle = shade(c, 0.6);
+        [[8, 8], [N - 10, 8], [8, N - 10], [N - 10, N - 10]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.5, 0, 7); g.fill(); });
+        break;
+      case 'shingles':
+        for (let row = 0; row < 8; row++) {
+          const y = row * 16, off = row % 2 ? 8 : 0;
+          for (let x = -16 + off; x < N + 16; x += 16) {
+            g.fillStyle = shade(c, 0.82 + R() * 0.28);
+            g.beginPath(); g.arc(x + 8, y + 10, 9, 0, Math.PI); g.fill();
+          }
+          line(0, y, N, y, shade(c, 0.58), 1.5);
+        }
+        blotch(4, 16, 30, 0.12, 0.08);
+        break;
+      case 'crate':
+        g.fillStyle = shade(c, 0.95); g.fillRect(0, 0, N, N);
+        for (let k = 0; k < 4; k++) { const y = 12 + k * 26; line(12, y, N - 12, y, shade(c, 0.78), 1); }
+        grain(12, 12, N - 24, N - 24, false);
+        g.strokeStyle = shade(c, 0.6); g.lineWidth = 12; g.strokeRect(6, 6, N - 12, N - 12);
+        line(12, 12, N - 12, N - 12, shade(c, 0.7), 10);
+        g.fillStyle = shade(c, 0.4); [[9, 9], [N - 11, 9], [9, N - 11], [N - 11, N - 11]].forEach(([x, y]) => g.fillRect(x, y, 2.5, 2.5));
+        speck(200, 0.85, 1.1);
+        break;
+      default:   // 'flat': color liso con una variación muy suave
+        blotch(3, 20, 40, 0.05, 0.05);
+        speck(120, 0.96, 1.04);
+    }
+  }
+  // </tex>
+
   function makeTexture(name) {
     if (texCache[name]) return texCache[name];
     const m = MB.MATERIALS[name] || MB.MATERIALS.stone;
@@ -43,101 +231,16 @@ window.MapRenderer = (function () {
     const R = rng(name.length * 977 + c % 1000);
     g.fillStyle = hex(c);
     g.fillRect(0, 0, N, N);
-    const speck = (n, a, b) => {
-      for (let i = 0; i < n; i++) {
-        g.fillStyle = shade(c, a + R() * (b - a));
-        const s = 1 + R() * 3;
-        g.fillRect(R() * N, R() * N, s, s);
-      }
-    };
-    const line = (x0, y0, x1, y1, col, w) => { g.strokeStyle = col; g.lineWidth = w || 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
-    switch (m.pattern) {
-      case 'noise': speck(900, 0.82, 1.15); break;
-      case 'blocks':
-        speck(500, 0.88, 1.1);
-        for (let row = 0; row < 4; row++) {
-          const y = row * 32;
-          line(0, y, N, y, shade(c, 0.7), 3);
-          const off = row % 2 ? 32 : 0;
-          for (let x = off; x <= N; x += 64) line(x, y, x, y + 32, shade(c, 0.7), 3);
-          for (let k = 0; k < 2; k++) { g.fillStyle = shade(c, 0.92 + R() * 0.16); g.fillRect(off + k * 64 + 3, y + 3, 58, 26); }
-        }
-        break;
-      case 'brick':
-        speck(300, 0.85, 1.1);
-        for (let row = 0; row < 8; row++) {
-          const y = row * 16;
-          line(0, y, N, y, shade(c, 0.6), 2);
-          const off = row % 2 ? 16 : 0;
-          for (let x = off; x <= N; x += 32) line(x, y, x, y + 16, shade(c, 0.6), 2);
-        }
-        break;
-      case 'planks':
-        for (let row = 0; row < 6; row++) {
-          const y = row * (N / 6);
-          g.fillStyle = shade(c, 0.88 + R() * 0.2);
-          g.fillRect(0, y, N, N / 6);
-          line(0, y, N, y, shade(c, 0.55), 2);
-          for (let k = 0; k < 6; k++) line(R() * N, y + 4 + R() * 12, R() * N, y + 4 + R() * 12, shade(c, 0.8), 1);
-        }
-        break;
-      case 'planksV':
-        for (let col = 0; col < 6; col++) {
-          const x = col * (N / 6);
-          g.fillStyle = shade(c, 0.88 + R() * 0.2);
-          g.fillRect(x, 0, N / 6, N);
-          line(x, 0, x, N, shade(c, 0.55), 2);
-        }
-        break;
-      case 'straw':
-        speck(200, 0.9, 1.1);
-        for (let i = 0; i < 220; i++) { const x = R() * N, y = R() * N; line(x, y, x + 8 + R() * 14, y + (R() - 0.5) * 5, shade(c, 0.7 + R() * 0.45), 1.4); }
-        // borde redondeado de la paca (oscuro arriba/abajo) y cuerdas
-        for (let k = 0; k < 10; k++) { g.fillStyle = 'rgba(80,50,10,' + (0.05 * (10 - k) / 10) + ')'; g.fillRect(0, k * 2, N, 2); g.fillRect(0, N - k * 2 - 2, N, 2); }
-        [N * 0.3, N * 0.7].forEach(x => { line(x, 0, x, N, shade(c, 0.5), 5); line(x + 2, 0, x + 2, N, shade(c, 1.15), 1.2); });
-        break;
-      case 'tiles':
-        speck(150, 0.94, 1.06);
-        for (let i = 0; i <= N; i += 64) { line(i, 0, i, N, shade(c, 0.8), 2); line(0, i, N, i, shade(c, 0.8), 2); }
-        break;
-      case 'ribs':
-        for (let x = 0; x < N; x += 16) { g.fillStyle = shade(c, 1.12); g.fillRect(x, 0, 6, N); g.fillStyle = shade(c, 0.78); g.fillRect(x + 6, 0, 2, N); }
-        speck(120, 0.8, 1.05);
-        break;
-      case 'panels':
-        speck(80, 0.95, 1.05);
-        line(0, 1, N, 1, shade(c, 0.7), 3); line(1, 0, 1, N, shade(c, 0.7), 3);
-        line(0, 64, N, 64, shade(c, 0.82), 1.5);
-        g.fillStyle = shade(c, 0.6);
-        [[8, 8], [N - 10, 8], [8, N - 10], [N - 10, N - 10]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.5, 0, 7); g.fill(); });
-        break;
-      case 'shingles':
-        for (let row = 0; row < 8; row++) {
-          const y = row * 16, off = row % 2 ? 8 : 0;
-          for (let x = -16 + off; x < N + 16; x += 16) {
-            g.fillStyle = shade(c, 0.85 + R() * 0.25);
-            g.beginPath(); g.arc(x + 8, y + 10, 9, 0, Math.PI); g.fill();
-          }
-          line(0, y, N, y, shade(c, 0.6), 1.5);
-        }
-        break;
-      case 'crate':
-        g.fillStyle = shade(c, 0.95); g.fillRect(0, 0, N, N);
-        g.strokeStyle = shade(c, 0.6); g.lineWidth = 12; g.strokeRect(6, 6, N - 12, N - 12);
-        line(12, 12, N - 12, N - 12, shade(c, 0.7), 10);
-        speck(200, 0.85, 1.1);
-        break;
-      default: speck(200, 0.95, 1.05);
-    }
+    paintPattern(g, m, N, R);
     // Grano fino y bisel suave en los bordes del mosaico (da relieve a todo)
     g.setTransform(1, 0, 0, 1, 0, 0);
     const img = g.getImageData(0, 0, cv.width, cv.height), px = img.data, W = cv.width;
     for (let i = 0; i < px.length; i += 4) {
-      const n = (R() - 0.5) * 14;
+      const n = (R() - 0.5) * (m.pattern === 'flat' ? 6 : 12);
       px[i] = Math.max(0, Math.min(255, px[i] + n)); px[i + 1] = Math.max(0, Math.min(255, px[i + 1] + n)); px[i + 2] = Math.max(0, Math.min(255, px[i + 2] + n));
     }
     g.putImageData(img, 0, 0);
-    if (['blocks', 'tiles', 'panels', 'crate', 'ribs', 'planks'].includes(m.pattern)) {
+    if (['tiles', 'panels', 'crate'].includes(m.pattern)) {
       const e = 3;
       g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(0, 0, W, e); g.fillRect(0, 0, e, W);
       g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(0, W - e, W, e); g.fillRect(W - e, 0, e, W);
@@ -166,7 +269,7 @@ window.MapRenderer = (function () {
   // ---------------------------------------------------------------------------
   function GeoBuf(scale) { this.p = []; this.n = []; this.u = []; this.i = []; this.c = []; this.s = scale || 3; }
   const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  GeoBuf.prototype.quad = function (a, b, c, d) {
+  GeoBuf.prototype.quad = function (a, b, c, d, baseY) {
     // a,b,c,d en sentido antihorario visto desde fuera.
     // Normal por el método de Newell (robusto con aristas degeneradas: caras triangulares de rampas)
     const P4 = [a, b, c, d];
@@ -182,7 +285,8 @@ window.MapRenderer = (function () {
     nx /= L; ny /= L; nz /= L;
     const base = this.p.length / 3, s = this.s;
     const ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
-    const minY = Math.min(a[1], b[1], c[1], d[1]);
+    // baseY: pie de la caja entera (si la cara se ha partido, el degradado sigue siendo continuo)
+    const minY = baseY !== undefined ? baseY : Math.min(a[1], b[1], c[1], d[1]);
     [a, b, c, d].forEach(v => {
       this.p.push(v[0], v[1], v[2]);
       this.n.push(nx, ny, nz);
@@ -192,6 +296,8 @@ window.MapRenderer = (function () {
       else if (ny < 0.7) k = 0.66 + 0.34 * smooth(0, 1.4, v[1] - minY) - (v[1] < 0.05 ? 0.06 : 0);
       // Sombreado por orientación (estilo bloques): cada cara con su tono, los volúmenes se leen al instante
       if (ny < 0.7) k *= ax > az ? (nx > 0 ? 0.9 : 0.8) : (nz > 0 ? 0.95 : 0.85);
+      // Variación de tono a gran escala (como el desgaste de una pared larga): la textura no se ve repetida
+      if (this.macro) k *= 1 + 0.055 * Math.sin(v[0] * 0.21 + v[2] * 0.17) * Math.cos(v[2] * 0.23 - v[0] * 0.11 + v[1] * 0.05) + 0.03 * Math.sin((v[0] + v[1] * 0.7) * 0.53 + v[2] * 0.41);
       this.c.push(k, k, k);
       if (ay >= ax && ay >= az) this.u.push(v[0] / s, v[2] / s);
       else if (ax >= az) this.u.push(v[2] / s, v[1] / s);
@@ -213,6 +319,24 @@ window.MapRenderer = (function () {
   };
   GeoBuf.prototype.box = function (b) {
     this.prism(b.minX, b.maxX, b.minZ, b.maxZ, [b.maxY, b.maxY, b.maxY, b.maxY], [b.minY, b.minY, b.minY, b.minY]);
+  };
+  // Sólo las partes visibles de las caras de una caja (ver MapBuilder.cullFaces)
+  GeoBuf.prototype.faces = function (b, F) {
+    const lo = [b.minX, b.minY, b.minZ], hi = [b.maxX, b.maxY, b.maxZ];
+    for (let a = 0; a < 3; a++) {
+      const u = (a + 1) % 3, v = (a + 2) % 3;
+      for (const s of [-1, 1]) {
+        const rects = F[MB.FACE_KEYS[a * 2 + (s > 0 ? 1 : 0)]];
+        if (!rects) continue;
+        const c = s > 0 ? hi[a] : lo[a];
+        for (const r of rects) {
+          const P = (uu, vv) => { const p = [0, 0, 0]; p[a] = c; p[u] = uu; p[v] = vv; return p; };
+          const q = [P(r[0], r[2]), P(r[1], r[2]), P(r[1], r[3]), P(r[0], r[3])];
+          if (s > 0) this.quad(q[0], q[1], q[2], q[3], b.minY);
+          else this.quad(q[3], q[2], q[1], q[0], b.minY);
+        }
+      }
+    }
   };
   GeoBuf.prototype.toGeometry = function () {
     const g = new THREE.BufferGeometry();
@@ -281,7 +405,7 @@ window.MapRenderer = (function () {
 
   function buildDeco(d, root, anim) {
     const g = new THREE.Group();
-    g.position.set(d.x, d.y || 0, d.z);
+    g.position.set(d.x, (d.y || 0) + (d._yo || 0), d.z);
     if (d.rotY) g.rotation.y = d.rotY;
     const s = d.s || 1;
     switch (d.type) {
@@ -542,6 +666,69 @@ window.MapRenderer = (function () {
         { const gl = glowSprite(0xfff0b0, 2.2); gl.position.y = 3.7; gl.material.opacity = 0.55; g.add(gl); }
         break;
       }
+      case 'rock': {
+        // Roca low-poly (achatada) con un poco de nieve encima si toca
+        const h = d.h || s * 0.8, col = d.color || 0x8a8d92;
+        const r1 = mesh(new THREE.DodecahedronGeometry(0.5, 0), L(col, { flatShading: true }), 0, h * 0.45, 0);
+        r1.scale.set(s * 0.95, h * 1.05, s * 0.85); r1.rotation.y = (d.x * 7 + d.z * 3) % 6; g.add(r1);
+        const r2 = mesh(new THREE.DodecahedronGeometry(0.5, 0), L(new THREE.Color(col).multiplyScalar(0.88).getHex(), { flatShading: true }), s * 0.32, h * 0.25, s * 0.18);
+        r2.scale.set(s * 0.55, h * 0.6, s * 0.5); g.add(r2);
+        if (d.snow) { const c = mesh(new THREE.SphereGeometry(0.5, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), L(0xf4f8fb), 0, h * 0.82, 0, false); c.scale.set(s * 0.8, h * 0.35, s * 0.7); g.add(c); }
+        break;
+      }
+      case 'snowman': {
+        const sm = L(0xf6f9fc);
+        g.add(mesh(new THREE.SphereGeometry(0.6, 12, 9), sm, 0, 0.55, 0));
+        g.add(mesh(new THREE.SphereGeometry(0.44, 12, 9), sm, 0, 1.35, 0));
+        g.add(mesh(new THREE.SphereGeometry(0.3, 12, 9), sm, 0, 1.95, 0));
+        const nose = mesh(new THREE.ConeGeometry(0.06, 0.3, 6), L(0xe67e22), 0, 1.95, 0.38, false); nose.rotation.x = Math.PI / 2; g.add(nose);
+        [-0.1, 0.1].forEach(x => g.add(mesh(new THREE.SphereGeometry(0.04, 6, 4), L(0x1a1a1a), x, 2.05, 0.27, false)));
+        g.add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.32, 10), L(0x1c1c1c), 0, 2.36, 0));
+        g.add(mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 12), L(0x1c1c1c), 0, 2.2, 0, false));
+        const sc = mesh(new THREE.TorusGeometry(0.33, 0.07, 6, 14), L(0xc0392b), 0, 1.66, 0, false); sc.rotation.x = Math.PI / 2; g.add(sc);
+        break;
+      }
+      case 'bench': {
+        const wd = L(0x9b6b3d), mt = L(0x2c3e50);
+        g.add(mesh(new THREE.BoxGeometry(1.8, 0.08, 0.5), wd, 0, 0.48, 0));
+        g.add(mesh(new THREE.BoxGeometry(1.8, 0.4, 0.07), wd, 0, 0.8, -0.24));
+        [-0.75, 0.75].forEach(x => g.add(mesh(new THREE.BoxGeometry(0.08, 0.48, 0.5), mt, x, 0.24, 0)));
+        break;
+      }
+      case 'planter': {
+        g.add(mesh(new THREE.BoxGeometry(1.4, 0.6, 1.4), L(d.color || 0x9aa0a6), 0, 0.3, 0));
+        g.add(mesh(new THREE.BoxGeometry(1.2, 0.05, 1.2), L(0x5b3a1e), 0, 0.6, 0, false));
+        g.add(mesh(new THREE.CylinderGeometry(0.1, 0.14, 1.6, 6), L(0x6b4423), 0, 1.4, 0));
+        g.add(mesh(new THREE.IcosahedronGeometry(0.95, 0), L(0x4c9a3c, { flatShading: true }), 0, 2.5, 0));
+        break;
+      }
+      case 'tank': {
+        // Depósito cilíndrico vertical con aros, escalerilla pintada y tapa
+        const r = d.r || 1.6, h = d.h || 6, col = d.color || 0xd5d8dc;
+        g.add(mesh(new THREE.CylinderGeometry(r, r, h, 16), L(col), 0, h / 2, 0));
+        g.add(mesh(new THREE.CylinderGeometry(r * 0.15, r, r * 0.45, 16), L(new THREE.Color(col).multiplyScalar(0.9).getHex()), 0, h + r * 0.22, 0));
+        [0.25, 0.5, 0.75].forEach(k => g.add(mesh(new THREE.CylinderGeometry(r + 0.04, r + 0.04, 0.12, 16), L(0x7f8c8d), 0, h * k, 0, false)));
+        g.add(mesh(new THREE.BoxGeometry(0.5, h, 0.06), L(0x5d6d7e), 0, h / 2, r + 0.03, false));
+        break;
+      }
+      case 'sign': {
+        g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6), L(0x7f8c8d), 0, 1.1, 0));
+        g.add(mesh(new THREE.BoxGeometry(1.1, 0.6, 0.05), L(d.color || 0x2f6fb5), 0, 2.1, 0));
+        g.add(mesh(new THREE.BoxGeometry(0.8, 0.12, 0.06), L(0xffffff), 0, 2.1, 0, false));
+        break;
+      }
+      case 'stripes': {
+        // Paso de cebra / líneas pintadas (planos finos): d.n franjas a lo largo de d.w
+        const n = d.n || 6, w = d.w || 4, len = d.d || 3, m = L(d.color || 0xf2f2ee);
+        for (let i = 0; i < n; i++) { const p = mesh(new THREE.PlaneGeometry(w / (n * 2), len), m, -w / 2 + (i + 0.5) * w / n, 0.03, 0, false); p.rotation.x = -Math.PI / 2; p.castShadow = false; g.add(p); }
+        break;
+      }
+      case 'fruitcrate': {
+        g.add(mesh(new THREE.BoxGeometry(0.9, 0.45, 0.6), L(0xb8864b), 0, 0.22, 0));
+        const fm = L(d.color || 0xe74c3c);
+        for (let i = 0; i < 6; i++) g.add(mesh(new THREE.SphereGeometry(0.11, 6, 5), fm, -0.3 + (i % 3) * 0.3, 0.5, i < 3 ? -0.12 : 0.12, false));
+        break;
+      }
       case 'bell':
         g.add(mesh(new THREE.ConeGeometry(0.6, 0.9, 10, 1, true), L(0xd4ac0d, { side: THREE.DoubleSide }), 0, 2.3, 0));
         g.add(mesh(new THREE.BoxGeometry(0.15, 1.8, 0.15), L(0x5b3a1e), -1.6, 0.9, 0));
@@ -720,7 +907,7 @@ window.MapRenderer = (function () {
     gr.addColorStop(0, 'rgba(255,250,235,1)'); gr.addColorStop(0.18, 'rgba(255,236,200,0.95)'); gr.addColorStop(0.4, 'rgba(255,200,140,0.25)'); gr.addColorStop(1, 'rgba(255,180,120,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
     const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), fog: false, depthWrite: false, transparent: true }));
-    sun.position.set(half * 0.7, 70, half * 0.45).normalize().multiplyScalar(420);
+    { const d = sunDir(theme); sun.position.set(d[0], d[1], d[2]).multiplyScalar(420); }
     sun.scale.setScalar(theme.stars ? 60 : 110);
     root.add(sun);
 
@@ -876,6 +1063,7 @@ window.MapRenderer = (function () {
       im.castShadow = !!castShadow;
       im.userData.detail = true;
       root.add(im);
+      return im;
     };
     const hy = (x, z) => heightAt(x, z) + yOff;
     if (bname === 'hills' || bname === 'farm' || bname === 'snow') {
@@ -911,12 +1099,14 @@ window.MapRenderer = (function () {
       for (let y = 6; y < 128; y += 12) for (let x = 5; x < 64; x += 11) { g.fillStyle = R() < 0.3 ? '#fff3c4' : '#7d8ea3'; g.fillRect(x, y, 7, 8); }
       const wt = new THREE.CanvasTexture(cv); wt.wrapS = wt.wrapT = THREE.RepeatWrapping;
       const blds = [];
-      ring(120, start + 8, start + 110, (x, z) => {
+      // Más allá de la órbita de la cámara del lobby (antes se metía dentro de algún edificio)
+      ring(120, start + 16, start + 116, (x, z) => {
         const w = 6 + R() * 10, h = 10 + R() * 45;
         blds.push({ x, y: hy(x, z) + h / 2, z, sx: w, sy: h, sz: w * (0.7 + R() * 0.6), c: [0xc9cdd3, 0xb4bcc6, 0xd8cfc2, 0x9aa6b4, 0xe2d6c6][Math.floor(R() * 5)] });
       });
       const bg = new THREE.BoxGeometry(1, 1, 1);
-      inst(bg, new THREE.MeshLambertMaterial({ color: 0xffffff, map: wt }), blds, false);
+      const tall = inst(bg, new THREE.MeshLambertMaterial({ color: 0xffffff, map: wt }), blds, false);
+      if (tall) tall.userData.tall = true;
     }
     if (bname === 'coast') {
       // Mar alrededor y unas islas en el horizonte
@@ -949,6 +1139,36 @@ window.MapRenderer = (function () {
     }
   }
 
+  // Dirección del sol: unos 50° de altura (antes ~66°). Las sombras salen más largas
+  // y los volúmenes (muros, escalones, coberturas) se leen mucho mejor.
+  function sunDir(th) {
+    const d = (th && th.sunDir) || [0.56, 0.77, 0.32];
+    const L = Math.hypot(d[0], d[1], d[2]);
+    return [d[0] / L, d[1] / L, d[2] / L];
+  }
+  // Coloca el sol y ajusta su cámara de sombras para que cubra justo el mapa entero
+  // (se calcula con las esquinas del mapa vistas desde el sol: nada se queda sin sombra)
+  function fitSun(lights, data) {
+    const th = data.def.theme, d = sunDir(th), h = data.halfSize + 2, top = 18;
+    const D = 140;
+    lights.sun.target.position.set(0, 0, 0);
+    lights.sun.position.set(d[0] * D, d[1] * D, d[2] * D);
+    // ejes de la vista del sol (como lookAt de three.js con up = +Y)
+    const f = [-d[0], -d[1], -d[2]];
+    let r = [f[1] * 0 - f[2] * 1, f[2] * 0 - f[0] * 0, f[0] * 1 - f[1] * 0];
+    const rl = Math.hypot(r[0], r[1], r[2]) || 1; r = r.map(v => v / rl);
+    const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+    let mx = 0, my = 0;
+    for (const x of [-h, h]) for (const y of [0, top]) for (const z of [-h, h]) {
+      mx = Math.max(mx, Math.abs(x * r[0] + y * r[1] + z * r[2]));
+      my = Math.max(my, Math.abs(x * u[0] + y * u[1] + z * u[2]));
+    }
+    const cam = lights.sun.shadow.camera;
+    cam.left = -mx; cam.right = mx; cam.top = my; cam.bottom = -my;
+    cam.near = 1; cam.far = D + h * 2 + 40;
+    cam.updateProjectionMatrix();
+  }
+
   function build(mapId, scene, root, lights, opts) {
     const data = MapDefs.build(mapId);
     const def = data.def;
@@ -964,11 +1184,7 @@ window.MapRenderer = (function () {
       lights.amb.intensity = th.amb;
       lights.hemi.color.setHex(th.hemiSky);
       lights.hemi.groundColor.setHex(th.hemiGround);
-      const h = data.halfSize + 6;
-      const cam = lights.sun.shadow.camera;
-      cam.left = -h; cam.right = h; cam.top = h; cam.bottom = -h;
-      cam.updateProjectionMatrix();
-      lights.sun.position.set(h * 0.7, 70, h * 0.45);
+      fitSun(lights, data);
     }
 
     // Suelo + paisaje alrededor (colinas, montañas, ciudad, mar…): el mapa no acaba en el vacío
@@ -985,10 +1201,46 @@ window.MapRenderer = (function () {
       if (!bufs[mat]) {
         const m = MB.MATERIALS[mat] || MB.MATERIALS.stone;
         bufs[mat] = new GeoBuf(TEX_SCALE[m.pattern] || 3);
+        bufs[mat].macro = true;
       }
       return bufs[mat];
     };
-    for (const b of data.boxes) if (b.vis) buf(b.mat).box(b);
+    // Sólo lo que se ve: sin caras tapadas ni caras duplicadas en el mismo plano (sin parpadeo)
+    const faceSets = MB.cullFaces(data.boxes, { ground: data.ground });
+    // Barandillas ('rail'): las balas las atraviesan, así que se dibujan como barandilla de verdad
+    // (pasamanos, barra intermedia y postes) en vez de un murete macizo. La colisión no cambia.
+    const railBufDefault = new GeoBuf(2);
+    const railing = (b, RB) => {
+      const railBuf = RB || railBufDefault;
+      const w = b.maxX - b.minX, d = b.maxZ - b.minZ, h = b.maxY - b.minY;
+      const alongX = w >= d, L = alongX ? w : d, t = Math.min(alongX ? d : w, 0.12);
+      const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+      const bar = (y0, y1, th) => railBuf.box(alongX
+        ? { minX: b.minX, maxX: b.maxX, minY: y0, maxY: y1, minZ: cz - th / 2, maxZ: cz + th / 2 }
+        : { minX: cx - th / 2, maxX: cx + th / 2, minY: y0, maxY: y1, minZ: b.minZ, maxZ: b.maxZ });
+      bar(b.maxY - 0.08, b.maxY, t);                       // pasamanos
+      bar(b.minY + h * 0.45, b.minY + h * 0.45 + 0.05, t * 0.6);   // barra intermedia
+      bar(b.minY, b.minY + 0.08, t);                        // zócalo
+      const n = Math.max(1, Math.round(L / 1.2));
+      for (let k = 0; k <= n; k++) {
+        const u = (alongX ? b.minX : b.minZ) + Math.min(L - 0.03, Math.max(0.03, L * k / n));
+        railBuf.box(alongX ? { minX: u - 0.035, maxX: u + 0.035, minY: b.minY, maxY: b.maxY - 0.08, minZ: cz - t / 2, maxZ: cz + t / 2 }
+          : { minX: cx - t / 2, maxX: cx + t / 2, minY: b.minY, maxY: b.maxY - 0.08, minZ: u - 0.035, maxZ: u + 0.035 });
+      }
+    };
+    // Vista previa de un mapa interior (ÑEMANAVE): sin el techo, para que se vean las salas
+    const cutaway = opts && opts.preview && def.indoor;
+    data.boxes.forEach((b, i) => {
+      if (!b.vis || !faceSets[i]) return;
+      if (cutaway && b.minY >= 3.3) return;
+      const thin = Math.min(b.maxX - b.minX, b.maxZ - b.minZ) <= 0.2;
+      if (b.maxY - b.minY > 0.5 && Math.max(b.maxX - b.minX, b.maxZ - b.minZ) > 0.6) {
+        if (b.mat === 'rail') { railing(b); return; }
+        // barandillas caladas de otros materiales (madera…): mismo dibujo, con su textura
+        if (b.see && thin && !(MB.MATERIALS[b.mat] || {}).transparent && b.mat !== 'invisible') { railing(b, buf(b.mat)); return; }
+      }
+      buf(b.mat).faces(b, faceSets[i]);
+    });
     // Aristas marcadas de los bloques (una sola malla de líneas para todo el mapa)
     const edges = [];
     const noEdge = m => { const md = MB.MATERIALS[m] || {}; return md.transparent || md.see || m === 'invisible'; };
@@ -996,7 +1248,51 @@ window.MapRenderer = (function () {
       const c = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]];
       [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].forEach(([a, b2]) => edges.push(...c[a], ...c[b2]));
     };
-    for (const b of data.boxes) if (b.vis && !noEdge(b.mat) && (b.maxX - b.minX) > 0.15 && (b.maxZ - b.minZ) > 0.15) boxEdges(b.minX, b.maxX, b.minY, b.maxY, b.minZ, b.maxZ);
+    // Sólo las esquinas de verdad: las juntas entre tramos de una misma pared no se marcan
+    data.boxes.forEach((b, i) => {
+      if (!b.vis || noEdge(b.mat) || !faceSets[i] || (b.maxX - b.minX) <= 0.15 || (b.maxZ - b.minZ) <= 0.15) return;
+      if (opts && opts.preview && def.indoor && b.minY >= 3.3) return;
+      for (const e of MB.boxEdges(b, faceSets[i])) edges.push(...e);
+    });
+    const noseBuf = new GeoBuf(1);
+    const railGroup = new THREE.Group();
+    const railMat = new THREE.MeshLambertMaterial({ color: 0x5b4636 });
+    // Barandillas de las escaleras en los lados que NO tienen pared al lado
+    const stairRails = (r, v) => {
+      const along = v[0] !== 0;
+      const L = along ? r.maxX - r.minX : r.maxZ - r.minZ;
+      const sides = along ? [[r.minZ - 0.06, -1], [r.maxZ + 0.06, 1]] : [[r.minX - 0.06, -1], [r.maxX + 0.06, 1]];
+      for (const [pos, sgn] of sides) {
+        // ¿Hay pared al lado? (se mira a media escalera, un poco hacia fuera)
+        let wall = false;
+        for (const t of [0.25, 0.5, 0.75]) {
+          const u = along ? r.minX + L * t : r.minZ + L * t, hy = r.y0 + r.h * t + 0.6;
+          const px = along ? u : pos + sgn * 0.25, pz = along ? pos + sgn * 0.25 : u;
+          if (data.boxes.some(b => b.solid && px > b.minX && px < b.maxX && pz > b.minZ && pz < b.maxZ && hy > b.minY && hy < b.maxY)) { wall = true; break; }
+        }
+        if (wall) continue;
+        const low = { x: 0, z: 0 }, high = { x: 0, z: 0 };
+        if (along) { low.x = v[0] > 0 ? r.minX : r.maxX; high.x = v[0] > 0 ? r.maxX : r.minX; low.z = high.z = pos; }
+        else { low.z = v[1] > 0 ? r.minZ : r.maxZ; high.z = v[1] > 0 ? r.maxZ : r.minZ; low.x = high.x = pos; }
+        const y0 = r.y0 + 0.95, y1 = r.y0 + r.h + 0.95;
+        const len = Math.hypot(L, r.h);
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, len), railMat);
+        rail.position.set((low.x + high.x) / 2, (y0 + y1) / 2, (low.z + high.z) / 2);
+        rail.lookAt(high.x, y1, high.z);
+        railGroup.add(rail);
+        const nPost = Math.max(2, Math.round(L / 1.3) + 1);
+        for (let i = 0; i < nPost; i++) {
+          const k = i / (nPost - 1);
+          const px = low.x + (high.x - low.x) * k, pz = low.z + (high.z - low.z) * k;
+          const base = r.y0 + r.h * Math.min(1, (Math.floor(k * 0.999 * Math.max(3, Math.round(r.h / 0.32))) + 1) / Math.max(3, Math.round(r.h / 0.32)));
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1, 0.06), railMat);
+          const top = r.y0 + r.h * k + 0.95;
+          post.scale.y = Math.max(0.2, top - base);
+          post.position.set(px, (base + top) / 2, pz);
+          railGroup.add(post);
+        }
+      }
+    };
     for (const r of data.ramps) {
       if (r.stairs) {
         const n = Math.max(3, Math.round(r.h / 0.32));
@@ -1011,7 +1307,15 @@ window.MapRenderer = (function () {
           else if (v[1] > 0) { z0 = r.minZ + lz * t0; z1 = r.minZ + lz * t1; }
           else { z1 = r.maxZ - lz * t0; z0 = r.maxZ - lz * t1; }
           buf(r.mat).box({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: r.y0, maxY: yTop });
+          // Borde de cada peldaño (más claro) y contorno: se leen bien los escalones
+          const N = 0.05, H2 = 0.045;
+          if (v[0] > 0) noseBuf.box({ minX: x0 - N, maxX: x0 + 0.08, minZ: z0 + 0.02, maxZ: z1 - 0.02, minY: yTop - H2, maxY: yTop + 0.006 });
+          else if (v[0] < 0) noseBuf.box({ minX: x1 - 0.08, maxX: x1 + N, minZ: z0 + 0.02, maxZ: z1 - 0.02, minY: yTop - H2, maxY: yTop + 0.006 });
+          else if (v[1] > 0) noseBuf.box({ minX: x0 + 0.02, maxX: x1 - 0.02, minZ: z0 - N, maxZ: z0 + 0.08, minY: yTop - H2, maxY: yTop + 0.006 });
+          else noseBuf.box({ minX: x0 + 0.02, maxX: x1 - 0.02, minZ: z1 - 0.08, maxZ: z1 + N, minY: yTop - H2, maxY: yTop + 0.006 });
+          boxEdges(x0, x1, yTop - 0.001, yTop, z0, z1);
         }
+        if (r.h >= 1.4) stairRails(r, v);
       } else {
         const c = rampCorners(r);
         buf(r.mat).prism(r.minX, r.maxX, r.minZ, r.maxZ, c.top, c.bot);
@@ -1050,6 +1354,9 @@ window.MapRenderer = (function () {
     }
     addBuf(ladW, L(0xc8a165));
     addBuf(ladM, L(0xaab7b8));
+    addBuf(noseBuf, L(0xf1e7cf));
+    addBuf(railBufDefault, L(0x7d8a92));
+    if (railGroup.children.length) batchStatic(railGroup, root);
 
     if (edges.length) {
       const eg = new THREE.BufferGeometry();
@@ -1061,6 +1368,10 @@ window.MapRenderer = (function () {
     // Decoración: las piezas estáticas se fusionan por material (pocas llamadas de dibujo);
     // las animadas (antorchas, molino, agua, grúa…) se quedan como objetos sueltos.
     const staticDecos = new THREE.Group();
+    // Suelos pintados (caminos, surcos, agua) a la misma altura: cada uno 2 mm más arriba que el anterior,
+    // así no parpadean donde se cruzan
+    let planeN = 0;
+    for (const d of data.decos) if (d.type === 'plane') d._yo = (planeN++ % 6) * 0.002;
     for (const d of data.decos) {
       const n0 = fns.length, tmp = new THREE.Group();
       buildDeco(d, tmp, fns);
@@ -1254,6 +1565,8 @@ window.MapRenderer = (function () {
     while (P.root.children.length) { const c = P.root.children[0]; P.root.remove(c); c.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
     const data = build(id, P.scene, P.root, P.lights, { preview: true });
     const h = data.halfSize;
+    // La cámara de la vista previa está lejos: los rascacielos del fondo la tapaban
+    P.root.traverse(o => { if (o.userData && o.userData.tall) o.visible = false; });
     // La niebla del juego es para la vista en primera persona: aquí la alejamos
     if (P.scene.fog) { P.scene.fog.near = h * 3; P.scene.fog.far = h * 9; }
     P.r.setSize(W, H, false);
@@ -1322,5 +1635,5 @@ window.MapRenderer = (function () {
     if (!pvBusy) requestAnimationFrame(pumpPreviews);
   }
 
-  return { build, animate, thumbnail, preview, makeTexture, setAnisotropy };
+  return { build, animate, thumbnail, preview, makeTexture, setAnisotropy, fitSun };
 })();

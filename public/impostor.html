@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Huevo Impostor · ÑEMANAVE — EGG WARS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" onerror="this.remove()">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23e53935%22/%3E%3C/svg%3E"/>
+  <link rel="stylesheet" href="/impostor.css"/>
+</head>
+<body>
+
+<!-- ======================= Conexión / sesión ======================= -->
+<div id="scr-auth" class="screen center">
+  <div class="card narrow">
+    <h1 class="logo">🔪 HUEVO <span>IMPOSTOR</span></h1>
+    <p id="auth-msg">Conectando con la nave…</p>
+    <a class="btn ghost" id="auth-back" href="/" hidden>⬅ Ir al menú e iniciar sesión</a>
+  </div>
+</div>
+
+<!-- ======================= Navegador de salas ======================= -->
+<div id="scr-browser" class="screen hidden">
+  <div class="stars"></div>
+  <div class="floaters" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="browser">
+    <header class="hero">
+      <div class="hero-egg" aria-hidden="true"><div class="he-shell"><div class="he-eyes"><b></b><b></b></div><div class="he-crack"></div></div><div class="he-knife"></div></div>
+      <div>
+        <h1 class="logo">HUEVO <span>IMPOSTOR</span></h1>
+        <p class="sub">Deducción espacial en primera persona a bordo de la <b>ÑEMANAVE</b> · 4–10 huevos</p>
+        <div class="who"><span class="me-chip">🥚 <b id="me-name">—</b></span><a class="btn ghost small" href="/">⬅ Volver a EGG WARS</a></div>
+      </div>
+    </header>
+    <div class="cols">
+      <section class="card">
+        <h2>🛸 Naves en órbita <button class="btn ghost small" id="rooms-refresh" title="Actualizar">↻</button></h2>
+        <div id="room-list" class="room-grid"></div>
+        <div class="code-row">
+          <span class="muted">¿Te han pasado un código?</span>
+          <input id="code-in" maxlength="4" placeholder="ABCD" autocomplete="off" spellcheck="false"/>
+          <button class="btn" id="code-btn">Entrar</button>
+        </div>
+      </section>
+      <section class="card create">
+        <h2>🚀 Crear tu nave</h2>
+        <label>Nombre de la nave <input id="c-name" maxlength="30" placeholder="La nave de…"/></label>
+        <div class="grid2">
+          <label>Huevos máx. <select id="c-max"><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option selected>10</option></select></label>
+          <label>Impostores <select id="c-imp"><option value="0" selected>Auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+        </div>
+        <label class="chk switch"><input type="checkbox" id="c-priv"/><span class="sw"></span> Sala privada (sólo con código)</label>
+        <button class="btn big" id="c-btn">🚀 Crear y despegar</button>
+      </section>
+    </div>
+    <section class="howto">
+      <div class="hcard crewc"><div class="hic">🥚</div><h3 class="crew">Tripulantes</h3><p>Haced las tareas por la ÑEMANAVE y descubrid al impostor. ¿Un huevo roto? <b>¡Informad!</b></p></div>
+      <div class="hcard impc"><div class="hic">🔪</div><h3 class="imp">Impostores</h3><p>Cascad a la tripulación sin que os pillen. Moveos por los conductos y sabotead la nave.</p></div>
+      <div class="hcard keysc"><div class="hic">⌨️</div><h3>Controles</h3><p class="keys"><kbd>WASD</kbd> mover · <kbd>E</kbd> usar · <kbd>R</kbd> informar · <kbd>Q</kbd> matar · <kbd>F</kbd> sabotear · <kbd>V</kbd> conducto · <kbd>M</kbd> mapa · <kbd>Enter</kbd> chat · <kbd>Esc</kbd> pausa</p><p class="tabtip">Mantén <kbd>TAB</kbd> para ver tu rol en secreto.</p></div>
+    </section>
+  </div>
+</div>
+
+<!-- ======================= Juego ======================= -->
+<div id="scr-game" class="screen hidden">
+  <div id="vignette"></div>
+  <div id="crosshair"></div>
+
+  <!-- Tareas y barra global -->
+  <div id="hud-tasks" class="panel">
+    <div id="taskbar-wrap"><div class="lbl">TAREAS DE LA NAVE</div><div id="taskbar"><i></i></div></div>
+    <div id="role-tag"></div>
+    <ul id="task-list"></ul>
+  </div>
+  <div id="alert" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="ghost-tag" class="hidden">👻 Eres un fantasma: atraviesas paredes y sigues haciendo tareas</div>
+
+  <!-- Botones de acción -->
+  <div id="actions">
+    <button class="act" id="b-use" data-k="E"><span class="ic">✋</span><span class="tx">USAR</span></button>
+    <button class="act" id="b-report" data-k="R"><span class="ic">📢</span><span class="tx">INFORMAR</span></button>
+    <button class="act imp-only" id="b-kill" data-k="Q"><span class="ic">🔪</span><span class="tx">MATAR</span><span class="cd"></span></button>
+    <button class="act imp-only" id="b-sab" data-k="F"><span class="ic">⚠️</span><span class="tx">SABOTEAR</span></button>
+    <button class="act imp-only" id="b-vent" data-k="V"><span class="ic">🕳️</span><span class="tx">CONDUCTO</span></button>
+    <button class="act" id="b-map" data-k="M"><span class="ic">🗺️</span><span class="tx">MAPA</span></button>
+  </div>
+
+  <!-- Vestíbulo -->
+  <div id="lobby" class="panel hidden">
+    <div class="lobby-head"><b id="lb-name">Nave</b> <span id="lb-code"></span></div>
+    <ul id="lb-players"></ul>
+    <div id="lb-settings"></div>
+    <div id="lb-admin" class="hidden">
+      <div class="grid2">
+        <label>Impostores <select id="s-imp"><option value="0">Auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+        <label>Espera para matar <select id="s-kill"><option value="15">15 s</option><option value="25">25 s</option><option value="35">35 s</option></select></label>
+        <label>Reunión <select id="s-meet"><option value="60">60 s</option><option value="90">90 s</option><option value="120">120 s</option></select></label>
+        <label>Tareas <select id="s-tasks"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="s-confirm"/> Confirmar expulsiones (decir si era impostor)</label>
+      <button class="btn big" id="lb-start">▶ EMPEZAR</button>
+      <div class="row"><button class="btn ghost" id="lb-practice">🧪 Práctica</button>
+        <select id="lb-prole"><option value="crew">como tripulante</option><option value="impostor">como impostor</option></select></div>
+    </div>
+    <div id="lb-wait" class="muted">Esperando a que el anfitrión empiece…</div>
+    <button class="btn ghost small" id="lb-leave">⬅ Salir de la nave</button>
+  </div>
+
+  <!-- Chat (vestíbulo y fantasmas) -->
+  <div id="chat" class="panel">
+    <div id="chat-log"></div>
+    <input id="chat-in" maxlength="120" placeholder="Enter para hablar" autocomplete="off" class="hidden"/>
+  </div>
+
+  <!-- Conductos -->
+  <div id="cam-ui" class="hidden"><span>● CÁMARAS</span> · <b>E</b> o <b>Esc</b> para salir</div>
+  <div id="vent-ui" class="hidden"><div class="lbl">🕳️ En el conducto</div><div id="vent-btns"></div></div>
+
+  <!-- Overlays -->
+  <div id="ov-role" class="overlay hidden"><div class="role-box"><div id="role-title"></div><div id="role-sub"></div><div id="role-mates"></div></div></div>
+  <div id="ov-killed" class="overlay hidden"><div class="killed-box"><div class="big">💥🥚</div><div id="killed-txt"></div></div></div>
+  <div id="ov-mg" class="overlay hidden"><div class="mg-box"><button class="x" id="mg-x">✕</button><h3 id="mg-title"></h3><div id="mg-body"></div></div></div>
+  <div id="ov-sab" class="overlay hidden"><div class="mg-box"><button class="x" id="sab-x">✕</button><h3>⚠️ Sabotear</h3><div id="sab-body"></div></div></div>
+  <div id="ov-map" class="overlay hidden"><div class="map-box"><button class="x" id="map-x">✕</button><canvas id="map-cv" width="900" height="560"></canvas></div></div>
+  <div id="ov-meet" class="overlay hidden">
+    <div class="meet-wrap">
+      <div class="meet-head"><div id="meet-title"></div><div id="meet-timer"></div></div>
+      <div class="meet-main">
+        <section class="meet-pane pane-chat">
+          <h3>💬 Chat de la reunión</h3>
+          <div id="meet-chat"></div>
+          <input id="meet-in" maxlength="120" placeholder="Escribe y pulsa Enter…" autocomplete="off"/>
+        </section>
+        <section class="meet-pane pane-vote">
+          <h3>🗳️ Votación <span id="meet-note"></span></h3>
+          <div id="meet-grid"></div>
+          <div class="meet-foot"><button class="btn ghost" id="meet-skip">⏭ Saltar voto</button></div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div id="ov-eject" class="overlay hidden"><div class="eject-box"><div id="eject-egg">🥚</div><div id="eject-txt"></div><div id="eject-sub"></div></div></div>
+  <div id="ov-over" class="overlay hidden"><div class="over-box"><div id="over-title"></div><div id="over-reason"></div><div id="over-list"></div><div class="muted">Volviendo al vestíbulo…</div></div></div>
+  <div id="ov-click" class="overlay soft hidden"><div class="click-box pause-box">
+    <div class="pz-title">⏸ PAUSA</div><div class="muted" id="pz-state"></div>
+    <button class="btn big" id="pz-go">▶ CONTINUAR</button>
+    <label>🖱️ Sensibilidad del ratón <input type="range" id="pz-sens" min="8" max="60"/></label>
+    <label>🔊 Volumen <input type="range" id="pz-vol" min="0" max="100"/></label>
+    <div class="grid2 pz-q"><label>🎨 Calidad <select id="pz-q"><option value="auto">Automática</option><option value="hi">Alta</option><option value="mid">Media</option><option value="lo">Baja (PC lento)</option></select></label>
+      <label class="chk switch pz-fps"><input type="checkbox" id="pz-fps"/><span class="sw"></span> Ver FPS</label></div>
+    <div class="pz-btns"><button class="btn ghost" id="pz-leave">🚪 Salir de la nave</button><button class="btn ghost" id="pz-menu">🏠 Menú principal</button></div>
+    <small class="muted">Esc abre este menú · TAB ver rol · M mapa</small>
+  </div></div>
+</div>
+
+<div id="ver-warn" class="hidden">⚠️ El servidor tiene <b>otra versión del mapa</b>: por eso puedes quedarte pillado. Reinicia el servidor (<kbd>Ctrl+C</kbd> y <kbd>npm start</kbd>) y recarga con <kbd>Ctrl+F5</kbd>.</div>
+<div id="fps" class="hidden"></div>
+<div id="ov-resume" class="hidden">🖱️ Haz clic para seguir jugando</div>
+<div id="net-down" class="hidden"><div class="nd-box"><div class="nd-egg">🥚</div><b>Conexión perdida</b><span>Reconectando con la ÑEMANAVE… <i id="net-try"></i></span></div></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/mapbuilder.js"></script>
+<script src="/shared/mapdefs.js"></script>
+<script src="/shared/physics.js"></script>
+<script src="/shared/cosmetics.js"></script>
+<script src="/shared/impostor.js"></script>
+<script src="/js/maps.js"></script>
+<script src="/js/eggmodel.js"></script>
+<script src="/js/navedecor.js"></script>
+<script src="/js/impostor.js"></script>
+</body>
+</html>

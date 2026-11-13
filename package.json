@@ -1,14 +1,15 @@
 {
   "name": "egg-wars",
-  "version": "5.0.0",
-  "description": "EGG WARS — FPS 3D multijugador de huevos para LAN: 34 mapas, 4 modos de juego",
+  "version": "6.2.0",
+  "description": "EGG WARS — FPS 3D multijugador de huevos para LAN: 15 mapas, 4 modos de juego + modo Huevo Impostor",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build": "node tools/build.js",
+    "build:pages": "node tools/build-pages.js",
     "start:prod": "node server.js --prod",
-    "test": "node tests/validate-maps.js && node tests/playtest.js && node tests/fuzz-physics.js 20 && node tests/server-test.js"
+    "test": "node tests/validate-maps.js && node tests/playtest.js && node tests/fuzz-physics.js 20 && node tests/server-test.js && node tests/fuzz-server.js && node tests/impostor-map.js && node tests/impostor-walk.js && node tests/impostor-server.js && node tests/bots-test.js"
   },
   "devDependencies": {
     "terser": "^5.31.0"

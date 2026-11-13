@@ -37,12 +37,12 @@
     },
     rpegg: {
       name: 'RPEGG', icon: '🚀', type: 'Lanzacohetes', slot: 'primary',
-      desc: 'Un impacto directo revienta a cualquiera y salpica mucho daño alrededor. ¡Cuidado con tu propio cohete!',
-      damage: 0, cooldown: 900, pellets: 1, range: 90, auto: false,
-      spread: 0.012, adsSpread: 0.5, maxAmmo: 2, reloadTime: 2600,
+      desc: 'Un impacto directo revienta a cualquiera; cerca de la explosión hace mucho daño, pero hay que afinar. ¡Cuidado con tu propio cohete!',
+      damage: 0, cooldown: 1100, pellets: 1, range: 90, auto: false,
+      spread: 0.012, adsSpread: 0.5, maxAmmo: 2, reloadTime: 3000,
       falloffStart: 999, falloffMin: 1, headMult: 1,
       adsFov: 58, tracerColor: 0xffa502, recoil: 0.2,
-      projectile: { speed: 42, radius: 3.8, maxDmg: 195 }, stat: { dmg: 5, rate: 1, range: 2, mob: 2 },
+      projectile: { speed: 36, radius: 3.6, maxDmg: 110, direct: 110 }, stat: { dmg: 4, rate: 1, range: 2, mob: 2 },
     },
     whipper: {
       name: 'Whipper', icon: '🌀', type: 'Subfusil', slot: 'primary',
@@ -83,6 +83,30 @@
   // Intervalo mínimo real entre balas (las armas de ráfaga disparan más rápido dentro de la ráfaga)
   function minInterval(w) { return w.burst ? w.burst.interval : w.cooldown; }
 
+  // Datos REALES de cada arma para la previsualización (no números puestos a mano)
+  function weaponInfo(k) {
+    const w = WEAPONS[k];
+    const rocket = !!w.projectile;
+    const body = rocket ? w.projectile.maxDmg : w.damage * w.pellets;
+    const head = rocket ? body : Math.round(w.damage * w.headMult) * w.pellets;
+    // Disparos por segundo (las ráfagas cuentan todas sus balas)
+    const cycle = w.burst ? w.cooldown + w.burst.interval * (w.burst.count - 1) : w.cooldown;
+    const sps = (w.burst ? w.burst.count : 1) * 1000 / cycle;
+    const toKill = d => (d >= 100 ? 1 : Math.ceil(100 / d));
+    const bar = (v, steps) => { let n = 1; for (const s of steps) if (v >= s) n++; return Math.min(5, n); };
+    return {
+      body, head, sps: Math.round(sps * 10) / 10, range: w.range, mag: w.maxAmmo, reload: w.reloadTime,
+      killBody: toKill(rocket ? body : w.damage * (w.pellets > 1 ? Math.ceil(w.pellets * 0.75) : 1)),
+      killHead: toKill(rocket ? body : Math.round(w.damage * w.headMult) * (w.pellets > 1 ? Math.ceil(w.pellets * 0.75) : 1)),
+      bars: {
+        dmg: bar(body, [25, 45, 70, 100]),
+        rate: bar(sps, [1.5, 3, 6, 10]),
+        range: bar(w.range, [60, 100, 160, 240]),
+        mob: (w.stat && w.stat.mob) || 3,
+      },
+    };
+  }
+
   // Multiplicador de daño según distancia
   function falloff(wep, dist) {
     if (dist <= wep.falloffStart) return 1;
@@ -108,6 +132,8 @@
     RESPAWN_MS: 3000,
     SPAWN_PROTECT_MS: 1600,
     GRENADE_MAX: 3,
+    GRENADE_START: 0,            // al reaparecer: 0 granadas (se recogen del suelo)
+    GRENADE_PACK_RESPAWN_MS: 14000, // una granada recogida vuelve a aparecer a los 14 s
     GRENADE_REGEN_MS: 10000,
     GRENADE_MIN_INTERVAL: 700,
     GRENADE_FUSE_MS: 2200,
@@ -126,5 +152,5 @@
     MAX_SPEED: 26,             // m/s máximos aceptados por el servidor (incluye jump pads y caídas)
   };
 
-  return { WEAPONS, PRIMARY_KEYS, MELEE, MODES, TIME_LIMITS, RULES, falloff, minInterval };
+  return { WEAPONS, PRIMARY_KEYS, MELEE, MODES, TIME_LIMITS, RULES, falloff, minInterval, weaponInfo };
 });

@@ -1,5 +1,5 @@
 // ============================================================================
-// shared/mapdefs.js — 10 mapas al estilo Shell Shockers (recreaciones propias)
+// shared/mapdefs.js — 15 mapas al estilo Shell Shockers (recreaciones propias) + ÑEMANAVE
 // Inspirados en los mapas oficiales a partir de su descripción pública; la
 // geometría es propia. Cada mapa define su tema, spawns, zonas de King of the
 // Coop, la espátula y las bases de Capture the Spatula.
@@ -548,7 +548,7 @@
       b.platform(4, -19, 6, 5, 2, 'stoneOld', ['s'], { stairs: true, len: 4, rw: 2.4, rim: 'stone' });
     },
     spawns: [
-      { x: 0, y: 2.4, z: -3 }, { x: 14, z: 0 }, { x: -14, z: 0 }, { x: 0, z: 14 }, { x: 0, z: -14 }, { x: 25, z: 4 }, { x: -20, z: 22 },
+      { x: 0, y: 2.4, z: -3 }, { x: 14, z: 0 }, { x: -14, z: 0 }, { x: 0, z: 14 }, { x: 0, z: -14 }, { x: 25, z: 4 }, { x: -20, z: 21.4 },
       { x: 22, z: -18 }, { x: -18, z: -16 }, { x: -19.5, y: 3, z: -19.5 }, { x: 6, z: 24 }, { x: 14.5, y: 5.5, z: 21 }, { x: 20, y: 1.8, z: 12.5 }, { x: -24, z: -2 }, { x: 24, z: 2 },
     ],
     teamSpawns: {
@@ -720,6 +720,9 @@
           b.crate(-22, 0, -8); b.crate(-22, 0, 8); b.crate(-22, 1.4, 8);
           b.box(-14, 0, -16, 6, 2.2, 0.8, 'hedge'); b.box(-14, 0, 16, 6, 2.2, 0.8, 'hedge');
           b.tree(-24, -22, 1.1); b.tree(-24, 22, 1.1);
+          // v6: rocas en los flancos y farolas a la puerta de la torre
+          b.rock(-25, -12.5, 1.9); b.rock(-9.5, 22.5, 1.6, { flat: true });
+          b.decoAt('lamp', -11.6, 0, 2.6); b.decoAt('lamp', -11.6, 0, -2.6);
         });
       }
       // Puente y pilar central
@@ -819,7 +822,331 @@
     bases: { red: { x: -20, y: 1.6, z: 0, r: 2.4 }, blue: { x: 20, y: 1.6, z: 0, r: 2.4 } },
   };
 
-  const LIST = [castle, dirt, feedlot, moonbase, shipyard, ruins, blue, fortflip, twotowers, medina];
+
+  // =========================================================================
+  // 36. NEVADA — aldea alpina nevada (diseño propio)
+  // =========================================================================
+  const alpine = {
+    id: 'alpine', name: 'Nevada', size: 'M', players: 18,
+    desc: 'Aldea alpina: chalés de dos pisos, estanque helado en el centro, torres del telesilla y bosque de pinos.',
+    halfSize: 30, gravity: -22, ground: 'snow',
+    theme: Object.assign({}, SKY_DAY, { sky: 0xb9d4ec, fog: [45, 140], sunColor: 0xfff6ea, hemiSky: 0xe6f2ff, hemiGround: 0x9fb2c2, particles: 'snow' }),
+    build(b) {
+      b.perimeter(30, 1.4, 'logs', 1);
+      b.perimeter(30, 16, 'invisible', 1);
+      // Estanque helado con caseta de pesca y murete de nieve
+      b.box(0, 0, 0, 12, 0.12, 8, 'ice');
+      b.room(0, 0, 0.12, 4, 3, 2.6, 'wood', { cornice: 'woodDark', open: [{ side: 'e', at: 0, w: 1.6, h: 2.2 }, { side: 'w', at: 0, w: 1.6, h: 2.2 }], roof: true, roofMat: 'roofRed' });
+      [0, 2].forEach(rot => b.with({ rot }, () => {
+        // Chalé de dos pisos (azotea con pretil) y su leñera
+        b.house2(-15, -15, 12, 9, 'wood', { h1: 2.6, doors: ['s', 'e'], trim: 'woodDark', roofMat: 'roofRed' });
+        b.box(-15, 0, -8.8, 6, 1.3, 1.2, 'logs');
+        // Torre del telesilla (francotirador) con tejadillo
+        b.tower(18, -20, 9, 3.4, 'logs', 'w', { roof: 'roofRed' });
+        // Montículo de nieve con rampas y muretes de nieve
+        b.hill(-1, -18, 1.6, 5, 3.2, 'snow');
+        b.box(8, 0, -9, 4, 1.2, 0.9, 'snow'); b.box(-8, 0, -6, 0.9, 1.2, 3.6, 'snow');
+        // Trineo de troncos y pinos
+        b.box(20, 0, -8, 1.4, 1, 4, 'logs');
+        [[-25, -4], [-6, -25], [25, -24], [10, -25], [-25, -24]].forEach(([x, z]) => b.tree(x, z, 1.25, 'pine'));
+        b.decoAt('lamp', -9, 0, -9.5); b.decoAt('lamp', 9, 0, -3);
+        // v6: cabaña del alquiler de esquís (tejado a dos aguas transitable) con esquís apoyados
+        b.room(10, -17, 0, 6, 5, 2.8, 'wood', { cornice: 'woodDark',
+          open: [{ side: 's', at: 0, w: 1.8, h: 2.3 }, { side: 'w', at: 0, y: 1, w: 1.4, h: 1 }, { side: 'e', at: 0, y: 1, w: 1.4, h: 1 }],
+          roof: true, roofMat: 'woodDark' });
+        b.gable(10, -17, 3.1, 6, 5, 1.2, true, 'roofRed');
+        [8.2, 8.6, 11.4, 11.8].forEach((x, i) => b.box(x, 0, -14.35, 0.12, 1.7, 0.06, i % 2 ? 'red' : 'blue', { solid: false }));
+        // Rocas nevadas, muñeco de nieve y pinos jóvenes
+        b.rock(-26, -12, 2.2, { snow: true, color: 0x7d858c });
+        b.rock(-4, -27, 1.6, { snow: true, color: 0x7d858c, flat: true });
+        b.box(5, 0, -6, 1.1, 2.3, 1.1, 'invisible'); b.decoAt('snowman', 5, 0, -6, { rotY: 0.6 });
+        [[-12, -27], [27, -14]].forEach(([x, z]) => { b.box(x, 0, z, 0.45, 1.8, 0.45, 'invisible'); b.decoAt('pine', x, 0, z, { s: 0.7, snow: true }); });
+      }));
+    },
+    coverDensity: 0.8,
+    spawns: [
+      { x: -15, z: -6 }, { x: 15, z: 6 }, { x: -24, z: 4 }, { x: 24, z: -4 }, { x: 4, z: -12 }, { x: -4, z: 12 },
+      { x: -15, y: 5.5, z: -15 }, { x: 15, y: 5.5, z: 15 }, { x: 22, z: -14 }, { x: -22, z: 14 }, { x: 4, z: -26 }, { x: -4, z: 26 },
+    ],
+    teamSpawns: {
+      red: [{ x: -15, z: -6 }, { x: -24, z: 4 }, { x: -22, z: -8 }, { x: -18, z: -23 }, { x: -9, z: -23 }],
+      blue: [{ x: 15, z: 6 }, { x: 24, z: -4 }, { x: 22, z: 8 }, { x: 18, z: 23 }, { x: 9, z: 23 }],
+    },
+    coops: [{ x: 0, y: 0.12, z: 3, r: 2.4 }, { x: -1, y: 1.6, z: -18, r: 2 }, { x: 1, y: 1.6, z: 18, r: 2 }, { x: -15, y: 5.5, z: -15, r: 2 }, { x: 15, y: 5.5, z: 15, r: 2 }],
+    spatula: { x: 0, y: 0.12, z: 3 },
+    bases: { red: { x: -22, y: 0, z: -2, r: 2.6 }, blue: { x: 22, y: 0, z: 2, r: 2.6 } },
+  };
+
+  // =========================================================================
+  // 37. TEMPLO — pirámide escalonada en la selva (diseño propio)
+  // =========================================================================
+  const temple = {
+    id: 'temple', name: 'Templo', size: 'M', players: 18,
+    desc: 'Pirámide escalonada con santuario en la cima, escalinatas, ruinas con arcos y torres de troncos unidas por puentes.',
+    halfSize: 30, gravity: -22, ground: 'grass',
+    theme: Object.assign({}, SKY_DAY, { sky: 0x9fd1d8, fog: [40, 135], sunColor: 0xfff1cf, hemiSky: 0xd8f5e6, hemiGround: 0x4d6b2f, particles: 'pollen' }),
+    build(b) {
+      b.perimeter(30, 2.2, 'stoneOld', 1);
+      b.perimeter(30, 16, 'invisible', 1);
+      // Pirámide: dos gradas y santuario con tejado sobre cuatro columnas
+      b.box(0, 0, 0, 18, 2.4, 18, 'stoneOld');
+      b.box(0, 0, 0, 9, 4.8, 9, 'stoneOld');
+      [[-2.2, -2.2], [2.2, -2.2], [-2.2, 2.2], [2.2, 2.2]].forEach(([x, z]) => b.pillar(x, 4.8, z, 0.6, 2.6, 'stone'));
+      b.slab(0, 0, 7.7, 5.6, 5.6, 0.3, 'stone');
+      [0, 2].forEach(rot => b.with({ rot }, () => {
+        // Gran escalinata hasta la cima (norte/sur) y escalones a la primera grada (este/oeste)
+        b.stairs(0, -9.3, 0, 3, 9.6, 4.8, '+z', 'stone');
+        b.stairs(-11.4, 0, 0, 3, 4.8, 2.4, '+x', 'stone');
+        // Ruinas: muro con dos arcos y columnas
+        b.wallSeg('x', -21, -14, -2, 0, 3.4, 1, [{ at: -3, w: 2, h: 2.6 }, { at: 3, w: 2, h: 2.6 }], 'stoneOld');
+        b.pillar(-18, 0, -14, 1, 3, 'stone'); b.pillar(-10, 0, -14, 1, 1.4, 'stone');
+        b.box(-14, 0, -11, 4, 0.9, 1, 'stone');
+        // Dos torres de troncos unidas por un puente de tablones
+        b.box(22, 0, -22, 3.4, 6, 3.4, 'logs');
+        b.box(22, 0, -10, 3.4, 6, 3.4, 'logs');
+        b.ring(22, -22, 6, 3.8, 3.8, 1, 0.3, 'woodDark', [{ side: 's', at: 0, w: 1.8 }, { side: 'w', at: 0, w: 1.4 }]);
+        b.ring(22, -10, 6, 3.8, 3.8, 1, 0.3, 'woodDark', [{ side: 'n', at: 0, w: 1.8 }]);
+        b.ladder(20.3, -22, 0, 6, '+x');
+        b.bridge(22, -20.3, 22, -11.7, 6, 1.8, 'plank', { railMat: 'woodDark' });
+        // Selva
+        [[-25, -25], [-6, -25], [12, -25], [-25, -8], [8, -18], [-20, -2]].forEach(([x, z]) => b.tree(x, z, 1.15, 'tree'));
+        [[-12, -22], [4, -22], [16, -16]].forEach(([x, z]) => b.decoAt('bush', x, 0, z));
+        b.decoAt('torch', -1.6, 4.8, -4.6); b.decoAt('torch', 1.6, 4.8, -4.6);
+        // v6: puerta de piedra ante la gran escalinata, con el ídolo del huevo dorado encima
+        b.pillar(-2.6, 0, -17.5, 1, 4.2, 'stone'); b.pillar(2.6, 0, -17.5, 1, 4.2, 'stone');
+        b.aabb(-3.3, 4.2, -18.1, 3.3, 5, -16.9, 'stoneOld');
+        b.box(0, 5, -17.5, 1.2, 0.3, 1.2, 'gold', { solid: false });
+        b.decoAt('bigegg', 0, 5.3, -17.5, { s: 0.75, color: 0xe8b830 });
+        b.decoAt('torch', -2.6, 3.4, -16.95); b.decoAt('torch', 2.6, 3.4, -16.95);
+        // Columnata en ruinas (columnas enteras, rotas y una caída): cobertura en el flanco
+        [[-24, 3.4], [-21, 1.6], [-18, 3.4], [-15, 2.2]].forEach(([x, h]) => {
+          b.pillar(x, 0, -6, 0.9, h, 'stone');
+          if (h > 3) b.box(x, h, -6, 1.2, 0.3, 1.2, 'stoneOld', { solid: false });
+        });
+        b.aabb(-24.6, 3.4, -6.5, -17.4, 3.9, -5.5, 'stoneOld');
+        b.box(-19.5, 0, -8.4, 3.4, 0.8, 0.8, 'stone');
+        [[-27, -16], [-10, -27.5], [27.5, -20], [-27.5, 12]].forEach(([x, z]) => b.decoAt('bush', x, 0, z));
+      }));
+    },
+    coverDensity: 0.7,
+    spawns: [
+      { x: -14, z: -18 }, { x: 14, z: 18 }, { x: -26, z: 4 }, { x: 26, z: -4 }, { x: 16, z: -4 }, { x: -16, z: 4 },
+      { x: 0, y: 4.8, z: 0 }, { x: 22, y: 6, z: -16 }, { x: -22, y: 6, z: 16 }, { x: 6, z: -24 }, { x: -6, z: 24 }, { x: -8, y: 2.4, z: 6 },
+    ],
+    teamSpawns: {
+      red: [{ x: -26, z: 4 }, { x: -16, z: 4 }, { x: -24, z: -16 }, { x: -14, z: -18 }, { x: -26, z: 26 }],
+      blue: [{ x: 26, z: -4 }, { x: 16, z: -4 }, { x: 24, z: 16 }, { x: 14, z: 18 }, { x: 26, z: -26 }],
+    },
+    coops: [{ x: 0, y: 4.8, z: 0, r: 2 }, { x: 6.6, y: 2.4, z: -6.6, r: 1.6 }, { x: -6.6, y: 2.4, z: 6.6, r: 1.6 }, { x: 22, y: 6, z: -16, r: 1.2 }, { x: -22, y: 6, z: 16, r: 1.2 }],
+    spatula: { x: 0, y: 4.8, z: 0 },
+    bases: { red: { x: -24, y: 0, z: 0, r: 2.6 }, blue: { x: 24, y: 0, z: 0, r: 2.6 } },
+  };
+
+  // =========================================================================
+  // 38. FÁBRICA — nave industrial con pasarelas (diseño propio)
+  // =========================================================================
+  const factory = {
+    id: 'factory', name: 'Fábrica', size: 'M', players: 18,
+    desc: 'Gran nave con pasarelas interiores a 4 m, máquinas, chimeneas, contenedores y depósito de agua en el patio.',
+    halfSize: 30, gravity: -22, ground: 'concrete',
+    theme: Object.assign({}, SKY_DAY, { sky: 0xb4c4cf, fog: [40, 130], sunColor: 0xfff0d8, hemiSky: 0xdfe8ef, hemiGround: 0x6b6b6b, particles: 'dust' }),
+    build(b) {
+      b.perimeter(30, 3, 'concrete', 1);
+      b.perimeter(30, 16, 'invisible', 1);
+      // Nave: portones a norte y sur, puertas a este y oeste, pasarela interior a 4 m
+      b.room(0, 0, 0, 22, 14, 8, 'brick', {
+        cornice: 'stoneDark',
+        open: [
+          { side: 'n', at: 0, w: 4, h: 3.4 }, { side: 's', at: 0, w: 4, h: 3.4 },
+          { side: 'e', at: 0, w: 2, h: 2.6 }, { side: 'w', at: 0, w: 2, h: 2.6 },
+          { side: 'n', at: -7, y: 5.2, w: 2.4, h: 1.6 }, { side: 'n', at: 7, y: 5.2, w: 2.4, h: 1.6 },
+          { side: 's', at: -7, y: 5.2, w: 2.4, h: 1.6 }, { side: 's', at: 7, y: 5.2, w: 2.4, h: 1.6 },
+        ],
+        floors: [{ y: 4, mat: 'metal', holes: [{ x: 0, z: 0, w: 13, d: 5 }, { x: -4.85, z: -5.4, w: 8.3, d: 2.3 }, { x: 4.85, z: 5.4, w: 8.3, d: 2.3 }] }],
+        roof: true, roofMat: 'roofGrey',
+      });
+      [0, 2].forEach(rot => b.with({ rot }, () => {
+        b.stairs(-4.85, -5.4, 0, 2, 8, 4, '+x', 'metalDark');
+        // Máquinas en la planta baja y cinta transportadora
+        b.box(-6, 0, 1.2, 2.4, 1.6, 2, 'metalDark'); b.box(3, 0, -1.6, 5, 0.9, 1.2, 'metal');
+        b.crate(1.5, 0.9, -1.6, 0.9); b.crate(4, 0.9, -1.6, 0.9);
+        // Chimenea, depósito de agua (francotirador) y contenedores en el patio
+        b.box(-13.5, 0, -10, 2.2, 13, 2.2, 'brick');
+        b.tower(20, -20, 9, 3.4, 'metalDark', 'w', { metal: true, roof: 'roofGrey', postMat: 'metalDark' });
+        b.container(-20, 0, -22, true, 'cOrange'); b.container(-20, 2.6, -22, true, 'cBlue');
+        b.ladder(-20, -20.7, 0, 5.2, '-z', { metal: true });
+        b.container(6, 0, -22, true, 'cGreen');
+        b.decoAt('forklift', 13, 0, -12, { rotY: 0.6 }); b.box(13, 0, -12, 1.6, 2.2, 2.6, 'invisible');
+        [[-24, -10], [-23, -11.2]].forEach(([x, z]) => { b.box(x, 0, z, 0.9, 1.3, 0.9, 'invisible'); b.decoAt('barrel', x, 0, z); });
+        b.decoAt('lamp', -9, 0, -10); b.decoAt('lamp', 9, 0, -10);
+        // v6: oficinas de dos plantas (azotea con máquina del aire) entre la nave y la vía
+        b.house2(-7, -21, 11, 8, 'concrete', { h1: 2.6, doors: ['s', 'e'], trim: 'stoneDark', roofMat: 'concrete', metal: true, awning: 'cOrange' });
+        // Vía de tren con un vagón de mercancías (cobertura alta en el fondo del patio)
+        b.track(-28.4, 28.4, -27);
+        b.box(14, 0, -27, 5.6, 0.6, 2, 'metalDark');
+        b.container(14, 0.6, -27, true, 'cGreen');
+        // Depósito de agua tratada con tubería hasta la nave
+        b.box(20, 0, -9, 3, 6.4, 3, 'invisible');
+        b.decoAt('tank', 20, 0, -9, { r: 1.6, h: 6, color: 0xc9d1d6 });
+        b.box(14.6, 3.6, -9, 7.4, 0.4, 0.4, 'steel', { solid: false });
+        b.pillar(15, 0, -9, 0.25, 3.6, 'metalDark');
+        b.decoAt('sign', 9.5, 0, -16.5, { color: 0xe67e22 });
+      }));
+    },
+    coverDensity: 0.7,
+    spawns: [
+      { x: -8, z: -12 }, { x: 8, z: 12 }, { x: -24, z: 4 }, { x: 24, z: -4 }, { x: 14, z: -24 }, { x: -14, z: 24 },
+      { x: -8, y: 4, z: -4.4 }, { x: 8, y: 4, z: 4.4 }, { x: 0, z: -3.5 }, { x: 0, z: 3.5 }, { x: 24, z: 14 }, { x: -24, z: -14 },
+    ],
+    teamSpawns: {
+      red: [{ x: -24, z: 4 }, { x: -24, z: -14 }, { x: -24, z: 14 }, { x: -16, z: 14 }, { x: -16, z: -16 }],
+      blue: [{ x: 24, z: -4 }, { x: 24, z: 14 }, { x: 24, z: -14 }, { x: 16, z: -14 }, { x: 16, z: 16 }],
+    },
+    coops: [{ x: 0, y: 0, z: 0, r: 2.4 }, { x: 0, y: 4, z: -4.5, r: 1.6 }, { x: 0, y: 4, z: 4.5, r: 1.6 }, { x: 20, y: 9, z: -20, r: 1.2 }, { x: -20, y: 9, z: 20, r: 1.2 }],
+    spatula: { x: 0, y: 0, z: 0 },
+    bases: { red: { x: -24, y: 0, z: 0, r: 2.6 }, blue: { x: 24, y: 0, z: 0, r: 2.6 } },
+  };
+
+  // =========================================================================
+  // 39. CENTRO — azoteas de ciudad unidas por puentes (diseño propio)
+  // =========================================================================
+  const downtown = {
+    id: 'downtown', name: 'Centro', size: 'M', players: 18,
+    desc: 'Cuatro edificios de dos plantas con azoteas unidas por puentes, calles con coches y una torre del reloj en el cruce.',
+    halfSize: 30, gravity: -22, ground: 'asphalt',
+    theme: Object.assign({}, SKY_DAY, { sky: 0x9cc8ea }),
+    build(b) {
+      b.perimeter(30, 3, 'concrete', 1);
+      b.perimeter(30, 16, 'invisible', 1);
+      // Torre del reloj en el cruce y bancos de plaza
+      b.tower(0, 0, 10, 3, 'stone', 's', { roof: 'roofRed' });
+      [0, 2].forEach(rot => b.with({ rot }, () => {
+        // Aceras
+        b.decoAt('plane', -13, 0.02, -13, { w: 15, d: 13, color: 0xb8b8b4 });
+        b.decoAt('plane', 13, 0.02, -13, { w: 15, d: 13, color: 0xb8b8b4 });
+        // Edificios (azotea a 5,5 m) con huecos en el pretil para los puentes
+        b.house2(-13, -13, 12, 10, 'brick', { h1: 2.6, doors: ['s', 'e'], trim: 'stoneDark', roofMat: 'concrete', gaps: [{ side: 'e', at: 0, w: 2.2 }, { side: 's', at: 0, w: 2.2 }] });
+        b.house2(13, -13, 12, 10, rot ? 'white' : 'concrete', { h1: 2.6, doors: ['s', 'w'], trim: 'stoneDark', roofMat: 'concrete', gaps: [{ side: 'w', at: 0, w: 2.2 }, { side: 's', at: 0, w: 2.2 }] });
+        b.bridge(-7, -13, 7, -13, 5.5, 2.2, 'metal', { supports: true, supportMat: 'metalDark' });
+        b.bridge(13, -8, 13, 8, 5.5, 2.2, 'metal', { supports: true, supportMat: 'metalDark' });
+        // Calle: coches aparcados, barreras y marquesina
+        b.decoAt('car', -4, 0, -22, { rotY: 0, color: 0xc0392b }); b.box(-4, 0, -22, 2.4, 1.6, 4.4, 'invisible');
+        b.decoAt('car', 22, 0, 3, { rotY: Math.PI / 2, color: 0x2f6fb5 }); b.box(22, 0, 3, 4.4, 1.6, 2.4, 'invisible');
+        b.box(4, 0, -4.5, 3, 1.05, 0.8, 'jersey');
+        b.box(-25, 0, -4, 0.3, 2.6, 0.3, 'metalDark'); b.box(-25, 0, -1, 0.3, 2.6, 0.3, 'metalDark');
+        b.slab(-25.3, -2.5, 2.8, 1.6, 4, 0.15, 'glass');
+        [[-7.5, -24], [7.5, -24], [-24, 7.5]].forEach(([x, z]) => b.decoAt('lamp', x, 0, z));
+        // v6: marcas viales (línea discontinua y pasos de cebra junto al cruce)
+        b.decoAt('stripes', -18.5, 0, 0, { w: 17, n: 6, d: 0.22, color: 0xf1c40f });
+        b.decoAt('stripes', 0, 0, -18.5, { w: 17, n: 6, d: 0.22, color: 0xf1c40f, rotY: Math.PI / 2 });
+        b.decoAt('stripes', -9.5, 0, 0, { w: 12, n: 8, d: 3, rotY: Math.PI / 2 });
+        // Jardineras con árbol en las aceras
+        [[-20.5, -5.5], [-6.5, -20.8]].forEach(([x, z]) => { b.box(x, 0, z, 1.4, 0.6, 1.4, 'invisible'); b.box(x, 0, z, 0.3, 2.2, 0.3, 'invisible'); b.decoAt('planter', x, 0, z, { color: 0xa9aaa4 }); });
+        // Quiosco de prensa
+        b.box(20, 0, -22, 3, 2.4, 2, 'white');
+        b.box(20, 2.4, -21.2, 3.6, 0.15, 3, 'roofRed', { solid: false });
+        b.decoAt('sign', 22, 0, -20.4, { color: 0xc0392b });
+      }));
+    },
+    coverDensity: 0.6,
+    spawns: [
+      { x: -4, z: -26 }, { x: 4, z: 26 }, { x: -26, z: 10 }, { x: 26, z: -10 }, { x: 4, z: -10 }, { x: -4, z: 10 },
+      { x: -13, y: 5.5, z: -13 }, { x: 13, y: 5.5, z: 13 }, { x: 13, z: -6.5 }, { x: -13, z: 6.5 }, { x: 26, z: 26 }, { x: -26, z: -26 },
+    ],
+    teamSpawns: {
+      red: [{ x: -26, z: 10 }, { x: -26, z: -26 }, { x: -26, z: -10 }, { x: -20, z: -26 }, { x: -26, z: 24 }],
+      blue: [{ x: 26, z: -10 }, { x: 26, z: 26 }, { x: 26, z: 10 }, { x: 20, z: 26 }, { x: 26, z: -24 }],
+    },
+    coops: [{ x: 0, y: 0, z: 4.5, r: 2 }, { x: 0, y: 5.5, z: -13, r: 1.4 }, { x: 0, y: 5.5, z: 13, r: 1.4 }, { x: 0, y: 10, z: 0, r: 1.1 }, { x: 13, y: 5.5, z: 0, r: 1.4 }],
+    spatula: { x: 0, y: 0, z: 4.5 },
+    bases: { red: { x: -26, y: 0, z: 0, r: 2.6 }, blue: { x: 26, y: 0, z: 0, r: 2.6 } },
+  };
+
+  // =========================================================================
+  // 40. ASERRADERO — serrería junto a un arroyo (diseño propio)
+  // =========================================================================
+  const sawmill = {
+    id: 'sawmill', name: 'Aserradero', size: 'M', players: 18,
+    desc: 'Serrería con altillo y tejado a dos aguas, arroyo con vados, pilas de troncos, torres de vigía y el bosque alrededor.',
+    halfSize: 30, gravity: -22, ground: 'grass',
+    theme: Object.assign({}, SKY_DAY, { sky: 0x98c7e8, sunColor: 0xfff0d2, particles: 'pollen' }),
+    build(b) {
+      b.perimeter(30, 1.6, 'logs', 1);
+      b.perimeter(30, 16, 'invisible', 1);
+      // Arroyo (agua poco profunda) que cruza el mapa con orillas de piedra y vados
+      b.decoAt('plane', 0, 0.04, 0, { w: 58, d: 4, color: 0x4fa3d9 });
+      b.wallSeg('x', -2.4, -29, 29, 0, 0.8, 0.8, [{ at: -14, w: 3 }, { at: 0, w: 3 }, { at: 14, w: 3 }], 'stoneOld');
+      b.wallSeg('x', 2.4, -29, 29, 0, 0.8, 0.8, [{ at: -14, w: 3 }, { at: 0, w: 3 }, { at: 14, w: 3 }], 'stoneOld');
+      [0, 2].forEach(rot => b.with({ rot }, () => {
+        // Serrería: nave con altillo a 3,5 m y tejado a dos aguas transitable
+        b.room(-12, -13, 0, 14, 9, 7, 'wood', {
+          cornice: 'woodDark',
+          open: [{ side: 's', at: -3, w: 3.4, h: 3 }, { side: 'e', at: 0, w: 2, h: 2.6 }, { side: 'n', at: 3, y: 4.4, w: 2, h: 1.4 }, { side: 'w', at: 0, y: 4.4, w: 1.6, h: 1.4 }],
+          floors: [{ y: 3.5, mat: 'plank', holes: [{ x: -9.6, z: -14.4, w: 6.3, d: 2.3 }] }],
+          roof: true, roofMat: 'woodDark',
+        });
+        b.stairs(-9.6, -14.4, 0, 2, 6, 3.5, '-x', 'woodDark');
+        b.gable(-12, -13, 7.3, 14, 9, 1.8, true, 'roofRed');
+        b.ladder(-5, -9.1, 0, 7.5, '-x');
+        // Pilas de troncos escalonadas y tablones
+        b.box(6, 0, -12, 6, 1, 2.4, 'logs'); b.box(6, 1, -12, 4, 1, 2.4, 'logs');
+        b.box(-22, 0, -24, 2.4, 0.8, 5, 'plank'); b.box(-22, 0.8, -24, 2.4, 0.6, 3, 'plank');
+        // Torre de vigía con tejadillo
+        b.tower(22, -21, 8, 3.2, 'logs', 'w', { roof: 'roofRed' });
+        // Bosque
+        [[-26, -6], [-6, -25], [12, -25], [26, -8], [16, -16], [-26, -24]].forEach(([x, z]) => b.tree(x, z, 1.2, (x + z) % 2 ? 'pine' : 'tree'));
+        b.decoAt('cart', 0, 0, -18, { rotY: 0.4 }); b.box(0, 0, -18, 2.6, 1.6, 1.6, 'invisible');
+        // v6: cobertizo de aserrar con la mesa de la sierra y un tronco a medio cortar
+        b.shed(14, -12, 6, 4, 3, 'roofRed');
+        b.box(14, 0, -12, 3.2, 0.9, 1.1, 'steel');
+        b.box(13.6, 0.9, -12, 3, 0.5, 0.5, 'logs');
+        b.box(15.6, 0.9, -12, 0.06, 0.55, 0.55, 'metalDark', { solid: false });   // disco de la sierra
+        // Pasarela de tablones sobre el arroyo (sube por rampas: cruza sin saltar los muretes)
+        b.footbridge(-7, -2.8, 2.8, 1.1, 2, 'plank');
+        b.rock(-27, -15, 1.8, { color: 0x8a8d92 });
+      }));
+    },
+    coverDensity: 0.7,
+    spawns: [
+      { x: -12, z: -6 }, { x: 12, z: 6 }, { x: -24, z: -14 }, { x: 24, z: 14 }, { x: 8, z: -20 }, { x: -8, z: 20 },
+      { x: -12, y: 3.5, z: -11 }, { x: 12, y: 3.5, z: 11 }, { x: 22, z: -6 }, { x: -22, z: 6 }, { x: 16, z: -26 }, { x: -16, z: 26 },
+    ],
+    teamSpawns: {
+      red: [{ x: -12, z: -6 }, { x: -24, z: -14 }, { x: -2, z: -24 }, { x: -18, z: -6 }, { x: 8, z: -20 }],
+      blue: [{ x: 12, z: 6 }, { x: 24, z: 14 }, { x: 2, z: 24 }, { x: 18, z: 6 }, { x: -8, z: 20 }],
+    },
+    coops: [{ x: 0, y: 0, z: 0, r: 2.4 }, { x: -12, y: 3.5, z: -11, r: 1.8 }, { x: 12, y: 3.5, z: 11, r: 1.8 }, { x: 22, y: 8, z: -21, r: 1.2 }, { x: -22, y: 8, z: 21, r: 1.2 }],
+    spatula: { x: 0, y: 0, z: 0 },
+    bases: { red: { x: -14, y: 0, z: -22, r: 2.4 }, blue: { x: 14, y: 0, z: 22, r: 2.4 } },
+  };
+
+  // =========================================================================
+  // 16. ÑEMANAVE — la nave de Huevo Impostor, ahora también para el FPS.
+  // La geometría la construye shared/impostor.js (se carga al construir el mapa).
+  // =========================================================================
+  const loadImpostor = () => (typeof module === 'object' && module.exports && typeof require === 'function')
+    ? require('./impostor.js') : (typeof self !== 'undefined' ? self : this).Impostor;
+  const nemanave = {
+    id: 'nemanave', name: 'ÑEMANAVE', size: 'L', players: 12, indoor: true,
+    desc: 'La nave de Huevo Impostor: La Yema en el centro, 4 pasillos y 12 salas llenas de gallinas, nidos y hornos.',
+    halfSize: 40, gravity: -22, ground: null, cover: false,
+    theme: { sky: 0x03040c, fog: [14, 55], sunColor: 0xeaf2ff, sun: 0.55, amb: 0.85, hemiSky: 0xcfe0ff, hemiGround: 0x55606a, stars: true },
+    build(b) { const I = loadImpostor(); if (!I) throw new Error('Falta shared/impostor.js para el mapa ÑEMANAVE'); I.nave.build(b); },
+    spawns: [
+      { x: 0, z: -4.5 }, { x: 0, z: 4.5 }, { x: -16.5, z: -11.5 }, { x: 18.5, z: -12 }, { x: 0, z: 16.5 }, { x: -17, z: 15.5 },
+      { x: 18.5, z: 12 }, { x: 24, z: 0 }, { x: -17, z: -4.75 }, { x: -33.5, z: -2.5 }, { x: -26, z: -14.5 }, { x: -26, z: 13 },
+    ],
+    teamSpawns: {
+      red: [{ x: -33.5, z: -2.5 }, { x: -33.5, z: 2.5 }, { x: -26, z: -14.5 }, { x: -26, z: 13 }, { x: -16.5, z: -11.5 }],
+      blue: [{ x: 24, z: 0 }, { x: 24.5, z: -3 }, { x: 18.5, z: -12 }, { x: 18.5, z: 12 }, { x: 12, z: 0 }],
+    },
+    coops: [{ x: 0, y: 0, z: -4.5, r: 1.8 }, { x: 0, y: 0, z: -11, r: 1.4 }, { x: 0, y: 0, z: 11, r: 1.4 }, { x: 18.5, y: 0, z: 0, r: 1.4 }, { x: -25.5, y: 0, z: 0, r: 1.4 }],
+    grenadePacks: [{ x: -8, z: -11 }, { x: 10, z: 11 }, { x: -14, z: 0 }, { x: 12, z: -11 }, { x: -8, z: 11 }, { x: -4.5, z: 0 }],
+    spatula: { x: 4.5, y: 0, z: 0 },
+    bases: { red: { x: -16.5, y: 0, z: -11.5, r: 1.8 }, blue: { x: 18.5, y: 0, z: 12, r: 1.8 } },
+  };
+
+  const LIST = [castle, dirt, feedlot, moonbase, shipyard, ruins, blue, fortflip, twotowers, medina, alpine, temple, factory, downtown, sawmill, nemanave];
   const MAPS = {};
   LIST.forEach(m => { MAPS[m.id] = m; });
   // Alias de los ids antiguos
@@ -857,6 +1184,7 @@
     data.teamSpawns = { red: def.teamSpawns.red.map(fix), blue: def.teamSpawns.blue.map(fix) };
     data.coops = def.coops;
     data.healthPacks = def.healthPacks ? def.healthPacks.map(fix) : autoHealthPacks(data, def);
+    data.grenadePacks = def.grenadePacks ? def.grenadePacks.map(fix) : autoGrenadePacks(data, def);
     data.spatula = def.spatula;
     data.bases = def.bases;
     cache[id] = data;
@@ -869,20 +1197,22 @@
   // cliente). Nunca tapa spawns, objetivos, rampas, escaleras ni puertas.
   // -------------------------------------------------------------------------
   const COVER_KITS = {
-    grass: ['crates', 'hay', 'wallLow:stoneOld', 'bags', 'logs'],
-    hedge: ['wallLow:hedge', 'crates', 'wallLow:hedge'],
-    stone: ['wallLow:stoneOld', 'crates', 'bags'],
-    dirt: ['hay', 'crates', 'bags', 'logs', 'barrels'],
-    hay: ['hay', 'hay', 'crates'],
-    sand: ['wallLow:sandstone', 'crates', 'bags', 'block:sandstoneDk'],
-    snow: ['wallLow:snow', 'logs', 'crates', 'block:ice'],
-    rock: ['block:rock', 'block:stoneDark', 'crates'],
-    stoneDark: ['block:stoneDark', 'crates'],
-    moon: ['block:scifiDark', 'crates:scifiDark', 'block:rock'],
+    // Sólo piezas reconocibles (cajas, sacos, muretes, barriles, pacas): nada de bloques al azar
+    // v6: en los mapas naturales también rocas (más naturales que tantas cajas sueltas)
+    grass: ['crates', 'hay', 'wallLow:stoneOld', 'bags', 'rocks'],
+    hedge: ['wallLow:hedge', 'crates', 'bags'],
+    stone: ['wallLow:stoneOld', 'crates', 'bags', 'rocks'],
+    dirt: ['hay', 'crates', 'bags', 'barrels', 'rocks'],
+    hay: ['hay', 'crates'],
+    sand: ['wallLow:sandstone', 'crates', 'bags', 'barrels', 'rocks'],
+    snow: ['wallLow:snow', 'crates', 'bags', 'rocks'],
+    rock: ['wallLow:stoneDark', 'crates', 'barrels', 'rocks'],
+    stoneDark: ['wallLow:stoneDark', 'crates'],
+    moon: ['crates:scifiDark', 'wallLow:scifiDark', 'barrels', 'rocks', 'rocks'],
     concrete: ['jersey', 'crates', 'barrels', 'bags'],
     asphalt: ['jersey', 'crates', 'barrels'],
-    marble: ['block:marble', 'wallLow:white'],
-    kitchen: ['block:bookRed', 'block:bookBlue', 'block:appliance'],
+    marble: ['wallLow:marble', 'crates'],
+    kitchen: ['crates'],
   };
   function coverRng(seed) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
   function autoCover(b, def) {
@@ -932,14 +1262,23 @@
       else if (kind === 'logs') { fw = ax ? 4 : 1.1; fd = ax ? 1.1 : 4; }
       else if (kind === 'hay') { fw = ax ? 2.2 : 1.3; fd = ax ? 1.3 : 2.2; }
       else if (kind === 'barrels') { fw = 2; fd = 1; }
+      else if (kind === 'rocks') { fw = ax ? 2.6 : 2; fd = ax ? 2 : 2.6; }
       else if (kind === 'block') { fw = 1.6 + R() * 1.2; fd = 1.4 + R() * 1.2; }
       else { fw = ax ? 2.8 : 1.4; fd = ax ? 1.4 : 2.8; } // crates
       if (!free(x - fw / 2, z - fd / 2, x + fw / 2, z + fd / 2)) continue;
       const v = R();
       switch (kind) {
-        case 'wallLow': b.box(x, 0, z, fw, 1.25, fd, matArg || 'stoneOld'); break;
+        case 'wallLow': {
+          const wm = matArg || 'stoneOld';
+          b.box(x, 0, z, fw, 1.25, fd, wm);
+          // albardilla (remate) algo más ancha: el murete se lee como un muro de verdad
+          if (wm !== 'snow' && wm !== 'hedge') b.box(x, 1.25, z, fw + 0.12, 0.12, fd + 0.12, wm === 'stoneOld' ? 'stone' : wm === 'sandstone' ? 'sandstoneDk' : 'stoneDark', { solid: false });
+          break;
+        }
         case 'bags':
-          b.box(x, 0, z, fw, 1.1, fd, 'sandbag');
+          // dos hileras de sacos: la de arriba algo más estrecha
+          b.box(x, 0, z, fw, 0.6, fd, 'sandbag');
+          b.box(x, 0.6, z, ax ? fw - 0.3 : 0.75, 0.5, ax ? 0.75 : fd - 0.3, 'sandbag');
           break;
         case 'jersey': b.box(x, 0, z, fw, 1.05, fd, 'jersey'); break;
         case 'logs': b.box(x, 0, z, fw, 1, fd, 'logs'); if (v < 0.5) b.box(x, 1, z, ax ? fw * 0.6 : fw, 0.8, ax ? fd : fd * 0.6, 'logs'); break;
@@ -949,6 +1288,14 @@
           b.decoAt('barrel', x - 0.5, 0, z); b.decoAt('barrel', x + 0.5, 0, z);
           break;
         case 'block': b.box(x, 0, z, fw, 1.2 + v * 0.9, fd, matArg || 'rock'); break;
+        case 'rocks': {
+          // una roca grande (cubre agachado) y otra pequeña al lado
+          const col = { grass: 0x8a8d92, stone: 0x8a8d92, dirt: 0x8b7d6b, sand: 0xc9a46a, snow: 0x7d858c, rock: 0x5a4a42, moon: 0x7a7c86 }[def.ground] || 0x8a8d92;
+          const big = 1.7 + v * 0.5, o = ax ? [0.45, 0] : [0, 0.45];
+          b.rock(x - o[0], z - o[1], big, { color: col, snow: def.ground === 'snow', rotY: v * 6 });
+          b.rock(x + o[0] * 2.1, z + o[1] * 2.1, 0.8 + v * 0.3, { color: col, flat: true, snow: def.ground === 'snow' });
+          break;
+        }
         default: {
           const m = matArg || 'crate';
           const c = ax ? [-0.7, 0] : [0, -0.7], c2 = ax ? [0.7, 0] : [0, 0.7];
@@ -976,6 +1323,49 @@
       if (blockedPack(data, c.x, y, c.z)) continue;
       if (out.some(o => Math.hypot(o.x - c.x, o.z - c.z) < minSep)) continue;
       out.push({ x: +c.x.toFixed(2), y, z: +c.z.toFixed(2) });
+    }
+    return out;
+  }
+  // Granadas en el suelo: puntos de la planta baja bien repartidos (muestreo del
+  // punto más lejano), lejos de spawns y botiquines. Deterministas.
+  function autoGrenadePacks(data, def) {
+    const want = { S: 3, M: 6, L: 8 }[def.size] || 6;
+    const H = data.halfSize - 3;
+    const avoid = data.spawns.concat(data.teamSpawns.red, data.teamSpawns.blue, data.healthPacks);
+    const cands = [];
+    for (let x = -H; x <= H; x += 2.5) for (let z = -H; z <= H; z += 2.5) {
+      const y = supportAt(data, x, z, 0.5);
+      if (!isFinite(y) || y < -50 || y > 0.45) continue;
+      if (blockedPack(data, x, y, z)) continue;
+      // Sólo en zonas abiertas: con hueco alrededor y a cielo abierto (nada de rincones ni interiores)
+      let tight = false;
+      for (const bx of data.boxes) {
+        if (!bx.solid || bx.maxY > 60) continue;
+        const covers = x > bx.minX && x < bx.maxX && z > bx.minZ && z < bx.maxZ && bx.minY > y;
+        const close = bx.minY < y + 2 && bx.maxY > y + 0.05 && x + 1.1 > bx.minX && x - 1.1 < bx.maxX && z + 1.1 > bx.minZ && z - 1.1 < bx.maxZ;
+        if (covers || close) { tight = true; break; }
+      }
+      if (tight) continue;
+      let near = false;
+      for (const r of data.ramps) if (x > r.minX - 1 && x < r.maxX + 1 && z > r.minZ - 1 && z < r.maxZ + 1) { near = true; break; }
+      if (near) continue;
+      for (const l of data.ladders) if (x > l.minX - 1.2 && x < l.maxX + 1.2 && z > l.minZ - 1.2 && z < l.maxZ + 1.2) { near = true; break; }
+      if (near) continue;
+      let dmin = Infinity;
+      for (const a of avoid) dmin = Math.min(dmin, Math.hypot(a.x - x, a.z - z));
+      if (dmin < 4) continue;
+      cands.push({ x, y, z, d: dmin });
+    }
+    const out = [];
+    while (out.length < want && cands.length) {
+      let best = 0, bestD = -1;
+      for (let i = 0; i < cands.length; i++) {
+        let d = cands[i].d;
+        for (const o of out) d = Math.min(d, Math.hypot(o.x - cands[i].x, o.z - cands[i].z));
+        if (d > bestD) { bestD = d; best = i; }
+      }
+      const c = cands.splice(best, 1)[0];
+      out.push({ x: +c.x.toFixed(2), y: c.y, z: +c.z.toFixed(2) });
     }
     return out;
   }

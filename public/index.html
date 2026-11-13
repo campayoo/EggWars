@@ -30,6 +30,7 @@
       <button class="side-btn" data-panel="friends"><span>🤝</span>Amigos<i class="badge hidden" id="friends-badge">0</i></button>
       <button class="side-btn" data-panel="rooms"><span>🌐</span>Salas</button>
       <button class="side-btn" data-panel="profile"><span>👤</span>Perfil</button>
+      <a class="nav-imp" href="/impostor.html" title="Nuevo modo: deducción social en una nave"><span>🔪</span>Huevo Impostor</a>
     </nav>
     <div class="top-right">
       <div class="egg-counter" title="Huevos ganados con los retos"><span class="egg-ico"></span><b id="egg-count">0</b></div>
@@ -277,7 +278,7 @@
       <div class="set-row"><label>Campo de visión <b id="fov-value-text">75°</b></label><input type="range" id="fov-slider" min="60" max="100" step="1"/></div>
       <div class="set-row"><label>Volumen <b id="vol-value-text">70%</b></label><input type="range" id="vol-slider" min="0" max="1" step="0.05"/></div>
       <div class="set-row"><label>Calidad gráfica</label>
-        <select id="quality-select"><option value="low">Baja (sin sombras)</option><option value="mid">Media</option><option value="high">Alta</option></select></div>
+        <select id="quality-select"><option value="low">Baja · máxima fluidez</option><option value="mid">Media</option><option value="high">Alta</option><option value="ultra">Ultra · PCs potentes</option></select></div>
       <label class="check-row"><input type="checkbox" id="show-fps"/> Mostrar FPS y ping</label>
     </div>
     <div class="settings-actions">
@@ -295,49 +296,64 @@
   <div class="create-room-card wide">
     <div class="modal-top">
       <h3 id="create-title">🛠️ CREAR PARTIDA</h3>
-      <button id="btn-close-create-room" class="btn-close-modal" title="Cerrar">✖</button>
+      <button id="btn-close-create-room" class="btn-close-modal" title="Cerrar (Esc)">✖</button>
     </div>
 
     <div class="create-layout">
       <div class="create-col-maps">
-        <div class="create-section-title">1 · ELIGE EL MAPA <span id="map-filter" class="map-filter">
+        <div class="create-section-title"><span><i class="step">1</i>ELIGE EL MAPA</span><span id="map-filter" class="map-filter">
           <button data-size="all" class="active">Todos</button><button data-size="L">Grandes</button><button data-size="M">Medianos</button><button data-size="S">Arenas 1v1</button>
         </span></div>
         <div id="map-grid" class="map-grid"></div>
       </div>
 
       <div class="create-col-opts">
-        <canvas id="create-preview" width="720" height="250"></canvas>
-        <div class="create-section-title">2 · MODO DE JUEGO</div>
-        <div id="mode-grid" class="mode-grid"></div>
-        <p id="mode-desc" class="mode-desc"></p>
+        <div class="create-scroll">
+          <div class="create-hero">
+            <canvas id="create-preview" width="720" height="300"></canvas>
+            <div class="create-hero-info"><b id="create-hero-name">Castle</b><span id="create-hero-desc"></span></div>
+          </div>
+          <div class="create-section-title"><span><i class="step">2</i>MODO DE JUEGO</span></div>
+          <div id="mode-grid" class="mode-grid"></div>
 
-        <div class="create-section-title">3 · OPCIONES</div>
-        <div class="form-group">
-          <label for="create-room-name">Nombre de la sala</label>
-          <input type="text" id="create-room-name" placeholder="Ej: Duelo de Reyes" maxlength="24"/>
-        </div>
-        <div class="form-row">
+          <div class="create-section-title"><span><i class="step">3</i>OPCIONES</span></div>
           <div class="form-group">
-            <label for="create-room-max-players">Jugadores</label>
-            <select id="create-room-max-players">
-              <option value="2">2</option><option value="4">4</option><option value="6">6</option>
-              <option value="8" selected>8</option><option value="12">12</option><option value="16">16</option><option value="18">18</option>
-            </select>
+            <label for="create-room-name">Nombre de la sala</label>
+            <input type="text" id="create-room-name" placeholder="Ej: Duelo de Reyes" maxlength="24"/>
           </div>
-          <div class="form-group">
-            <label for="create-room-limit" id="create-room-limit-label">Bajas para ganar</label>
-            <select id="create-room-limit"></select>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="create-room-max-players">Jugadores</label>
+              <select id="create-room-max-players">
+                <option value="2">2</option><option value="4">4</option><option value="6">6</option>
+                <option value="8" selected>8</option><option value="12">12</option><option value="16">16</option><option value="18">18</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="create-room-limit" id="create-room-limit-label">Bajas para ganar</label>
+              <select id="create-room-limit"></select>
+            </div>
+            <div class="form-group">
+              <label for="create-room-time">Tiempo</label>
+              <select id="create-room-time"></select>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="create-room-time">Tiempo</label>
-            <select id="create-room-time"></select>
-          </div>
-        </div>
-        <label class="check-row" id="create-private-row"><input type="checkbox" id="create-room-private"/> Sala privada (sólo se entra con código)</label>
 
-        <div class="create-summary" id="create-summary"></div>
-        <div class="modal-actions">
+          <div class="create-section-title"><span><i class="step">4</i>BOTS</span><small class="bots-hint" id="bots-hint">Rellenan las plazas libres y se apartan cuando entra alguien</small></div>
+          <div class="bots-box">
+            <div class="bots-count">
+              <input type="range" id="create-room-bots" min="0" max="7" value="0" step="1"/>
+              <output id="create-room-bots-val">Sin bots</output>
+            </div>
+            <div class="seg bots-diff" id="create-room-botdiff">
+              <button data-diff="easy">🐣 Fácil</button><button data-diff="normal" class="active">🥚 Normal</button><button data-diff="hard">🍳 Difícil</button>
+            </div>
+          </div>
+
+          <label class="check-row" id="create-private-row"><input type="checkbox" id="create-room-private"/> Sala privada (sólo se entra con código)</label>
+        </div>
+        <div class="create-footer">
+          <div class="create-summary" id="create-summary"></div>
           <button id="btn-confirm-create-room" class="shell-btn-primary big">CREAR Y ENTRAR 💥</button>
         </div>
       </div>
@@ -533,8 +549,10 @@
 <script src="/shared/physics.js"></script>
 <script src="/shared/gamedata.js"></script>
 <script src="/shared/cosmetics.js"></script>
+<script src="/shared/impostor.js"></script>
 <script src="/js/maps.js"></script>
 <script src="/js/eggmodel.js"></script>
+<script src="/js/navedecor.js"></script>
 <script src="/js/main.js"></script>
 </body>
 </html>

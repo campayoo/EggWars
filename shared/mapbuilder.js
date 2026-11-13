@@ -149,7 +149,7 @@
       minY: y, maxY: y + h,
       minZ: p[1] - d / 2, maxZ: p[1] + d / 2,
       mat,
-      see: !!(o.see || m.see),        // las balas lo atraviesan (cristal, barandillas)
+      see: !!(o.see || m.see || this._see),   // las balas lo atraviesan (cristal, barandillas)
       solid: o.solid !== false,
       vis: !(o.vis === false || m.invisible),
     };
@@ -222,7 +222,8 @@
     const p = this._tp(x, z);
     const F = this._tdir(facing);
     const f = DIRV[F];
-    const depth = 0.84, width = 1.1;
+    // Zona para agarrarse algo más amplia que la escalera visible (1,5 m): se engancha aunque llegues ladeado
+    const depth = 1.05, width = 1.5;
     const cx = p[0] - f[0] * depth / 2, cz = p[1] - f[1] * depth / 2;
     const sx = f[0] !== 0 ? depth : width, sz = f[0] !== 0 ? width : depth;
     this.ladders.push({
@@ -275,9 +276,26 @@
       if (a > cur) seg(cur, a, y0, y0 + H);
       if (op.y > 0) seg(a, b, y0, y0 + Math.min(H, op.y));
       if (op.y + op.h < H) seg(a, b, y0 + op.y + op.h, y0 + H);
+      // Marco (sólo decoración, sin colisión) en puertas y ventanas de verdad
+      if (op.y + op.h < H - 0.05 && b - a > 0.6 && t >= 0.2 && this.frames !== false) this._frame(axis, fixed, a, b, y0 + op.y, y0 + op.y + op.h, t, op.y > 0.05);
       cur = Math.max(cur, b);
     }
     if (cur < to) seg(cur, to, y0, y0 + H);
+  };
+
+  // Marco de puerta (jambas + dintel) o de ventana (alféizar + dintel)
+  Builder.prototype._frame = function (axis, fixed, a, b, ya, yb, t, isWindow) {
+    const fm = this.frameMat || 'woodDark', deco = { solid: false };
+    const out = t + 0.12, fw = 0.14;
+    const put = (u0, u1, y0, y1, depth) => {
+      if (axis === 'x') this.aabb(u0, y0, fixed - depth / 2, u1, y1, fixed + depth / 2, fm, deco);
+      else this.aabb(fixed - depth / 2, y0, u0, fixed + depth / 2, y1, u1, fm, deco);
+    };
+    // Cada pieza entra 2 cm en el hueco: así no comparte cara con la pared (sin parpadeo)
+    const e = 0.02;
+    put(a - fw, b + fw, yb - e, yb + fw, out);                       // dintel
+    if (isWindow) put(a - fw, b + fw, ya - 0.1, ya + e, out + 0.1);  // alféizar
+    else { put(a - fw, a + e, ya, yb, out); put(b - e, b + fw, ya, yb, out); }  // jambas
   };
 
   // Habitación/edificio: paredes con aperturas, pisos opcionales, techo y pretil
@@ -441,6 +459,20 @@
     });
     this.stairs(scx, sz, 0, 2, len, H1, '+x', o.stairMat || 'woodDark');
     this.ladder(cx + w / 2 - t, lz, H1, H1 + 0.3, '+x', { metal: !!o.metal });
+    // Azotea con algo encima (v6): chimenea en casas de piedra/madera/ladrillo o máquina del aire
+    // acondicionado en edificios modernos. Esquina NO, lejos de la trampilla y de los puentes. Da cobertura.
+    if (o.chimney !== false) {
+      const roofY = H + 0.3, rx = cx - w / 2 + t + 0.95, rz = cz - d / 2 + t + 0.85;
+      const modern = ['concrete', 'white', 'blue', 'blueLight', 'scifi', 'scifiDark', 'metal'].indexOf(mat) >= 0;
+      if (modern) {
+        this.box(rx + 0.25, roofY, rz + 0.1, 1.5, 0.95, 1.1, 'metal');
+        this.box(rx + 0.25, roofY + 0.95, rz + 0.1, 0.9, 0.06, 0.9, 'metalDark', { solid: false });   // rejilla del ventilador
+        this.box(rx + 1.35, roofY, rz + 0.1, 0.5, 0.35, 0.5, 'metalDark');
+      } else {
+        this.box(rx, roofY, rz, 0.9, 1.6, 0.9, o.trim || mat);
+        this.box(rx, roofY + 1.6, rz, 1.1, 0.16, 1.1, 'stoneDark', { solid: false });
+      }
+    }
     // --- Decoración sin colisión: cornisa, zócalo, imposta entre pisos, toldos y alféizares
     const trim = o.trim || mat, deco = { solid: false };
     const band = (y0, h, out) => {
@@ -479,6 +511,8 @@
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, L = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0);
     this.slab(cx, cz, y, alongX ? L : w, alongX ? w : L, 0.3, mat || 'plank');
     if (o.rails !== false) {
+      // seeRails: barandilla calada (las balas pasan y se dibuja con postes y barras)
+      if (o.seeRails) this._see = true;
       const a = alongX ? Math.min(x0, x1) : Math.min(z0, z1), b = a + L;
       const gaps = o.gaps || [];
       if (alongX) {
@@ -488,6 +522,7 @@
         this.wallSeg('z', cx - w / 2 + 0.06, a, b, y, 0.9, 0.12, gaps.filter(g => g.side !== 'e'), o.railMat || 'rail');
         this.wallSeg('z', cx + w / 2 - 0.06, a, b, y, 0.9, 0.12, gaps.filter(g => g.side === 'e'), o.railMat || 'rail');
       }
+      this._see = false;
     }
     if (o.supports) {
       const n = Math.max(1, Math.floor(L / 7));
@@ -540,6 +575,63 @@
     return h;
   };
 
+  // -------------------------------------------------------------------------
+  // Piezas de detalle (v6): todas respetan with() y tienen colisión sencilla
+  // -------------------------------------------------------------------------
+
+  // Roca (cobertura): caja de colisión + roca low-poly. s = tamaño aproximado
+  Builder.prototype.rock = function (x, z, s, o) {
+    o = o || {};
+    s = s || 1.6;
+    const h = s * (o.flat ? 0.55 : 0.8);
+    this.box(x, 0, z, s * 0.9, h, s * 0.8, 'invisible');
+    this.decoAt('rock', x, 0, z, { s, h, color: o.color, snow: !!o.snow, rotY: o.rotY || 0 });
+  };
+
+  // Valla baja de madera (postes + 2 travesaños). Se puede saltar (1 m) y las balas pasan entre las tablas.
+  Builder.prototype.fence = function (x0, z0, x1, z1, o) {
+    o = o || {};
+    const h = o.h || 1, mat = o.mat || 'wood', alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+    const L = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const deco = { solid: false };
+    // colisión: un único panel delgado que no para balas
+    this.box(cx, 0, cz, alongX ? L : 0.12, h, alongX ? 0.12 : L, 'invisible', { see: true });
+    const n = Math.max(1, Math.round(L / 2));
+    for (let i = 0; i <= n; i++) {
+      const t = -L / 2 + L * i / n;
+      this.box(alongX ? cx + t : cx, 0, alongX ? cz : cz + t, 0.16, h + 0.1, 0.16, mat, deco);
+    }
+    for (const y of [h * 0.35, h * 0.8]) this.box(cx, y, cz, alongX ? L : 0.08, 0.12, alongX ? 0.08 : L, mat, deco);
+  };
+
+  // Cobertizo abierto: 4 postes y tejado plano (no se sube; da sombra y cobertura de arriba)
+  Builder.prototype.shed = function (x, z, w, d, h, roofMat, o) {
+    o = o || {};
+    const pm = o.postMat || 'woodDark', k = 0.2;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => this.pillar(x + sx * (w / 2 - k), 0, z + sz * (d / 2 - k), 0.3, h, pm));
+    this.slab(x, z, h + 0.25, w + 0.6, d + 0.6, 0.25, roofMat || 'roofRed');
+    this.box(x, h - 0.2, z - d / 2 + k, w, 0.2, 0.2, pm, { solid: false });
+    this.box(x, h - 0.2, z + d / 2 - k, w, 0.2, 0.2, pm, { solid: false });
+  };
+
+  // Pasarela peatonal con rampas en los dos extremos (cruza muretes, arroyos…)
+  Builder.prototype.footbridge = function (x, z0, z1, y, w, mat, o) {
+    o = o || {};
+    w = w || 2;
+    const zA = Math.min(z0, z1), zB = Math.max(z0, z1), rl = o.rampLen || Math.max(2.4, y * 2.6);
+    this.bridge(x, zA, x, zB, y, w, mat || 'plank', { railMat: o.railMat || 'woodDark', seeRails: true });
+    this.ramp(x, zA - rl / 2, 0, w, rl, y, '+z', mat || 'plank');
+    this.ramp(x, zB + rl / 2, 0, w, rl, y, '-z', mat || 'plank');
+  };
+
+  // Vía de tren (sólo decoración en el suelo): traviesas + dos raíles
+  Builder.prototype.track = function (x0, x1, z) {
+    const L = x1 - x0, cx = (x0 + x1) / 2, deco = { solid: false };
+    for (let x = x0 + 0.4; x < x1; x += 0.9) this.box(x, 0, z, 0.35, 0.08, 2.4, 'woodDark', deco);
+    this.box(cx, 0.08, z - 0.72, L, 0.1, 0.1, 'steel', deco);
+    this.box(cx, 0.08, z + 0.72, L, 0.1, 0.1, 'steel', deco);
+  };
+
   // Murete de sacos terreros / cobertura baja (L opcional)
   Builder.prototype.sandbags = function (x, z, len, alongX, mat, h) {
     h = h || 1.1;
@@ -559,5 +651,111 @@
     return r.y0 + r.h * Math.max(0, Math.min(1, t));
   }
 
-  return { MATERIALS, DIRV, Builder, rampSurfaceAt };
+  // -------------------------------------------------------------------------
+  // CARAS VISIBLES (sólo para el dibujo, el cliente): de cada caja quita las
+  // partes de sus caras que quedan tapadas por otra caja opaca (paredes unidas,
+  // cajas apoyadas, el lado de abajo pegado al suelo) y, cuando dos caras están
+  // en el mismo plano mirando al mismo lado, deja sólo una. Así:
+  //   · no hay parpadeo (z-fighting) entre piezas que se solapan,
+  //   · no salen líneas en medio de una pared hecha con varios tramos,
+  //   · se dibujan muchos menos triángulos (y menos píxeles repetidos).
+  // Devuelve, por caja visible, sus 6 caras como listas de rectángulos
+  // [u0, u1, v0, v1] en los ejes u = (eje+1)%3, v = (eje+2)%3.
+  // -------------------------------------------------------------------------
+  const LO = (b, a) => a === 0 ? b.minX : a === 1 ? b.minY : b.minZ;
+  const HI = (b, a) => a === 0 ? b.maxX : a === 1 ? b.maxY : b.maxZ;
+  const FACE_KEYS = ['nx', 'px', 'ny', 'py', 'nz', 'pz'];
+  function subtractRect(rects, o, E) {
+    const out = [];
+    for (const r of rects) {
+      if (o[1] <= r[0] + E || o[0] >= r[1] - E || o[3] <= r[2] + E || o[2] >= r[3] - E) { out.push(r); continue; }
+      if (o[0] > r[0] + E) out.push([r[0], o[0], r[2], r[3]]);
+      if (o[1] < r[1] - E) out.push([o[1], r[1], r[2], r[3]]);
+      const m0 = Math.max(r[0], o[0]), m1 = Math.min(r[1], o[1]);
+      if (o[2] > r[2] + E) out.push([m0, m1, r[2], o[2]]);
+      if (o[3] < r[3] - E) out.push([m0, m1, o[3], r[3]]);
+    }
+    return out;
+  }
+  function cullFaces(boxes, opts) {
+    opts = opts || {};
+    const E = 1e-4, CELL = 4;
+    // No tapan nada: cristal, cajas invisibles y barandillas (se dibujan caladas)
+    const clear = b => { const m = MATERIALS[b.mat] || {}; return !!(m.transparent || m.invisible || m.see); };
+    const occ = boxes.map(b => b.vis && !clear(b));
+    // Rejilla en XZ para no comparar cada caja con todas
+    const grid = new Map();
+    const cells = (b, fn) => {
+      const x0 = Math.floor(b.minX / CELL), x1 = Math.floor(b.maxX / CELL), z0 = Math.floor(b.minZ / CELL), z1 = Math.floor(b.maxZ / CELL);
+      for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) fn(x + ',' + z);
+    };
+    boxes.forEach((b, i) => { if (occ[i] && b.maxY < 70) cells(b, k => { let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(i); }); });
+    return boxes.map((A, i) => {
+      if (!A.vis) return null;
+      const near = new Set();
+      // margen de una celda: las cajas que tocan justo el borde también cuentan
+      cells({ minX: A.minX - 0.01, maxX: A.maxX + 0.01, minZ: A.minZ - 0.01, maxZ: A.maxZ + 0.01 }, k => { const l = grid.get(k); if (l) for (const j of l) if (j !== i) near.add(j); });
+      const res = {};
+      for (let a = 0; a < 3; a++) {
+        const u = (a + 1) % 3, v = (a + 2) % 3;
+        for (const s of [-1, 1]) {
+          const key = FACE_KEYS[a * 2 + (s > 0 ? 1 : 0)];
+          const c = s > 0 ? HI(A, a) : LO(A, a);
+          let rects = [[LO(A, u), HI(A, u), LO(A, v), HI(A, v)]];
+          if (opts.ground && a === 1 && s < 0 && c <= 0.002) { res[key] = []; continue; }   // pegada al suelo
+          const q = c + s * E * 10;
+          for (const j of near) {
+            const B = boxes[j];
+            const o = [LO(B, u), HI(B, u), LO(B, v), HI(B, v)];
+            if (o[1] <= LO(A, u) + E || o[0] >= HI(A, u) - E || o[3] <= LO(A, v) + E || o[2] >= HI(A, v) - E) continue;
+            let hidden = LO(B, a) < q && q < HI(B, a);
+            if (!hidden) {
+              // Mismo plano y mismo sentido: se queda una sola (la de la caja que va después)
+              const bc = s > 0 ? HI(B, a) : LO(B, a);
+              if (Math.abs(bc - c) < E * 10 && (occ[i] ? j > i : true)) hidden = true;
+            }
+            if (hidden) { rects = subtractRect(rects, o, E); if (!rects.length) break; }
+          }
+          res[key] = rects;
+        }
+      }
+      return res;
+    });
+  }
+  // Aristas "de verdad" de una caja (esquinas donde se ven las dos caras):
+  // devuelve segmentos [x0,y0,z0,x1,y1,z1]. Las juntas entre tramos no salen.
+  function boxEdges(b, faces, step) {
+    step = step || 0.5;
+    const out = [], E = 2e-3;
+    const inside = (rects, pu, pv) => rects.some(r => pu >= r[0] - E && pu <= r[1] + E && pv >= r[2] - E && pv <= r[3] + E);
+    // Una arista: eje "a" a lo largo; fija las otras dos coordenadas
+    for (let a = 0; a < 3; a++) {
+      const b1 = (a + 1) % 3, b2 = (a + 2) % 3;
+      for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) {
+        const c1 = s1 > 0 ? HI(b, b1) : LO(b, b1), c2 = s2 > 0 ? HI(b, b2) : LO(b, b2);
+        const f1 = faces[FACE_KEYS[b1 * 2 + (s1 > 0 ? 1 : 0)]], f2 = faces[FACE_KEYS[b2 * 2 + (s2 > 0 ? 1 : 0)]];
+        if (!f1 || !f2 || !f1.length || !f2.length) continue;
+        const t0 = LO(b, a), t1 = HI(b, a), L = t1 - t0;
+        const n = Math.max(2, Math.ceil(L / step));
+        let run = null;
+        const P = t => { const p = [0, 0, 0]; p[a] = t; p[b1] = c1; p[b2] = c2; return p; };
+        // en la cara f1 (eje b1) los ejes u,v son (b1+1)%3,(b1+2)%3
+        const uv = (axis, p) => [p[(axis + 1) % 3], p[(axis + 2) % 3]];
+        for (let k = 0; k <= n; k++) {
+          const t = t0 + L * k / n, p = P(t);
+          const a1 = uv(b1, p), a2 = uv(b2, p);
+          const vis = inside(f1, a1[0], a1[1]) && inside(f2, a2[0], a2[1]);
+          if (vis && run === null) run = t;
+          if ((!vis || k === n) && run !== null) {
+            const end = vis ? t : t0 + L * (k - 1) / n;
+            if (end - run > 0.05) out.push(P(run).concat(P(end)));
+            run = null;
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  return { MATERIALS, DIRV, Builder, rampSurfaceAt, cullFaces, boxEdges, FACE_KEYS };
 });
