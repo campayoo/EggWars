@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🥚 EGG WARS — FPS 3D de huevos (contra bots)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E"/>
+  <link rel="stylesheet" href="style.d6d12db4f7.css"/>
+</head>
+<body>
+
+
+
+
+<div id="menu-overlay">
+  <div class="home-shade"></div>
+
+  
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-egg"></span>
+      <div class="brand-text"><b>EGG WARS</b><small>LAN EDITION</small></div>
+    </div>
+    <nav class="nav-pills">
+      <button class="side-btn active" data-panel="home"><span>🎮</span>Jugar</button>
+      <button class="side-btn" data-panel="inventory"><span>🎨</span>Taller</button>
+      <button class="side-btn" data-panel="friends"><span>🤝</span>Amigos<i class="badge hidden" id="friends-badge">0</i></button>
+      <button class="side-btn" data-panel="rooms"><span>🌐</span>Salas</button>
+      <button class="side-btn" data-panel="profile"><span>👤</span>Perfil</button>
+      <a class="nav-imp" href="#" title="Nuevo modo: deducción social en una nave"><span>🔪</span>Huevo Impostor</a>
+    </nav>
+    <div class="top-right">
+      <div class="egg-counter" title="Huevos ganados con los retos"><span class="egg-ico"></span><b id="egg-count">0</b></div>
+      <div class="account-card" id="account-card" title="Tu cuenta">
+        <canvas id="acc-egg" width="44" height="56"></canvas>
+        <div class="acc-info"><b id="acc-name">—</b><small id="acc-type">Sin sesión</small></div>
+        <button class="icon-btn small-icon" id="btn-logout" title="Cerrar sesión">⏻</button>
+      </div>
+      <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
+      <button class="icon-btn" id="btn-fullscreen" title="Pantalla completa">⛶</button>
+    </div>
+  </header>
+
+  
+  <main class="home-center">
+    <div class="egg-stage">
+      <canvas id="home-egg-canvas"></canvas>
+      <button class="rot-btn left" id="egg-rot-l" title="Girar">⟲</button>
+      <button class="rot-btn right" id="egg-rot-r" title="Girar">⟳</button>
+    </div>
+    <div class="outfit-chips" id="outfit-chips"></div>
+    <div class="home-play">
+      <div class="weapon-title" id="home-weapon-name">EggK-47</div>
+      <div class="weapon-sub" id="home-weapon-desc">Fusil de asalto automático</div>
+      <div class="weapon-picker" id="home-weapon-picker"></div>
+      <div class="weapon-stats" id="home-weapon-stats"></div>
+      <div class="home-actions">
+        <button id="btn-friends" class="btn-friends">JUGAR CON<br>AMIGOS</button>
+        <button id="join-btn" class="btn-play"><span class="play-tri"></span>JUGAR</button>
+        <div class="mode-select" id="mode-select">
+          <small>MODO DE JUEGO</small>
+          <span id="mode-select-label">Cualquiera</span>
+          <i class="mode-caret">▲</i>
+          <div class="mode-dropdown hidden" id="mode-dropdown"></div>
+        </div>
+      </div>
+    </div>
+    <footer class="home-footer"><span class="conn-dot" id="conn-dot"></span><span id="conn-text">Conectando…</span> · <span id="online-count">0</span> jugando · <a href="#" id="link-controls">Controles</a></footer>
+  </main>
+
+  
+  <section class="side-panel panel-dark" id="panel-challenges">
+    <div class="panel-head"><span>RETOS DIARIOS</span><span class="timer" id="challenge-timer">--:--:--</span></div>
+    <div class="challenge-list" id="challenge-list"></div>
+  </section>
+
+  
+  <section class="side-panel panel-dark workshop hidden" id="panel-inventory">
+    <div class="panel-head"><span>TALLER DEL HUEVO</span>
+      <span class="head-actions"><span class="saved-ind" id="saved-ind">✓ Guardado</span>
+        <button class="btn-ghost small" id="btn-undo-egg" title="Deshacer el último cambio" disabled>↶</button>
+        <button class="btn-ghost small" id="btn-random-egg" title="Combinación aleatoria">🎲</button>
+        <button class="btn-ghost small" id="btn-reset-egg" title="Volver al huevo básico">⟲</button></span>
+    </div>
+    <div class="inv-presets-wrap"><span class="inv-label">Estilos rápidos <small>(un clic y listo)</small></span><div class="inv-presets" id="inv-presets"></div></div>
+    <div class="inv-tabs" id="inv-tabs">
+      <button data-inv="color" class="active"><i>🎨</i><span>Color</span></button>
+      <button data-inv="pattern"><i>🌀</i><span>Diseño</span></button>
+      <button data-inv="eyes"><i>👀</i><span>Ojos</span></button>
+      <button data-inv="mouth"><i>👄</i><span>Boca</span></button>
+      <button data-inv="hat"><i>🎩</i><span>Gorro</span></button>
+      <button data-inv="glasses"><i>🕶️</i><span>Gafas</span></button>
+      <button data-inv="extra"><i>🎀</i><span>Extra</span></button>
+      <button data-inv="paint"><i>🖌️</i><span>Pintar</span></button>
+    </div>
+    <div class="inv-current" id="inv-current"></div>
+    <div class="inv-body" id="inv-body">
+      <div class="inv-pane" data-pane="color">
+        <label class="inv-label">Color principal</label>
+        <div class="swatches" id="swatches-1"></div>
+        <div class="inv-row"><span>Elegir otro</span><input type="color" id="color-picker" value="#fff1dc"/></div>
+        <label class="inv-label">Color secundario <small>(diseños, bufanda, capa…)</small></label>
+        <div class="swatches" id="swatches-2"></div>
+        <div class="inv-row"><span>Elegir otro</span><input type="color" id="color2-picker" value="#ff9a4d"/></div>
+        <label class="inv-label">Acabado de la cáscara</label>
+        <div class="item-grid small" id="finish-grid"></div>
+      </div>
+      <div class="inv-pane hidden" data-pane="grid"><div id="grid-extra"></div><div class="item-grid" id="item-grid"></div></div>
+      <div class="inv-pane hidden" data-pane="paint">
+        <div class="paint-callout">🖌️ <b>Pinta directamente sobre el huevo</b> de la izquierda. Arrastra fuera del huevo (o con clic derecho) para girarlo.</div>
+        <div class="paint-row">
+          <div class="brush-swatches" id="brush-swatches"></div>
+          <input type="color" id="brush-color" value="#ff8a3d" title="Otro color"/>
+        </div>
+        <div class="paint-row">
+          <div class="seg" id="brush-tool">
+            <button data-tool="brush" class="active">🖌️ Pincel</button><button data-tool="spray">💨 Spray</button><button data-tool="eraser">🧽 Goma</button>
+          </div>
+          <input type="checkbox" id="brush-eraser" hidden/>
+        </div>
+        <div class="paint-row">
+          <label class="inv-label">Grosor</label>
+          <input type="range" id="brush-size" min="1" max="24" value="5"/>
+          <span class="brush-dot" id="brush-dot"></span>
+        </div>
+        <div class="paint-row">
+          <label class="check-row small-check"><input type="checkbox" id="brush-mirror" checked/> Simetría (izq./dcha.)</label>
+        </div>
+        <div class="paint-row paint-actions">
+          <button id="painter-undo" class="btn-ghost small" title="Ctrl+Z">↶ Deshacer</button>
+          <button id="painter-clear" class="btn-ghost small">🗑️ Borrar todo</button>
+        </div>
+        <details class="paint-flat"><summary>Ver la cáscara desenrollada</summary>
+          <canvas id="texture-canvas" width="128" height="128"></canvas>
+          <p class="hint">También puedes pintar aquí: el centro del cuadro es la cara.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="side-panel panel-dark hidden" id="panel-friends">
+    <div class="panel-head"><span>AMIGOS</span><span class="timer" id="friends-online">0 en línea</span></div>
+    <div class="friend-add">
+      <input type="text" id="friend-input" placeholder="Nombre de usuario del amigo" maxlength="14" autocomplete="off"/>
+      <button class="btn-orange small" id="btn-friend-add">AÑADIR</button>
+    </div>
+    <div id="friend-requests"></div>
+    <div class="friend-list" id="friend-list"></div>
+  </section>
+
+  
+  <section class="side-panel panel-dark wide hidden" id="panel-rooms">
+    <div class="panel-head"><span>SALAS EN LA RED</span>
+      <span class="head-actions">
+        <button id="btn-refresh-rooms" class="btn-ghost small" title="Actualizar">⟳</button>
+        <button id="btn-open-create-room" class="btn-orange small">+ CREAR</button>
+      </span>
+    </div>
+    <div class="rooms-table-wrap">
+      <table class="rooms-table">
+        <thead><tr><th>SALA</th><th>MAPA</th><th>MODO</th><th>JUG.</th><th></th></tr></thead>
+        <tbody id="rooms-list-body"><tr><td colspan="5" class="rooms-empty">Conectando…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="room-preview">
+      <canvas id="selected-map-thumb" width="600" height="320"></canvas>
+      <div class="room-sel"><strong id="selected-room-name-label">Partida rápida</strong><small id="selected-room-meta"></small></div>
+    </div>
+  </section>
+
+  
+  <section class="side-panel panel-dark hidden" id="panel-profile">
+    <div class="panel-head"><span>PERFIL</span></div>
+    <div class="profile-top"><canvas id="profile-egg" width="60" height="76"></canvas><div><div class="profile-name" id="profile-name">—</div><small class="profile-sub" id="profile-sub"></small></div></div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="acc-manage" id="acc-manage">
+      <div class="fr-title" id="pw-title">Contraseña</div>
+      <input type="password" id="pw-current" placeholder="Contraseña actual" autocomplete="current-password"/>
+      <input type="password" id="pw-new" placeholder="Nueva contraseña (mín. 4)" autocomplete="new-password"/>
+      <button class="btn-orange small" id="btn-pw">Guardar contraseña</button>
+      <p class="hint" id="pw-hint"></p>
+    </div>
+  </section>
+</div>
+<div id="lobby-toast" class="hidden"></div>
+
+
+
+
+<div id="auth-screen" class="hidden">
+  <div class="auth-card">
+    <div class="logo center">
+      <span class="logo-line1">EGG</span>
+      <span class="logo-line2">WARS</span>
+      <span class="logo-tag">LAN EDITION</span>
+    </div>
+    <div class="auth-tabs">
+      <button class="active" data-auth="login">Entrar</button>
+      <button data-auth="register">Crear cuenta</button>
+      <button data-auth="ip">Con mi IP</button>
+    </div>
+    <form class="auth-form" data-form="login" autocomplete="on">
+      <input type="text" id="login-user" placeholder="Usuario" maxlength="14" autocomplete="username"/>
+      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password"/>
+      <button type="submit" class="btn-orange">ENTRAR</button>
+    </form>
+    <form class="auth-form hidden" data-form="register" autocomplete="off">
+      <input type="text" id="reg-user" placeholder="Elige un usuario (3-14)" maxlength="14" autocomplete="username"/>
+      <input type="password" id="reg-pass" placeholder="Contraseña (mín. 4)" autocomplete="new-password"/>
+      <input type="password" id="reg-pass2" placeholder="Repite la contraseña" autocomplete="new-password"/>
+      <button type="submit" class="btn-orange">CREAR CUENTA</button>
+    </form>
+    <form class="auth-form hidden" data-form="ip" autocomplete="off">
+      <p class="auth-help">Sin contraseña: la cuenta queda ligada a <b>este ordenador</b> (su IP en la red). Útil en el aula; no la uses en un equipo compartido.</p>
+      <input type="text" id="ip-name" class="hidden" placeholder="Elige tu nombre (3-14)" maxlength="14"/>
+      <button type="submit" class="btn-orange" id="btn-ip">ENTRAR CON MI IP</button>
+    </form>
+    <div class="auth-error hidden" id="auth-error"></div>
+    <div class="auth-foot"><span class="conn-dot" id="auth-conn"></span><span id="auth-conn-text">Conectando con el servidor…</span></div>
+  </div>
+</div>
+
+<div id="invite-toast" class="hidden">
+  <div class="inv-msg" id="invite-msg"></div>
+  <div class="inv-actions"><button class="btn-orange small" id="invite-accept">UNIRSE</button><button class="btn-ghost small" id="invite-ignore">Ignorar</button></div>
+</div>
+
+
+
+
+<div id="friends-modal" class="modal-backdrop hidden">
+  <div class="modal-card narrow">
+    <div class="modal-top"><h3>JUGAR CON AMIGOS</h3><button class="btn-close-modal" data-close="friends-modal">✖</button></div>
+    <div class="friends-body">
+      <div class="friends-opt">
+        <h4>Crear sala privada</h4>
+        <p>Elige mapa y modo; te daremos un código de 4 letras para tus amigos.</p>
+        <button class="btn-orange" id="btn-friends-create">CREAR SALA</button>
+      </div>
+      <div class="friends-opt">
+        <h4>Unirse con código</h4>
+        <input type="text" id="join-code-input" placeholder="ABCD" maxlength="4" autocomplete="off"/>
+        <button class="btn-orange" id="btn-join-code">UNIRSE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="settings-modal" class="modal-backdrop hidden">
+  <div class="modal-card settings-card">
+    <div class="modal-top"><h3>AJUSTES</h3><button class="btn-close-modal" data-close="settings-modal">✖</button></div>
+    <div class="settings-tabs">
+      <button class="set-tab active" data-stab="controls">⌨ 🖱 CONTROLES</button>
+      <button class="set-tab" data-stab="video">🖥 🔊 VÍDEO Y AUDIO</button>
+    </div>
+    <div class="set-pane" id="stab-controls">
+      <div class="set-cols">
+        <div>
+          <h4>TECLAS</h4>
+          <div class="bind-list" id="bind-list"></div>
+        </div>
+        <div>
+          <h4>RATÓN</h4>
+          <div class="set-row"><label>Sensibilidad <b id="sens-value-text">50</b></label><input type="range" id="mouse-sens-slider" min="1" max="100" step="1"/></div>
+          <label class="check-row"><input type="checkbox" id="invert-y"/> Invertir ratón</label>
+          <p class="hint">Haz clic en una tecla y pulsa la nueva (también botones del ratón). Esc cancela.</p>
+        </div>
+      </div>
+    </div>
+    <div class="set-pane hidden" id="stab-video">
+      <div class="set-row"><label>Campo de visión <b id="fov-value-text">75°</b></label><input type="range" id="fov-slider" min="60" max="100" step="1"/></div>
+      <div class="set-row"><label>Volumen <b id="vol-value-text">70%</b></label><input type="range" id="vol-slider" min="0" max="1" step="0.05"/></div>
+      <div class="set-row"><label>Calidad gráfica</label>
+        <select id="quality-select"><option value="low">Baja · máxima fluidez</option><option value="mid">Media</option><option value="high">Alta</option><option value="ultra">Ultra · PCs potentes</option></select></div>
+      <label class="check-row"><input type="checkbox" id="show-fps"/> Mostrar FPS y ping</label>
+    </div>
+    <div class="settings-actions">
+      <button class="btn-red" id="set-cancel">Cancelar</button>
+      <button class="btn-orange-dark" id="set-reset">Restablecer</button>
+      <button class="btn-green" id="set-confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="create-room-modal" class="modal-backdrop hidden">
+  <div class="create-room-card wide">
+    <div class="modal-top">
+      <h3 id="create-title">🛠️ CREAR PARTIDA</h3>
+      <button id="btn-close-create-room" class="btn-close-modal" title="Cerrar (Esc)">✖</button>
+    </div>
+
+    <div class="create-layout">
+      <div class="create-col-maps">
+        <div class="create-section-title"><span><i class="step">1</i>ELIGE EL MAPA</span><span id="map-filter" class="map-filter">
+          <button data-size="all" class="active">Todos</button><button data-size="L">Grandes</button><button data-size="M">Medianos</button><button data-size="S">Arenas 1v1</button>
+        </span></div>
+        <div id="map-grid" class="map-grid"></div>
+      </div>
+
+      <div class="create-col-opts">
+        <div class="create-scroll">
+          <div class="create-hero">
+            <canvas id="create-preview" width="720" height="300"></canvas>
+            <div class="create-hero-info"><b id="create-hero-name">Castle</b><span id="create-hero-desc"></span></div>
+          </div>
+          <div class="create-section-title"><span><i class="step">2</i>MODO DE JUEGO</span></div>
+          <div id="mode-grid" class="mode-grid"></div>
+
+          <div class="create-section-title"><span><i class="step">3</i>OPCIONES</span></div>
+          <div class="form-group">
+            <label for="create-room-name">Nombre de la sala</label>
+            <input type="text" id="create-room-name" placeholder="Ej: Duelo de Reyes" maxlength="24"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="create-room-max-players">Jugadores</label>
+              <select id="create-room-max-players">
+                <option value="2">2</option><option value="4">4</option><option value="6">6</option>
+                <option value="8" selected>8</option><option value="12">12</option><option value="16">16</option><option value="18">18</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="create-room-limit" id="create-room-limit-label">Bajas para ganar</label>
+              <select id="create-room-limit"></select>
+            </div>
+            <div class="form-group">
+              <label for="create-room-time">Tiempo</label>
+              <select id="create-room-time"></select>
+            </div>
+          </div>
+
+          <div class="create-section-title"><span><i class="step">4</i>BOTS</span><small class="bots-hint" id="bots-hint">Rellenan las plazas libres y se apartan cuando entra alguien</small></div>
+          <div class="bots-box">
+            <div class="bots-count">
+              <input type="range" id="create-room-bots" min="0" max="7" value="0" step="1"/>
+              <output id="create-room-bots-val">Sin bots</output>
+            </div>
+            <div class="seg bots-diff" id="create-room-botdiff">
+              <button data-diff="easy">🐣 Fácil</button><button data-diff="normal" class="active">🥚 Normal</button><button data-diff="hard">🍳 Difícil</button>
+            </div>
+          </div>
+
+          <label class="check-row" id="create-private-row"><input type="checkbox" id="create-room-private"/> Sala privada (sólo se entra con código)</label>
+        </div>
+        <div class="create-footer">
+          <div class="create-summary" id="create-summary"></div>
+          <button id="btn-confirm-create-room" class="shell-btn-primary big">CREAR Y ENTRAR 💥</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="respawn-screen" class="hidden">
+  <div class="rs-streak"><b id="rs-streak">x0</b><span>MEJOR<br>RACHA</span></div>
+  <div class="rs-killed hidden" id="rs-killed"></div>
+  <div class="rs-grid">
+    <div class="rs-left">
+      <section class="panel-dark rs-admin hidden" id="rs-admin">
+        <div class="panel-head"><span>👑 ADMIN DE LA SALA</span><span class="admin-state" id="admin-state">EN JUEGO</span></div>
+        <div class="admin-actions">
+          <button class="admin-btn" id="adm-pause"><i>⏸</i><span>Pausar</span></button>
+          <button class="admin-btn" id="adm-restart"><i>🔄</i><span>Reiniciar ronda</span></button>
+          <button class="admin-btn danger" id="adm-end"><i>🏁</i><span>Terminar ronda</span></button>
+          <button class="admin-btn primary" id="adm-settings"><i>🗺️</i><span>Mapa y ajustes</span></button>
+        </div>
+        <div class="admin-players" id="admin-players"></div>
+      </section>
+      <section class="panel-dark rs-challenges">
+        <div class="panel-head"><span>RETOS</span><span class="timer" id="rs-challenge-timer">--:--:--</span></div>
+        <div class="challenge-list" id="rs-challenge-list"></div>
+      </section>
+    </div>
+    <div class="rs-right">
+      <section class="panel-dark rs-weapons">
+        <div class="panel-head center"><span>¿CAMBIAR DE ARMA?</span></div>
+        <div class="weapon-picker small" id="rs-weapon-picker"></div>
+        <div class="rs-weapon-name" id="rs-weapon-name">EggK-47</div>
+        <div class="weapon-stats small" id="rs-weapon-stats"></div>
+        <div class="rs-loadout-hint">+ <b>Cluck 9mm</b> (E) · golpe (F) · granadas (Q)</div>
+      </section>
+      <div class="rs-team hidden" id="rs-team">
+        <span class="rs-team-now" id="rs-team-now">Equipo Rojo</span>
+        <button class="btn-ghost" id="rs-team-switch">⇄ Cambiar de equipo</button>
+      </div>
+      <button class="btn-play wide" id="rs-play"><span class="play-tri"></span><span id="rs-play-label">JUGAR</span></button>
+      <div class="rs-small">
+        <button class="btn-ghost" id="rs-settings">⚙ Ajustes</button>
+        <button class="btn-ghost" id="rs-exit">Salir al lobby</button>
+      </div>
+      <div class="rs-invite" id="rs-invite"></div>
+      <div class="rs-room" id="pause-room-info"></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="scoreboard-overlay" class="hidden">
+  <div class="shell-scoreboard">
+    <div class="sb-top">
+      <h2>MARCADOR</h2>
+      <span id="sb-game-info">—</span>
+    </div>
+    <table class="sb-table">
+      <thead>
+        <tr><th>#</th><th>JUGADOR</th><th>EQUIPO</th><th id="sb-score-col">PUNTOS</th><th>BAJAS</th><th>MUERTES</th><th>K/D</th></tr>
+      </thead>
+      <tbody id="scoreboard-entries"></tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+<div id="gameover-overlay" class="hidden">
+  <div class="death-box victory-box">
+    <div class="trophy-icon">🏆</div>
+    <h2 id="gameover-title">¡RONDA FINALIZADA!</h2>
+    <p id="gameover-text">—</p>
+    <table class="sb-table go-table"><tbody id="gameover-standings"></tbody></table>
+    <p class="next-round" id="next-round-line">Siguiente ronda en <strong id="next-round-count">9</strong>…</p>
+    <div class="go-admin hidden" id="go-admin">
+      <button class="shell-btn-primary" id="go-start">▶ EMPEZAR OTRA RONDA</button>
+      <button class="btn-ghost" id="go-settings">🗺️ Cambiar mapa y ajustes</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="grenade-charge" class="hidden"><div id="grenade-charge-fill"></div><span>💣 Suelta para lanzar</span></div>
+  <div id="paused-banner" class="hidden"><b>⏸ PARTIDA EN PAUSA</b><small id="paused-by">El admin ha pausado la partida</small></div>
+  <div id="scope-overlay" class="hidden"><div class="scope-lens"></div></div>
+
+  <div id="crosshair">
+    <div class="ch-part ch-u"></div>
+    <div class="ch-part ch-d"></div>
+    <div class="ch-part ch-l"></div>
+    <div class="ch-part ch-r"></div>
+    <div class="ch-core"></div>
+    <div id="hitmarker" class="hitmarker hidden">
+      <div class="hm-line hm-1"></div>
+      <div class="hm-line hm-2"></div>
+    </div>
+  </div>
+
+  <div id="damage-indicators"></div>
+  <div id="damage-numbers"></div>
+  <div id="waypoints"></div>
+
+  
+  <div id="ss-left-leaderboard"></div>
+
+  
+  <div id="ss-top-match-info">
+    <div class="ss-team-pill red" id="ss-team-red-pill">
+      <span class="ss-team-letter">R</span>
+      <span class="ss-team-count" id="ss-red-count">0</span>
+    </div>
+    <div class="ss-center-box">
+      <div class="ss-timer" id="ss-timer">--:--</div>
+      <div class="ss-goal" id="ss-goal">—</div>
+    </div>
+    <div class="ss-team-pill blue" id="ss-team-blue-pill">
+      <span class="ss-team-letter">B</span>
+      <span class="ss-team-count" id="ss-blue-count">0</span>
+    </div>
+  </div>
+
+  
+  <div id="objective-panel" class="hidden">
+    <div class="obj-title" id="obj-title">—</div>
+    <div class="obj-bar"><div class="obj-fill" id="obj-fill"></div></div>
+    <div class="obj-sub" id="obj-sub">—</div>
+  </div>
+
+  <div id="ss-top-right-stats">
+    <div class="ss-fps-ping-box">
+      <div>FPS: <span id="ss-fps-val">--</span></div>
+      <div>PING: <span id="ss-ping-val">--</span></div>
+    </div>
+  </div>
+
+  <div id="ss-health-circle">
+    <svg class="ss-hp-svg" viewBox="0 0 100 100">
+      <circle class="ss-hp-bg" cx="50" cy="50" r="42"></circle>
+      <circle id="ss-hp-bar" class="ss-hp-progress" cx="50" cy="50" r="42"></circle>
+    </svg>
+    <div class="ss-hp-number" id="health-text">100</div>
+  </div>
+  <div id="spawn-protect" class="hidden">🛡️ PROTECCIÓN DE SPAWN</div>
+
+  <div id="shell-ammo-widget">
+    <div class="ss-grenades-row" id="grenade-icons">
+      <span class="ss-grenade-icon active">🥚</span>
+      <span class="ss-grenade-icon active">🥚</span>
+      <span class="ss-grenade-icon active">🥚</span>
+    </div>
+    <div class="ammo-digits">
+      <span id="ammo-current">30</span><span class="ammo-div">/</span><span id="ammo-max">30</span>
+    </div>
+    <div class="ammo-visual-list" id="ammo-bullet-icons"></div>
+    <div id="reload-hint" class="hidden">PULSA [R] PARA RECARGAR</div>
+    <div class="weapon-tag-label" id="active-weapon-name">EggK-47</div>
+    <div class="weapon-slots" id="weapon-slots"></div>
+  </div>
+
+  <div id="kill-feed"></div>
+  <div id="chat-log"></div>
+
+  <div id="chat-bar-container" class="hidden">
+    <span class="chat-prefix">💬 Chat:</span>
+    <input type="text" id="chat-input" placeholder="Escribe y pulsa Enter (Esc para cancelar)" maxlength="60" autocomplete="off"/>
+  </div>
+
+  <div id="damage-flash"></div>
+  <div id="center-toast" class="hidden"></div>
+  <div id="big-banner" class="hidden"></div>
+</div>
+
+<div id="loading-overlay" class="hidden"><div class="loading-egg">🥚</div><p id="loading-text">Entrando en la partida…</p></div>
+
+
+
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="app.176fe591e1.js"></script>
+</body>
+</html>
