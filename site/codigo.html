@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EGG WARS · Documentación técnica del código</title>
+<meta name="description" content="Documentación técnica de EGG WARS: arquitectura, protocolo de red socket.io, servidor, física compartida, anti-trampas, bots, mapas, renderizado, cuentas, build, despliegue y pruebas.">
+<meta name="author" content="Pablo Campayo Viñes">
+<meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados.">
+<meta name="theme-color" content="#ff8c2a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="docs-page">
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<div class="progress" aria-hidden="true"><span id="progress"></span></div>
+
+<header class="topbar scrolled" id="topbar">
+  <a class="brand" href="index.html" aria-label="EGG WARS, inicio">
+    <svg class="brand-egg" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg>
+    <span><b>EGG WARS</b><small>Documentación técnica</small></span>
+  </a>
+  <nav class="nav" id="nav" aria-label="Secciones del sitio">
+    <a href="index.html">🎮 Guía del juego</a>
+    <a href="codigo.html" class="active" aria-current="page">🧩 Código</a>
+    <a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <a class="btn btn-sm btn-primary nav-cta" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">🌍 Jugar online</a>
+  <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+</header>
+
+<div class="docs">
+  <aside class="side" id="side" aria-label="Índice de la documentación">
+    <label class="search"><span aria-hidden="true">🔎</span><input id="q" type="search" placeholder="Buscar en el índice…" autocomplete="off"></label>
+    <nav id="toc">
+      <p class="toc-g">Empezar</p>
+      <a href="#vision">Visión general</a>
+      <a href="#arquitectura">Arquitectura</a>
+      <a href="#carpetas">Estructura de carpetas</a>
+      <a href="#flujo">Ciclo de una partida</a>
+      <p class="toc-g">Red</p>
+      <a href="#protocolo">Protocolo socket.io</a>
+      <a href="#tick">Tick y sincronización</a>
+      <p class="toc-g">Servidor</p>
+      <a href="#servidor">server.js</a>
+      <a href="#gameroom">GameRoom</a>
+      <a href="#anticheat">Anti-trampas</a>
+      <a href="#bots">Bots</a>
+      <a href="#cuentas">Cuentas y persistencia</a>
+      <p class="toc-g">Compartido</p>
+      <a href="#fisica">Física</a>
+      <a href="#gamedata">Armas y reglas</a>
+      <a href="#mapas">Mapas</a>
+      <p class="toc-g">Cliente</p>
+      <a href="#cliente">Render y juego</a>
+      <a href="#offline">Modo sin servidor</a>
+      <a href="#impostor">Huevo Impostor</a>
+      <p class="toc-g">Proyecto</p>
+      <a href="#build">Build y despliegue</a>
+      <a href="#config">Variables de entorno</a>
+      <a href="#seguridad">Seguridad</a>
+      <a href="#pruebas">Pruebas</a>
+      <a href="#contribuir">Añadir un mapa</a>
+    </nav>
+    <p class="toc-empty" id="tocEmpty" hidden>Nada coincide 🥚</p>
+  </aside>
+
+  <main class="doc" id="contenido">
+    <header class="doc-hero reveal">
+      <span class="kicker">Para desarrolladores · v6.4</span>
+      <h1>Documentación técnica</h1>
+      <p class="lead">Cómo está hecho EGG WARS por dentro: un juego 3D multijugador en el navegador con un servidor autoritativo en Node.js, lógica compartida entre cliente y servidor y un modo que ejecuta el servidor dentro del propio navegador.</p>
+      <div class="doc-stats">
+        <div><b class="count" data-to="18385">18385</b><span>líneas de JS</span></div>
+        <div><b class="count" data-to="35">35</b><span>módulos</span></div>
+        <div><b class="count" data-to="65">65</b><span>eventos de red</span></div>
+        <div><b class="count" data-to="225">225</b><span>pruebas</span></div>
+      </div>
+    </header>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="vision">
+      <h2><a href="#vision">#</a>Visión general</h2>
+      <p>EGG WARS es un <b>FPS 3D</b> escrito íntegramente en JavaScript, sin motor de juego ni frameworks de interfaz:</p>
+      <div class="stack">
+        <div><b>Three.js r160</b><span>Render 3D en el navegador (WebGL)</span></div>
+        <div><b>Node.js + Express</b><span>Servidor HTTP y archivos estáticos</span></div>
+        <div><b>Socket.io 4</b><span>Comunicación en tiempo real (WebSocket)</span></div>
+        <div><b>PostgreSQL</b><span>Cuentas en el servidor online (opcional)</span></div>
+      </div>
+      <p>Tres principios guían el código:</p>
+      <ol class="principles">
+        <li><b>El servidor manda.</b> Toda la partida (posiciones válidas, impactos, daño, munición, puntuación) se decide en el servidor. El cliente sólo envía intenciones y dibuja.</li>
+        <li><b>Una sola lógica.</b> La física, los mapas y los datos de armas viven en <code>shared/</code> y se ejecutan igual en el navegador y en Node (módulos UMD). Así la predicción del cliente coincide con la validación del servidor.</li>
+        <li><b>Nada tumba la partida.</b> Cada evento de red se procesa protegido con <code>try/catch</code>, con límites de frecuencia y validación de tipos; un mensaje basura se descarta y se registra.</li>
+      </ol>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="arquitectura">
+      <h2><a href="#arquitectura">#</a>Arquitectura</h2>
+      <p>El mismo código del servidor se usa de tres formas: en un servidor de red local, en el servidor online (Render) y dentro del navegador en la versión contra bots.</p>
+      <div class="arch reveal" aria-label="Diagrama de arquitectura">
+        <div class="a-box a-client">
+          <h4>🖥️ Navegador</h4>
+          <ul><li><code>public/js/main.js</code> · menús y partida</li><li><code>renderer.js</code> · <code>maps.js</code> · <code>eggmodel.js</code></li><li><code>controls.js</code> · <code>ui.js</code></li><li>Predicción con <code>shared/physics.js</code></li></ul>
+        </div>
+        <div class="a-wire" aria-hidden="true"><span class="pkt p1"></span><span class="pkt p2"></span><span class="pkt p3"></span><em>socket.io<br>WebSocket</em></div>
+        <div class="a-box a-server">
+          <h4>🖧 Servidor Node.js</h4>
+          <ul><li><code>server/server.js</code> · Express, salas, cuentas</li><li><code>gameRoom.js</code> · bucle a 30 Hz</li><li><code>anticheat.js</code> · <code>bots.js</code></li><li><code>accounts.js</code> → JSON o PostgreSQL</li></ul>
+        </div>
+        <div class="a-shared">
+          <h4>📦 shared/ (UMD: navegador y Node)</h4>
+          <span><code>physics.js</code></span><span><code>mapdefs.js</code></span><span><code>mapbuilder.js</code></span><span><code>gamedata.js</code></span><span><code>cosmetics.js</code></span><span><code>impostor.js</code></span>
+        </div>
+        <div class="a-offline">
+          <h4>🤖 Modo sin servidor (<code>offline.js</code>)</h4>
+          <p><code>gameRoom.js</code>, <code>anticheat.js</code> y <code>bots.js</code> se empaquetan y corren en el navegador; un <code>LocalIO</code> imita a socket.io en memoria.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="carpetas">
+      <h2><a href="#carpetas">#</a>Estructura de carpetas</h2>
+      <div class="files">
+        <details open><summary><span>📁 server/</span><small>Servidor autoritativo</small></summary>
+          <table><tbody>
+            <tr><td><code>server.js</code></td><td>533</td><td>Express, cabeceras de seguridad, socket.io, salas, cuentas conectadas, amigos, modo público.</td></tr>
+            <tr><td><code>gameRoom.js</code></td><td>1036</td><td>Una partida: jugadores, tick a 30 Hz, disparos, granadas, cohetes, modos KOTC y CTS, admin.</td></tr>
+            <tr><td><code>anticheat.js</code></td><td>200</td><td>Validación de movimiento, historial de posiciones (compensación de latencia), munición e impactos.</td></tr>
+            <tr><td><code>bots.js</code></td><td>437</td><td>Bots: rejilla de navegación, A*, objetivos por modo, puntería según dificultad.</td></tr>
+            <tr><td><code>accounts.js</code></td><td>262</td><td>Usuarios, contraseñas scrypt, sesiones, amigos, estadísticas; disco o PostgreSQL.</td></tr>
+            <tr><td><code>impostorRoom.js</code></td><td>742</td><td>Sala de Huevo Impostor: roles, tareas, sabotajes, reuniones, visión.</td></tr>
+          </tbody></table>
+        </details>
+        <details open><summary><span>📁 shared/</span><small>Cliente y servidor</small></summary>
+          <table><tbody>
+            <tr><td><code>physics.js</code></td><td>416</td><td>Mundo de colisiones AABB, paso del jugador, raycast, línea de visión, granadas, escaleras.</td></tr>
+            <tr><td><code>mapdefs.js</code></td><td>1397</td><td>Los 16 mapas como funciones <code>build(b)</code>, spawns, objetivos y alias.</td></tr>
+            <tr><td><code>mapbuilder.js</code></td><td>761</td><td>Primitivas de construcción (casas, puentes, torres…), materiales y eliminación de caras ocultas.</td></tr>
+            <tr><td><code>gamedata.js</code></td><td>156</td><td>Armas, modos, tiempos y reglas (vida, granadas, reaparición).</td></tr>
+            <tr><td><code>cosmetics.js</code></td><td>124</td><td>Catálogo del taller del huevo y saneado de personalizaciones.</td></tr>
+            <tr><td><code>impostor.js</code></td><td>892</td><td>Mapa ÑEMANAVE, tareas, conductos y cámaras.</td></tr>
+          </tbody></table>
+        </details>
+        <details><summary><span>📁 public/js/</span><small>Cliente</small></summary>
+          <table><tbody>
+            <tr><td><code>main.js</code></td><td>3723</td><td>Arranque, menús, taller, crear partida, HUD, bucle de juego, predicción y reconciliación.</td></tr>
+            <tr><td><code>maps.js</code></td><td>1639</td><td>Geometría del mapa en Three.js: fusión por material, texturas procedurales, decoración, sol y sombras.</td></tr>
+            <tr><td><code>renderer.js</code></td><td>637</td><td>Escena, jugadores remotos, interpolación, efectos (disparos, explosiones, yema).</td></tr>
+            <tr><td><code>eggmodel.js</code></td><td>554</td><td>Modelo del huevo, cosméticos y textura pintada.</td></tr>
+            <tr><td><code>client.js</code></td><td>1036</td><td>Utilidades de red y estado del cliente.</td></tr>
+            <tr><td><code>controls.js</code> · <code>ui.js</code></td><td>466</td><td>Teclado/ratón remapeables, pointer lock, avisos y marcador.</td></tr>
+            <tr><td><code>offline.js</code></td><td>288</td><td>LocalIO, sockets simulados y mini <code>require</code> para el modo sin servidor.</td></tr>
+            <tr><td><code>impostor.js</code> · <code>navedecor.js</code></td><td>1625</td><td>Cliente de Huevo Impostor y decoración de la nave.</td></tr>
+          </tbody></table>
+        </details>
+        <details><summary><span>📁 tools/ · tests/ · site/</span><small>Proyecto</small></summary>
+          <table><tbody>
+            <tr><td><code>tools/build.js</code></td><td>83</td><td>Build de producción: un paquete minificado en <code>dist/</code>.</td></tr>
+            <tr><td><code>tools/build-pages.js</code></td><td>127</td><td>Web de documentación + juego sin servidor en <code>gh-pages/</code>.</td></tr>
+            <tr><td><code>tests/*.js</code></td><td>1188</td><td>11 suites de pruebas (ver <a href="#pruebas">Pruebas</a>).</td></tr>
+            <tr><td><code>site/</code></td><td>—</td><td>Esta web (HTML, CSS y JS sin dependencias).</td></tr>
+            <tr><td><code>render.yaml</code> · <code>vercel.json</code></td><td>—</td><td>Despliegue online (Render) y contra bots (Vercel).</td></tr>
+          </tbody></table>
+        </details>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="flujo">
+      <h2><a href="#flujo">#</a>Ciclo de una partida</h2>
+      <div class="seq reveal">
+        <div class="seq-cols"><b>Navegador</b><b>Servidor</b></div>
+        <div class="msg r"><code>connect</code><span>abre el WebSocket</span></div>
+        <div class="msg l"><code>server:config</code><span>{ online, ipLogin }</span></div>
+        <div class="msg r"><div><code>auth:login</code> / <code>auth:token</code></div><span>usuario + contraseña o token guardado</span></div>
+        <div class="msg l"><code>auth:ok</code><span>token de sesión + perfil</span></div>
+        <div class="msg r"><code>player:join-room</code><span>sala o partida rápida</span></div>
+        <div class="msg l"><code>you:joined</code><span>mapa, modo, jugadores, tu id</span></div>
+        <div class="msg r loop"><code>player:move</code><span>posición + entrada, cada fotograma</span></div>
+        <div class="msg l loop"><code>game:state</code><span>estado de todos, 30 veces por segundo</span></div>
+        <div class="msg r"><code>player:shoot</code><span>origen, dirección, punto de impacto</span></div>
+        <div class="msg l"><div><code>player:hit</code> · <code>player:killed</code></div><span>validado por el servidor</span></div>
+        <div class="msg l"><code>game:over</code><span>clasificación y siguiente ronda</span></div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="protocolo">
+      <h2><a href="#protocolo">#</a>Protocolo socket.io</h2>
+      <p>Todos los mensajes son eventos de socket.io con un objeto JSON. El servidor <b>valida y acota</b> cada campo (<code>clampNum</code>, longitudes máximas, listas blancas) antes de usarlo.</p>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-t="c2s" role="tab" aria-selected="true">Cliente → servidor</button>
+        <button class="tab" data-t="s2c" role="tab" aria-selected="false">Servidor → cliente</button>
+      </div>
+      <div class="tabp" id="c2s">
+        <table class="evt"><thead><tr><th>Evento</th><th>Para qué</th></tr></thead><tbody>
+          <tr class="g"><td colspan="2">Cuentas</td></tr>
+          <tr><td><code>auth:register</code></td><td>Crear cuenta (nombre 3–14, contraseña ≥ 4).</td></tr>
+          <tr><td><code>auth:login</code></td><td>Entrar con usuario y contraseña.</td></tr>
+          <tr><td><code>auth:token</code></td><td>Volver a entrar con el token guardado.</td></tr>
+          <tr><td><code>auth:ip</code></td><td>Cuenta ligada al equipo (sólo red local).</td></tr>
+          <tr><td><code>auth:logout</code> · <code>auth:setPassword</code></td><td>Cerrar sesión · cambiar contraseña.</td></tr>
+          <tr><td><code>profile:get</code> · <code>profile:save</code></td><td>Leer o guardar el perfil (huevo, retos).</td></tr>
+          <tr class="g"><td colspan="2">Amigos</td></tr>
+          <tr><td><code>friends:request</code> · <code>friends:respond</code> · <code>friends:remove</code> · <code>friends:invite</code></td><td>Solicitudes, aceptar/rechazar, borrar e invitar a tu sala.</td></tr>
+          <tr class="g"><td colspan="2">Salas</td></tr>
+          <tr><td><code>rooms:get</code> · <code>rooms:list</code></td><td>Pedir la lista de salas.</td></tr>
+          <tr><td><code>rooms:create</code></td><td>Crear sala (mapa, modo, jugadores, meta, tiempo, bots, privada).</td></tr>
+          <tr><td><code>player:join-room</code> · <code>player:leave-room</code></td><td>Entrar (por id o código) o salir.</td></tr>
+          <tr><td><code>room:admin</code></td><td>Pausar, reiniciar, terminar, ajustes, mover de equipo, expulsar.</td></tr>
+          <tr class="g"><td colspan="2">Partida</td></tr>
+          <tr><td><code>player:move</code></td><td>Posición, mirada y estado de la entrada.</td></tr>
+          <tr><td><code>player:shoot</code> · <code>player:rocket</code> · <code>player:melee</code></td><td>Disparo, cohete del RPEGG, golpe.</td></tr>
+          <tr><td><code>player:grenade-throw</code></td><td>Lanzar granada con la fuerza cargada.</td></tr>
+          <tr><td><code>player:reload</code> · <code>player:weapon-switch</code></td><td>Recargar · cambiar de arma.</td></tr>
+          <tr><td><code>player:respawn-request</code> · <code>player:switch-team</code></td><td>Reaparecer · cambiar de equipo.</td></tr>
+          <tr><td><code>player:chat</code> · <code>player:emote</code></td><td>Chat (60 caracteres) y gestos.</td></tr>
+          <tr><td><code>net:ping</code></td><td>Medir la latencia.</td></tr>
+          <tr class="g"><td colspan="2">Huevo Impostor</td></tr>
+          <tr><td><code>imp:rooms</code> · <code>imp:create</code> · <code>imp:act</code></td><td>Lista de naves, crear nave y todas las acciones del modo.</td></tr>
+        </tbody></table>
+      </div>
+      <div class="tabp" id="s2c" hidden>
+        <table class="evt"><thead><tr><th>Evento</th><th>Cuándo llega</th></tr></thead><tbody>
+          <tr class="g"><td colspan="2">Conexión y cuentas</td></tr>
+          <tr><td><code>server:config</code></td><td>Al conectar: modo online y si se permite entrar por IP.</td></tr>
+          <tr><td><code>auth:ok</code> · <code>auth:error</code> · <code>auth:needName</code> · <code>auth:kicked</code></td><td>Resultado del acceso; sesión abierta en otro equipo.</td></tr>
+          <tr><td><code>profile:data</code> · <code>friends:*</code></td><td>Perfil, lista de amigos, solicitudes e invitaciones.</td></tr>
+          <tr class="g"><td colspan="2">Salas</td></tr>
+          <tr><td><code>rooms:list</code> · <code>rooms:created</code> · <code>rooms:error</code></td><td>Lista actualizada, sala creada, errores.</td></tr>
+          <tr><td><code>you:joined</code></td><td>Entraste: configuración completa de la sala.</td></tr>
+          <tr><td><code>room:paused</code> · <code>room:notice</code> · <code>room:kicked</code> · <code>room:admin-result</code></td><td>Acciones del admin.</td></tr>
+          <tr class="g"><td colspan="2">Partida</td></tr>
+          <tr><td><code>game:state</code></td><td>30 Hz: jugadores, granadas y estado del modo.</td></tr>
+          <tr><td><code>you:correct</code></td><td>El anti-trampas te devuelve a una posición válida.</td></tr>
+          <tr><td><code>player:joined</code> · <code>player:left</code> · <code>player:team-changed</code></td><td>Cambios en la lista de jugadores.</td></tr>
+          <tr><td><code>player:shot-fired</code> · <code>player:hit</code> · <code>player:killed</code> · <code>player:respawn</code></td><td>Disparos, impactos validados, bajas, reapariciones.</td></tr>
+          <tr><td><code>player:weapon-switched</code> · <code>player:melee</code> · <code>player:chat</code> · <code>player:emote</code></td><td>Lo que hacen los demás.</td></tr>
+          <tr><td><code>rocket:fired</code> · <code>grenade:spawn</code> · <code>grenade:explode</code></td><td>Proyectiles y explosiones.</td></tr>
+          <tr><td><code>pickup:grenade</code> · <code>pickup:taken</code></td><td>Granadas del suelo recogidas o que reaparecen.</td></tr>
+          <tr><td><code>kotc:captured</code> · <code>cts:event</code></td><td>Eventos de King of the Coop y Capture the Spatula.</td></tr>
+          <tr><td><code>round:start</code> · <code>game:over</code></td><td>Inicio y final de ronda.</td></tr>
+        </tbody></table>
+      </div>
+      <div class="callout"><b>Límites de red:</b> máximo <b>160 mensajes/s</b> por conexión (el resto se descarta en silencio), paquetes de hasta <b>200 KB</b> (texturas pintadas del huevo), <code>pingInterval</code> 5 s y <code>pingTimeout</code> 8 s.</div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="tick">
+      <h2><a href="#tick">#</a>Tick y sincronización</h2>
+      <div class="cards3">
+        <div class="kcard"><b>30 Hz</b><span>Tick del servidor (<code>TICK_RATE</code>): física de granadas y cohetes, modos, reaparición y envío de <code>game:state</code>.</span></div>
+        <div class="kcard"><b>Predicción</b><span>El cliente mueve a su huevo al instante con la misma física y, si el servidor manda <code>you:correct</code>, se recoloca.</span></div>
+        <div class="kcard"><b>Interpolación</b><span>Los demás jugadores se dibujan ligeramente en el pasado y se extrapolan si un paquete llega tarde.</span></div>
+      </div>
+      <p>Para los disparos, el servidor guarda <b>1 s de historial</b> de posiciones por jugador (<code>HIST_MS = 1000</code>) y comprueba el impacto contra donde estaba el objetivo <i>cuando el tirador disparó</i> (compensación de latencia).</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="servidor">
+      <h2><a href="#servidor">#</a>server.js</h2>
+      <p>Punto de entrada (<code>npm start</code> → <code>server.js</code> → <code>server/server.js</code>). Responsabilidades:</p>
+      <ul class="ticks">
+        <li><b>HTTP:</b> Express sirve <code>public/</code> en desarrollo o sólo el paquete minificado de <code>dist/</code> en producción (<code>--prod</code>). Cualquier otra ruta da 404 sin pistas.</li>
+        <li><b>Cabeceras:</b> CSP, <code>X-Frame-Options</code>, <code>nosniff</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code> y HSTS en modo público.</li>
+        <li><b>Salas:</b> 5 salas por defecto, máximo 40; las vacías se cierran a los 60 s. Las privadas tienen un código de 4 letras.</li>
+        <li><b>Sesiones:</b> una cuenta sólo puede estar conectada en un equipo; al entrar desde otro, el anterior recibe <code>auth:kicked</code>.</li>
+        <li><b>Estadísticas:</b> las suma el servidor con <code>statHooks</code> (bajas, muertes, headshots, victorias): no se pueden falsear.</li>
+        <li><b>Robustez:</b> <code>socket.on</code> envuelto en <code>try/catch</code>, <code>uncaughtException</code> registrado y guardado de cuentas al recibir <code>SIGTERM</code>.</li>
+        <li><b>Salud:</b> <code>GET /healthz</code> → <code>ok</code> (lo usa Render).</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="gameroom">
+      <h2><a href="#gameroom">#</a>GameRoom</h2>
+      <p>Cada sala es una instancia de <code>GameRoom</code> (<code>server/gameRoom.js</code>) con su propio <code>setInterval</code> a 30 Hz. Métodos principales, por grupo:</p>
+      <div class="methods">
+        <div><h4>Ciclo de vida</h4><code>constructor</code><code>destroy</code><code>startRound</code><code>endRound</code><code>checkWin</code><code>timeUp</code><code>tick</code><code>emitState</code></div>
+        <div><h4>Jugadores</h4><code>handlePlayerJoin</code><code>handlePlayerDisconnect</code><code>pickSpawn</code><code>respawn</code><code>assignTeam</code><code>switchTeam</code><code>setBots</code><code>humanCount</code></div>
+        <div><h4>Combate</h4><code>handlePlayerMove</code><code>handlePlayerShoot</code><code>fireAllowed</code><code>applyDamage</code><code>killPlayer</code><code>handleMelee</code><code>handleRocket</code><code>stepRockets</code></div>
+        <div><h4>Granadas</h4><code>handleGrenadeThrow</code><code>detonateGrenade</code><code>explodeAt</code><code>sanitizeGrenades</code></div>
+        <div><h4>Modos</h4><code>tickKotc</code><code>tickCts</code><code>dropSpatula</code><code>returnSpatula</code><code>modeState</code></div>
+        <div><h4>Admin</h4><code>adminId</code><code>handleAdmin</code><code>applySettings</code><code>pause</code><code>resume</code><code>isKicked</code></div>
+      </div>
+      <p>Los bots no ocupan plaza de "humano": si entra una persona en una sala llena de bots, un bot le cede el sitio y vuelve cuando se va.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="anticheat">
+      <h2><a href="#anticheat">#</a>Anti-trampas</h2>
+      <p><code>server/anticheat.js</code> exporta <code>record</code>, <code>posAt</code>, <code>resetPlayer</code>, <code>checkMove</code>, <code>tickReload</code>, <code>startReload</code>, <code>useAmmo</code>, <code>checkHit</code> y <code>HEAD_Y</code>.</p>
+      <div class="pipe reveal">
+        <div><span>1</span><b>Movimiento</b><small>Presupuesto de distancia a la velocidad máxima, trayecto completo sin atravesar paredes, gravedad y tiempo en el aire.</small></div>
+        <div><span>2</span><b>Cadencia</b><small><code>fireAllowed</code>: intervalo mínimo por arma, recarga en curso y munición del cargador.</small></div>
+        <div><span>3</span><b>Visión</b><small><code>lineOfSight</code> desde los ojos del tirador hasta el punto de impacto.</small></div>
+        <div><span>4</span><b>Impacto</b><small><code>checkHit</code> contra la posición histórica (<code>posAt</code>) del objetivo; cabeza por encima de <code>HEAD_Y</code>.</small></div>
+        <div><span>5</span><b>Daño</b><small>Calculado en el servidor con <code>falloff</code> por distancia; nunca lo manda el cliente.</small></div>
+      </div>
+      <p>Los bots pasan por <b>el mismo</b> anti-trampas que una persona: las pruebas comprueban que nunca hace falta corregirlos.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="bots">
+      <h2><a href="#bots">#</a>Bots</h2>
+      <p><code>server/bots.js</code> exporta <code>BotManager</code>, <code>DIFF</code>, <code>findPath</code> y <code>navFor</code>.</p>
+      <ul class="ticks">
+        <li><b>Navegación:</b> <code>navFor(map)</code> genera una rejilla del mapa (una vez, en caché) y un BFS sube por rampas y escaleras; <code>findPath</code> es un A* sobre esa rejilla.</li>
+        <li><b>Decisión:</b> en cada <code>think</code> eligen objetivo según el modo (gallinero, espátula, enemigo visible o zona aleatoria con <code>wanderGoal</code>). En KOTC se reparten los roles <code>obj</code> (ir al gallinero) y <code>hunt</code> (cazar).</li>
+        <li><b>Juego limpio:</b> se mueven y disparan llamando a <code>handlePlayerMove</code> y <code>handlePlayerShoot</code>, como un jugador.</li>
+      </ul>
+      <table class="tbl"><thead><tr><th>Dificultad</th><th>Reacción</th><th>Error de puntería</th><th>Acierto</th><th>Cabeza</th><th>Visión</th><th>Granadas</th></tr></thead><tbody>
+        <tr><td>🐣 Fácil</td><td>750 ms</td><td>0,17</td><td>32 %</td><td>6 %</td><td>38 m</td><td>25 %</td></tr>
+        <tr><td>🥚 Normal</td><td>450 ms</td><td>0,10</td><td>50 %</td><td>12 %</td><td>55 m</td><td>50 %</td></tr>
+        <tr><td>🍳 Difícil</td><td>260 ms</td><td>0,05</td><td>70 %</td><td>20 %</td><td>70 m</td><td>80 %</td></tr>
+      </tbody></table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="cuentas">
+      <h2><a href="#cuentas">#</a>Cuentas y persistencia</h2>
+      <ul class="ticks">
+        <li><b>Contraseñas:</b> <code>crypto.scryptSync</code> con sal aleatoria por usuario; nunca se guardan en claro.</li>
+        <li><b>Sesiones:</b> token aleatorio que el navegador guarda para volver a entrar (<code>auth:token</code>).</li>
+        <li><b>Almacenamiento:</b> sin <code>DATABASE_URL</code> → <code>data/users.json</code> con escritura atómica (archivo temporal + <code>rename</code>) y retardo de 400 ms. Con <code>DATABASE_URL</code> → PostgreSQL, tabla <code>egg_store</code> (<code>jsonb</code>), con las escrituras en cola para que nunca se pisen.</li>
+        <li><b>Arranque:</b> <code>Accounts.init()</code> carga la base de datos antes de abrir el puerto; al apagar, <code>flush()</code> espera a que se guarde todo (máx. 5 s).</li>
+      </ul>
+      <div class="code"><code>CREATE TABLE IF NOT EXISTS egg_store (
+  id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);</code><button class="copy" data-copy="CREATE TABLE IF NOT EXISTS egg_store (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now());" aria-label="Copiar">Copiar</button></div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="fisica">
+      <h2><a href="#fisica">#</a>Física (shared/physics.js)</h2>
+      <p>Exporta <code>P</code>, <code>createWorld</code>, <code>newState</code>, <code>stepPlayer</code>, <code>simulate</code>, <code>blockedAt</code>, <code>supportBelow</code>, <code>raycast</code>, <code>lineOfSight</code>, <code>stepGrenade</code> y <code>findLadder</code>. El jugador es una caja (AABB) que avanza en sub-pasos de 1/120 s.</p>
+      <table class="tbl consts"><thead><tr><th>Constante</th><th>Valor</th><th>Significado</th></tr></thead><tbody>
+        <tr><td><code>RADIUS</code></td><td>0,4 m</td><td>Medio ancho de la caja del jugador</td></tr>
+        <tr><td><code>HEIGHT</code> · <code>EYE</code></td><td>1,6 m · 1,42 m</td><td>Altura de colisión · altura de los ojos</td></tr>
+        <tr><td><code>STEP</code></td><td>0,55 m</td><td>Escalón máximo que se sube andando</td></tr>
+        <tr><td><code>SPEED</code></td><td>7,2 m/s</td><td>Velocidad máxima andando</td></tr>
+        <tr><td><code>ACCEL_GROUND</code> · <code>ACCEL_AIR</code></td><td>70 · 16</td><td>Aceleración en el suelo · control en el aire</td></tr>
+        <tr><td><code>JUMP</code></td><td>8,4 m/s</td><td>Velocidad vertical del salto</td></tr>
+        <tr><td><code>CLIMB</code></td><td>5,4 m/s</td><td>Velocidad en escaleras de mano</td></tr>
+        <tr><td><code>COYOTE</code></td><td>0,1 s</td><td>Margen para saltar justo después de dejar un borde</td></tr>
+      </tbody></table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="gamedata">
+      <h2><a href="#gamedata">#</a>Armas y reglas (shared/gamedata.js)</h2>
+      <p>Exporta <code>WEAPONS</code>, <code>PRIMARY_KEYS</code>, <code>MELEE</code>, <code>MODES</code>, <code>TIME_LIMITS</code>, <code>RULES</code>, <code>falloff</code>, <code>minInterval</code> y <code>weaponInfo</code>. Cambiar un número aquí cambia el juego en el cliente <b>y</b> en el servidor a la vez.</p>
+      <table class="tbl"><thead><tr><th>Regla</th><th>Valor</th></tr></thead><tbody>
+        <tr><td><code>MAX_HP</code></td><td>100</td></tr>
+        <tr><td><code>RESPAWN_MS</code> · <code>SPAWN_PROTECT_MS</code></td><td>3000 ms · 1600 ms</td></tr>
+        <tr><td><code>GRENADE_MAX</code> · <code>GRENADE_START</code></td><td>3 · 0 (se recogen del suelo)</td></tr>
+        <tr><td><code>GRENADE_PACK_RESPAWN_MS</code></td><td>14000 ms</td></tr>
+        <tr><td><code>GRENADE_FUSE_MS</code> · <code>GRENADE_RADIUS</code> · <code>GRENADE_MAX_DMG</code></td><td>2200 ms · 7 m · 95</td></tr>
+      </tbody></table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="mapas">
+      <h2><a href="#mapas">#</a>Mapas</h2>
+      <p><code>shared/mapdefs.js</code> exporta <code>LIST</code>, <code>MAPS</code>, <code>ALIASES</code>, <code>resolveId</code>, <code>build</code> y <code>supportAt</code>. Cada mapa es una función <code>build(b)</code> que usa un <code>Builder</code> de <code>shared/mapbuilder.js</code>; el resultado es una lista de cajas con material, que sirve a la vez para colisiones (servidor) y para dibujar (cliente).</p>
+      <div class="cards3">
+        <div class="kcard"><b>cullFaces</b><span>Quita las caras tapadas por otras piezas o por el suelo restando rectángulos: −27 % de superficie y sin parpadeo (z-fighting).</span></div>
+        <div class="kcard"><b>autoCover</b><span>Reparte coberturas por el suelo (cajas, sacos, rocas, muretes) evitando spawns y caminos.</span></div>
+        <div class="kcard"><b>Materiales</b><span><code>MATERIALS</code> define color y patrón; los marcados <code>see</code> (barandillas) dejan pasar las balas.</span></div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="cliente">
+      <h2><a href="#cliente">#</a>Render y juego (cliente)</h2>
+      <ul class="ticks">
+        <li><b>Geometría fusionada:</b> <code>maps.js</code> junta todas las cajas por material en pocos <code>BufferGeometry</code> (de ~400 a ~100 llamadas de dibujo).</li>
+        <li><b>Texturas procedurales:</b> <code>paintPattern</code> pinta ladrillo, madera, chapa… en un <code>canvas</code>, con variación de color a gran escala.</li>
+        <li><b>Sombras:</b> sol a ~50°; <code>fitSun</code> ajusta la cámara de sombras al mapa y, en partida, sigue al jugador.</li>
+        <li><b>Calidad adaptable:</b> Baja/Media/Alta/Ultra cambian resolución interna, tamaño del mapa de sombras y distancia de dibujo; si bajan los FPS de 42, baja un escalón.</li>
+        <li><b>Sin tirones:</b> los shaders se compilan al cargar el mapa (<code>renderer.compile</code>).</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="offline">
+      <h2><a href="#offline">#</a>Modo sin servidor</h2>
+      <p>La versión contra bots no tiene servidor: <code>tools/build-pages.js</code> empaqueta <code>gameRoom.js</code>, <code>anticheat.js</code> y <code>bots.js</code> junto al cliente, envueltos con <code>EggOffline.def(nombre, fn)</code>. Un mini <code>require</code> resuelve los módulos y <code>EggOffline.connect()</code> devuelve un socket que habla con un <code>LocalIO</code> en memoria con la misma API que socket.io (<code>on</code>, <code>emit</code>, <code>to().emit</code>, salas). El perfil se guarda en <code>localStorage</code>.</p>
+      <div class="callout">Resultado: <b>el mismo código del servidor</b> (incluido el anti-trampas) se ejecuta en el navegador, así que el juego contra bots se comporta exactamente igual que el online.</div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="impostor">
+      <h2><a href="#impostor">#</a>Huevo Impostor</h2>
+      <p>Modo completamente separado: página propia (<code>impostor.html</code>), cliente <code>public/js/impostor.js</code>, sala <code>server/impostorRoom.js</code> y mapa <code>shared/impostor.js</code>. Todas las acciones van por un único evento <code>imp:act</code> con un tipo, validado en el servidor (distancia a la tarea, tiempo mínimo, enfriamiento de muertes, sabotajes).</p>
+      <p><b>Anti-wallhack:</b> el servidor sólo envía a cada jugador los huevos que puede ver (línea de visión y radio de visión, menor con las luces apagadas), así que leer los mensajes de red no da ventaja.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="build">
+      <h2><a href="#build">#</a>Build y despliegue</h2>
+      <table class="tbl"><thead><tr><th>Comando</th><th>Qué hace</th></tr></thead><tbody>
+        <tr><td><code>npm start</code></td><td>Servidor de desarrollo (red local) en el puerto 3000.</td></tr>
+        <tr><td><code>npm run build</code></td><td>Crea <code>dist/</code>: el cliente en un paquete minificado con terser.</td></tr>
+        <tr><td><code>npm run start:prod</code></td><td>Servidor que sólo sirve <code>dist/</code>.</td></tr>
+        <tr><td><code>npm run build:pages</code></td><td>Esta web en <code>gh-pages/</code> y el juego sin servidor en <code>gh-pages/jugar/</code>.</td></tr>
+        <tr><td><code>npm run build:pages -- --solo-juego</code></td><td>Sólo el juego sin servidor (lo usa Vercel).</td></tr>
+        <tr><td><code>npm test</code></td><td>Las 11 suites de pruebas.</td></tr>
+      </tbody></table>
+      <div class="cards3">
+        <div class="kcard"><b>Render</b><span><code>render.yaml</code> (Blueprint): servicio web Node + PostgreSQL en Frankfurt; despliega en cada push a <code>main</code>.</span></div>
+        <div class="kcard"><b>Vercel</b><span><code>vercel.json</code>: build sin servidor y cabeceras de seguridad para la versión contra bots.</span></div>
+        <div class="kcard"><b>GitHub Pages</b><span>Rama <code>gh-pages</code>: esta documentación y el juego en <code>/jugar/</code>.</span></div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="config">
+      <h2><a href="#config">#</a>Variables de entorno</h2>
+      <table class="tbl"><thead><tr><th>Variable</th><th>Por defecto</th><th>Uso</th></tr></thead><tbody>
+        <tr><td><code>PORT</code></td><td>3000</td><td>Puerto HTTP.</td></tr>
+        <tr><td><code>NODE_ENV</code></td><td>—</td><td><code>production</code> sirve sólo <code>dist/</code>.</td></tr>
+        <tr><td><code>EGG_PUBLIC</code></td><td>auto en Render</td><td>Modo Internet: sin login por IP, IP real tras el proxy, límites por IP, HSTS.</td></tr>
+        <tr><td><code>DATABASE_URL</code></td><td>—</td><td>Cadena de conexión de PostgreSQL para las cuentas.</td></tr>
+        <tr><td><code>PGSSL</code></td><td>auto</td><td><code>1</code> fuerza SSL, <code>0</code> lo desactiva.</td></tr>
+        <tr><td><code>ALLOWED_ORIGINS</code></td><td>—</td><td>Otros dominios que pueden conectarse por WebSocket (separados por comas).</td></tr>
+        <tr><td><code>MAX_CONN_PER_IP</code></td><td>8</td><td>Conexiones simultáneas por IP.</td></tr>
+        <tr><td><code>DATA_DIR</code></td><td><code>data/</code></td><td>Carpeta de <code>users.json</code> sin base de datos.</td></tr>
+      </tbody></table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="seguridad">
+      <h2><a href="#seguridad">#</a>Seguridad</h2>
+      <ul class="ticks">
+        <li><b>Origen:</b> <code>allowRequest</code> sólo acepta WebSockets desde la propia página o <code>ALLOWED_ORIGINS</code>.</li>
+        <li><b>Fuerza bruta:</b> 8 intentos fallidos por minuto y conexión, y 30 cada 10 minutos por IP (no se reinicia al reconectar).</li>
+        <li><b>Abuso:</b> conexiones por IP contadas en el handshake de engine.io (no se cuelan aunque lleguen a la vez).</li>
+        <li><b>Cabeceras:</b> CSP <code>default-src 'self'</code>, sin iframes ajenos, <code>object-src 'none'</code>, HSTS en modo público.</li>
+        <li><b>Código:</b> en producción sólo se sirve el paquete minificado con aviso de copyright; Three.js se carga con <b>SRI</b>.</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="pruebas">
+      <h2><a href="#pruebas">#</a>Pruebas</h2>
+      <p><code>npm test</code> ejecuta 11 suites sin dependencias de pruebas externas (225 comprobaciones):</p>
+      <table class="tbl"><thead><tr><th>Suite</th><th>Comprueba</th></tr></thead><tbody>
+        <tr><td><code>validate-maps</code></td><td>Spawns libres, escaleras y rampas bien colocadas, edificios sin solaparse.</td></tr>
+        <tr><td><code>playtest</code></td><td>Un jugador simulado con la física real recorre cada mapa; el anti-trampas nunca le corrige.</td></tr>
+        <tr><td><code>fuzz-physics</code></td><td>Movimientos aleatorios: nadie atraviesa paredes ni sale del mapa.</td></tr>
+        <tr><td><code>server-test</code></td><td>Salas, cuentas, disparos, cohetes, granadas, modos, admin y trampas.</td></tr>
+        <tr><td><code>fuzz-server</code></td><td>Miles de mensajes basura en los 16 mapas y 4 modos: el servidor no cae.</td></tr>
+        <tr><td><code>impostor-map</code> · <code>impostor-walk</code> · <code>impostor-server</code></td><td>Nave alcanzable entera, robot que la recorre y partida completa de 4 clientes.</td></tr>
+        <tr><td><code>bots-test</code></td><td>7 bots por sala: se mueven, disparan, consiguen bajas y ceden su plaza.</td></tr>
+        <tr><td><code>accounts-pg-test</code></td><td>Cuentas en PostgreSQL (simulado): guardar, reiniciar y volver a entrar.</td></tr>
+        <tr><td><code>online-test</code></td><td>Modo Internet: <code>/healthz</code>, cabeceras, orígenes, fuerza bruta y límite por IP.</td></tr>
+      </tbody></table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section class="ds" id="contribuir">
+      <h2><a href="#contribuir">#</a>Añadir un mapa</h2>
+      <p>Define un objeto en <code>shared/mapdefs.js</code> con una función <code>build(b)</code> y añádelo a <code>LIST</code>:</p>
+      <div class="code"><code><i class="c">// muro exterior</i>
+b.perimeter(30, 3, 'stone', 1);
+<i class="c">// casa de 2 pisos con azotea</i>
+b.house2(-10, -12, 12, 9, 'brick', { h1: 2.6 });
+<i class="c">// puente con barandillas</i>
+b.bridge(-4, -12, 8, -12, 5.5, 2.2, 'plank');
+<i class="c">// torre de vigía y terraza elevada</i>
+b.tower(18, 18, 8, 3.2, 'stoneDark', 'w', { roof: 'roofRed' });
+b.platform(0, 10, 6, 5, 2, 'stone', ['s'], { stairs: true });</code><button class="copy" data-copy="b.perimeter(30, 3, 'stone', 1);&#10;b.house2(-10, -12, 12, 9, 'brick', { h1: 2.6 });&#10;b.bridge(-4, -12, 8, -12, 5.5, 2.2, 'plank');&#10;b.tower(18, 18, 8, 3.2, 'stoneDark', 'w', { roof: 'roofRed' });&#10;b.platform(0, 10, 6, 5, 2, 'stone', ['s'], { stairs: true });" aria-label="Copiar">Copiar</button></div>
+      <p>Primitivas: <code>box</code>, <code>slab</code>, <code>ramp</code>, <code>stairs</code>, <code>ladder</code>, <code>room</code>, <code>wallSeg</code>, <code>container</code>, <code>crate</code>, <code>hill</code>, <code>tree</code>, <code>house2</code>, <code>bridge</code>, <code>tower</code>, <code>platform</code>, <code>rock</code>, <code>fence</code>, <code>shed</code>, <code>footbridge</code>, <code>track</code>… La cobertura del suelo se añade sola (<code>coverDensity</code> o <code>cover: false</code>). Después, <code>npm test</code> avisa si algún spawn, escalera o rampa ha quedado mal.</p>
+      <div class="doc-next">
+        <a class="btn btn-ghost" href="index.html">← Guía del juego</a>
+        <a class="btn btn-primary" href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">Ver el repositorio</a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="f-brand"><svg viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg><b>EGG WARS</b></div>
+  <p>© 2026 <b>Pablo Campayo Viñes</b> · Todos los derechos reservados.<br>El código es visible para consulta; su copia, modificación o redistribución requiere permiso del autor. <a href="https://github.com/campayoo/EggWars/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a></p>
+  <nav class="f-links"><a href="index.html">Guía del juego</a><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="#contenido">Arriba ↑</a></nav>
+</footer>
+<button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="gOr" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#ffe2c2"/><stop offset=".6" stop-color="#ffab5c"/><stop offset="1" stop-color="#e8701e"/></radialGradient>
+    <symbol id="egg" viewBox="0 0 40 50"><ellipse cx="20" cy="28" rx="16" ry="20" fill="url(#gOr)"/><ellipse cx="14" cy="20" rx="4" ry="6" fill="#fff" opacity=".45"/></symbol>
+  </defs>
+</svg>
+<script src="docs.js" defer></script>
+</body>
+</html>

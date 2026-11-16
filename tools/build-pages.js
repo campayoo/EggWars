@@ -104,24 +104,42 @@ async function main() {
   console.log('  Publícalo en Vercel (vercel.json) o en la rama gh-pages de GitHub Pages.');
 }
 
-// Web de documentación (site/) + imágenes de docs/img, con caché segura por hash
+// Web de documentación (site/): guía del juego (index.html) y documentación
+// técnica del código (codigo.html), con las imágenes de docs/img y los datos
+// REALES de las armas sacados de shared/gamedata.js.
 async function buildSite(version) {
   const hashOf = t => crypto.createHash('sha1').update(t).digest('hex').slice(0, 10);
   const banner = `/*! EGG WARS v${version} · © 2026 Pablo Campayo Viñes · Todos los derechos reservados. */\n`;
-  const css = banner + fs.readFileSync(path.join(SITE, 'site.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').replace(/\s*([{};:,>])\s*/g, '$1').replace(/;}/g, '}').trim();
-  const js = banner + (await minify(fs.readFileSync(path.join(SITE, 'site.js'), 'utf8'))).code;
-  const cssName = `site.${hashOf(css)}.css`, jsName = `site.${hashOf(js)}.js`;
-  fs.writeFileSync(path.join(DEST, cssName), css);
-  fs.writeFileSync(path.join(DEST, jsName), js);
-  let html = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8')
-    .replace('href="site.css"', `href="${cssName}"`)
-    .replace('src="site.js"', `src="${jsName}"`)
-    .replace(/Versión \d+\.\d+/, 'Versión ' + version.split('.').slice(0, 2).join('.'));
-  if (!html.includes(cssName) || !html.includes(jsName)) throw new Error('No se pudo enlazar site.css / site.js');
-  fs.writeFileSync(path.join(DEST, 'index.html'), html);
+  const names = {};
+  const css = banner + fs.readFileSync(path.join(SITE, 'site.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').replace(/\s*([{};,>])\s*/g, '$1').replace(/;}/g, '}').trim();
+  names['site.css'] = `site.${hashOf(css)}.css`;
+  fs.writeFileSync(path.join(DEST, names['site.css']), css);
+  for (const f of ['site.js', 'docs.js']) {
+    const js = banner + (await minify(fs.readFileSync(path.join(SITE, f), 'utf8'))).code;
+    names[f] = `${f.replace('.js', '')}.${hashOf(js)}.js`;
+    fs.writeFileSync(path.join(DEST, names[f]), js);
+  }
+  // Datos de armas: los mismos números que usa el juego
+  const GD = require(path.join(ROOT, 'shared', 'gamedata.js'));
+  const weapons = [...GD.PRIMARY_KEYS, 'pistol'].map(k => {
+    const w = GD.WEAPONS[k], i = GD.weaponInfo(k);
+    return { k, n: w.name, t: w.type, d: w.desc, dmg: w.damage, pel: w.pellets, cd: w.cooldown, mag: w.maxAmmo, rl: w.reloadTime, rng: w.range,
+      hm: w.headMult, sp: w.spread, ads: w.adsSpread, auto: w.auto, burst: w.burst || null, proj: w.projectile || null,
+      col: '#' + w.tracerColor.toString(16).padStart(6, '0'), scope: !!w.scope, spd: w.speedMult || 1, fs: w.falloffStart, fm: w.falloffMin,
+      body: i.body, head: i.head, sps: i.sps, kb: i.killBody, kh: i.killHead, bars: i.bars };
+  });
+  const short = version.split('.').slice(0, 2).join('.');
+  for (const page of ['index.html', 'codigo.html']) {
+    let html = fs.readFileSync(path.join(SITE, page), 'utf8');
+    for (const [src, out] of Object.entries(names)) html = html.split(`"${src}"`).join(`"${out}"`);
+    html = html.replace(/Versión \d+\.\d+/, 'Versión ' + short).replace(/· v\d+\.\d+</, `· v${short}<`);
+    if (page === 'index.html') html = html.replace(`<script src="${names['site.js']}"`, `<script>window.EGG_WEAPONS=${JSON.stringify(weapons).replace(/</g, '\\u003c')};</script>\n<script src="${names['site.js']}"`);
+    if (!html.includes(names['site.css'])) throw new Error('No se pudo enlazar site.css en ' + page);
+    fs.writeFileSync(path.join(DEST, page), html);
+  }
   fs.mkdirSync(path.join(DEST, 'img'), { recursive: true });
   for (const f of fs.readdirSync(path.join(ROOT, 'docs', 'img'))) fs.copyFileSync(path.join(ROOT, 'docs', 'img', f), path.join(DEST, 'img', f));
-  console.log(`✓ Web: index.html · ${cssName} · ${jsName} · ${fs.readdirSync(path.join(DEST, 'img')).length} imágenes`);
+  console.log(`✓ Web: index.html (guía) + codigo.html (código) · ${Object.values(names).join(' · ')} · ${weapons.length} armas · ${fs.readdirSync(path.join(DEST, 'img')).length} imágenes`);
 }
 
 main().catch(e => { console.error('✗', e && e.stack || e); process.exit(1); });
