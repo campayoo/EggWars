@@ -1,6 +1,6 @@
 {
   "name": "egg-wars",
-  "version": "6.3.0",
+  "version": "6.4.0",
   "description": "EGG WARS — FPS 3D multijugador de huevos: online (Render), LAN y contra bots (Vercel). 15 mapas, 4 modos + Huevo Impostor",
   "main": "server.js",
   "scripts": {

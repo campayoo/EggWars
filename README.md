@@ -5,12 +5,12 @@
 <h1 align="center">🥚 EGG WARS</h1>
 
 <p align="center">
-  <b>Shooter 3D multijugador de huevos para jugar en red local.</b><br>
+  <b>Shooter 3D multijugador de huevos: online, en red local o contra bots.</b><br>
   Inspirado en Shell Shockers · hecho con Three.js, Socket.io y Node.js
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versión-6.3-ff8c2a" alt="versión 6.3">
+  <img src="https://img.shields.io/badge/versión-6.4-ff8c2a" alt="versión 6.4">
   <img src="https://img.shields.io/badge/mapas-16-ffb347" alt="16 mapas">
   <img src="https://img.shields.io/badge/anti--trampas-servidor-2e7d32" alt="anti-trampas en el servidor">
   <img src="https://img.shields.io/badge/armas-8-e8742a" alt="8 armas">
@@ -19,10 +19,26 @@
   <img src="https://img.shields.io/badge/jugar-en%20el%20navegador-1f6feb" alt="versión web sin servidor">
   <img src="https://img.shields.io/badge/Node.js-18%2B-5fa04e" alt="Node.js 18+">
 </p>
+<p align="center">
+  <a href="https://eggwars-plai.onrender.com"><img src="https://img.shields.io/badge/🌍_JUGAR_ONLINE-eggwars--plai.onrender.com-ff8c2a?style=for-the-badge" alt="Jugar online"></a>
+  <a href="https://eggwars-ten.vercel.app"><img src="https://img.shields.io/badge/🤖_CONTRA_BOTS-eggwars--ten.vercel.app-1f6feb?style=for-the-badge" alt="Jugar contra bots"></a>
+</p>
+
+## 🎮 Jugar ahora
+
+| Versión | Enlace | Qué es |
+|---|---|---|
+| 🌍 **Online** | **https://eggwars-plai.onrender.com** | Multijugador por Internet con cuenta (usuario + contraseña), amigos, salas privadas con código y bots que rellenan huecos. Servidor en Frankfurt. |
+| 🤖 **Contra bots** | **https://eggwars-ten.vercel.app** | Sin cuenta ni servidor: todo corre en tu navegador. Ideal para practicar. |
+| 🏠 **Red local** | `npm start` → `http://IP-del-PC:3000` | Para jugar en clase o en casa por la misma Wi‑Fi. |
+
+> ⏳ La versión online usa el plan gratuito de Render: si nadie ha jugado en 15 min, el primero tarda unos 30 s en entrar mientras el servidor despierta.
+
 
 ---
 
 ## 📋 Índice
+- [🎮 Jugar ahora](#-jugar-ahora)
 - [Arrancar en 1 minuto](#-arrancar-en-1-minuto)
 - [Los 16 mapas](#️-los-16-mapas)
 - [Armas y granadas](#-armas-y-granadas)
