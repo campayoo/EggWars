@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="site.9c1edd3a46.css">
+<link rel="stylesheet" href="site.6dc7c9e5d4.css">
 </head>
 <body>
 <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -37,6 +37,7 @@
     <a href="#controles">Controles</a>
     <a href="#seguridad">Seguridad</a>
     <a href="#instalar">Instalar</a>
+    <a href="codigo.html" class="nav-code">🧩 Código</a>
   </nav>
   <a class="btn btn-sm btn-primary nav-cta" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">🌍 Jugar online</a>
   <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
@@ -313,6 +314,11 @@
     <article class="dcard reveal"><h3><span class="d-logo d-vercel">▲</span>Vercel · contra bots</h3><p>Importa el repo: <code>vercel.json</code> compila la versión sin servidor y añade cabeceras de seguridad.</p></article>
     <article class="dcard reveal"><h3><span class="d-logo d-gh">⬢</span>GitHub Pages · esta web</h3><p><code>npm run build:pages</code> genera la documentación y el juego contra bots en <code>/jugar/</code>, en la rama <code>gh-pages</code>.</p></article>
   </div>
+  <a class="code-banner reveal" href="codigo.html">
+    <span class="cb-ico">🧩</span>
+    <span><b>Documentación técnica del código</b><small>Arquitectura, protocolo de red, servidor, física, anti-trampas, bots, build y pruebas</small></span>
+    <span class="cb-go">Abrir →</span>
+  </a>
   <details class="tree reveal">
     <summary>📁 Estructura del proyecto</summary>
 <pre><code>EggWars/
@@ -359,7 +365,7 @@
 <footer class="footer">
   <div class="f-brand"><svg viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg><b>EGG WARS</b></div>
   <p>© 2026 <b>Pablo Campayo Viñes</b> · Todos los derechos reservados.<br>Prohibida la copia, modificación o redistribución sin permiso del autor. <a href="https://github.com/campayoo/EggWars/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a></p>
-  <nav class="f-links"><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Online</a><a href="jugar/">Contra bots</a><a href="#inicio">Arriba ↑</a></nav>
+  <nav class="f-links"><a href="codigo.html">Código</a><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Online</a><a href="jugar/">Contra bots</a><a href="#inicio">Arriba ↑</a></nav>
 </footer>
 
 <button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>
@@ -385,6 +391,7 @@
   </defs>
 </svg>
 
-<script src="site.eb5c3fd807.js" defer></script>
+<script>window.EGG_WEAPONS=[{"k":"rifle","n":"EggK-47","t":"Fusil automático","d":"Automático clásico de medio alcance: cadencia alta y nunca se encasquilla.","dmg":23,"pel":1,"cd":100,"mag":30,"rl":1400,"rng":120,"hm":1.6,"sp":0.017,"ads":0.4,"auto":true,"burst":null,"proj":null,"col":"#ffdd00","scope":false,"spd":1,"fs":35,"fm":0.6,"body":23,"head":37,"sps":10,"kb":5,"kh":3,"bars":{"dmg":1,"rate":5,"range":3,"mob":3}},{"k":"shotgun","n":"Scrambler","t":"Escopeta (2 cartuchos)","d":"Dos disparos devastadores a quemarropa. Recarga rápida.","dmg":16,"pel":8,"cd":420,"mag":2,"rl":1150,"rng":40,"hm":1.4,"sp":0.09,"ads":0.75,"auto":false,"burst":null,"proj":null,"col":"#ff6b35","scope":false,"spd":1,"fs":7,"fm":0.25,"body":128,"head":176,"sps":2.4,"kb":2,"kh":1,"bars":{"dmg":5,"rate":2,"range":1,"mob":4}},{"k":"ranger","n":"Free Ranger","t":"Francotirador semiautomático","d":"Semiautomático con mira: dos disparos al cuerpo o uno a la cabeza.","dmg":52,"pel":1,"cd":480,"mag":15,"rl":1900,"rng":220,"hm":2,"sp":0.04,"ads":0.05,"auto":false,"burst":null,"proj":null,"col":"#7bed9f","scope":true,"spd":1,"fs":999,"fm":1,"body":52,"head":104,"sps":2.1,"kb":2,"kh":1,"bars":{"dmg":3,"rate":2,"range":4,"mob":3}},{"k":"rpegg","n":"RPEGG","t":"Lanzacohetes","d":"Un impacto directo revienta a cualquiera; cerca de la explosión hace mucho daño, pero hay que afinar. ¡Cuidado con tu propio cohete!","dmg":0,"pel":1,"cd":1100,"mag":2,"rl":3000,"rng":90,"hm":1,"sp":0.012,"ads":0.5,"auto":false,"burst":null,"proj":{"speed":36,"radius":3.6,"maxDmg":110,"direct":110},"col":"#ffa502","scope":false,"spd":1,"fs":999,"fm":1,"body":110,"head":110,"sps":0.9,"kb":1,"kh":1,"bars":{"dmg":5,"rate":1,"range":2,"mob":2}},{"k":"whipper","n":"Whipper","t":"Subfusil","d":"Cargador enorme y cadencia altísima para correr y disparar a corta distancia.","dmg":15,"pel":1,"cd":68,"mag":40,"rl":1700,"rng":70,"hm":1.5,"sp":0.032,"ads":0.55,"auto":true,"burst":null,"proj":null,"col":"#eccc68","scope":false,"spd":1.06,"fs":18,"fm":0.5,"body":15,"head":23,"sps":14.7,"kb":7,"kh":5,"bars":{"dmg":1,"rate":5,"range":2,"mob":5}},{"k":"sniper","n":"Crackshot","t":"Francotirador de cerrojo","d":"Cerrojo: un disparo a la cabeza revienta cualquier huevo.","dmg":90,"pel":1,"cd":1300,"mag":3,"rl":2100,"rng":280,"hm":2,"sp":0.06,"ads":0,"auto":false,"burst":null,"proj":null,"col":"#00d2d3","scope":true,"spd":0.95,"fs":999,"fm":1,"body":90,"head":180,"sps":0.8,"kb":2,"kh":1,"bars":{"dmg":4,"rate":1,"range":5,"mob":2}},{"k":"trihard","n":"Tri-Hard","t":"Fusil de ráfaga de 3","d":"Ráfagas de tres balas muy precisas: especialista en media distancia.","dmg":26,"pel":1,"cd":380,"mag":24,"rl":1600,"rng":150,"hm":1.6,"sp":0.009,"ads":0.4,"auto":true,"burst":{"count":3,"interval":72},"proj":null,"col":"#ff7f50","scope":false,"spd":1,"fs":45,"fm":0.65,"body":26,"head":42,"sps":5.7,"kb":4,"kh":3,"bars":{"dmg":2,"rate":3,"range":3,"mob":3}},{"k":"pistol","n":"Cluck 9mm","t":"Pistola semiautomática","d":"Tu arma de apoyo: rápida de sacar y precisa.","dmg":24,"pel":1,"cd":140,"mag":15,"rl":1100,"rng":90,"hm":1.6,"sp":0.014,"ads":0.45,"auto":false,"burst":null,"proj":null,"col":"#fff3c4","scope":false,"spd":1.05,"fs":25,"fm":0.55,"body":24,"head":38,"sps":7.1,"kb":5,"kh":3,"bars":{"dmg":1,"rate":4,"range":2,"mob":3}}];</script>
+<script src="site.b6d4b0eef5.js" defer></script>
 </body>
 </html>
