@@ -1,6 +1,6 @@
 {
   "name": "egg-wars",
-  "version": "6.2.0",
+  "version": "6.3.0",
   "description": "EGG WARS — FPS 3D multijugador de huevos para LAN: 15 mapas, 4 modos de juego + modo Huevo Impostor",
   "main": "server.js",
   "scripts": {
@@ -26,5 +26,14 @@
     "game"
   ],
   "private": true,
-  "license": "UNLICENSED"
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Pablo Campayo Viñes (https://github.com/campayoo)",
+  "homepage": "https://github.com/campayoo/EggWars",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/campayoo/EggWars.git"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

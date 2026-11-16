@@ -60,6 +60,9 @@ async function main() {
   // Un solo ámbito: los "const" globales de cada archivo siguen viéndose entre sí
   const bundle = `(function(){\n${parts.join('\n;\n')}\n}).call(window);`;
   const min = await minify(bundle);
+  // Aviso de autoría al principio del paquete (el minificador quita los comentarios)
+  const pkg = require(path.join(ROOT, 'package.json'));
+  min.code = `/*! EGG WARS v${pkg.version} · © 2026 Pablo Campayo Viñes · Todos los derechos reservados. Prohibida su copia, modificación o redistribución sin permiso del autor. */\n` + min.code;
   const hash = crypto.createHash('sha1').update(min.code).digest('hex').slice(0, 10);
 
   fs.rmSync(OUT, { recursive: true, force: true });
@@ -75,7 +78,7 @@ async function main() {
   let page = html
     .replace(/<script src="\/socket\.io\/socket\.io\.js"><\/script>\s*/, '')
     .replace(/<script src="\/(?:shared|js)\/[^"]+\.js"><\/script>\s*/g, '')
-    .replace(/(<script src="https:\/\/unpkg\.com\/three@[^"]+"><\/script>)/, `$1\n<script src="${appName}"></script>`)
+    .replace(/(<script src="https:\/\/unpkg\.com\/three@[^"]+"[^>]*><\/script>)/, `$1\n<script src="${appName}"></script>`)
     .replace(/<link rel="stylesheet" href="\/style\.css"\/>/, `<link rel="stylesheet" href="${cssName}"/>`)
     .replace(/href="\/impostor\.html"/g, 'href="#"')
     .replace(/<title>[^<]*<\/title>/, '<title>🥚 EGG WARS — FPS 3D de huevos (contra bots)</title>')
@@ -86,11 +89,12 @@ async function main() {
   fs.writeFileSync(path.join(OUT, 'README.md'),
     '# 🥚 EGG WARS — versión web\n\nShooter 3D de huevos que se juega en el navegador **contra bots** (sin servidor).\n\n' +
     'Generado con `npm run build:pages`. Para jugar con amigos en la red local se usa el servidor del proyecto (`npm start`).\n\n' +
-    'Hecho por Pablo Campayo Viñes.\n');
+    '© 2026 Pablo Campayo Viñes. Todos los derechos reservados. Ver LICENSE.\n');
+  fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(OUT, 'LICENSE.txt'));
 
   const kb = f => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';
   console.log(`✓ gh-pages/ listo · ${appName} (${kb(appName)}, minificado con ${min.tool}) · ${cssName} (${kb(cssName)})`);
-  console.log('  Sube el CONTENIDO de gh-pages/ a un repositorio público y activa GitHub Pages (rama main, carpeta raíz).');
+  console.log('  Publícalo en Vercel (vercel.json) o en la rama gh-pages de GitHub Pages.');
 }
 
 main().catch(e => { console.error('✗', e && e.stack || e); process.exit(1); });

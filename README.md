@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versión-6.2-ff8c2a" alt="versión 6.2">
+  <img src="https://img.shields.io/badge/versión-6.3-ff8c2a" alt="versión 6.3">
   <img src="https://img.shields.io/badge/mapas-16-ffb347" alt="16 mapas">
   <img src="https://img.shields.io/badge/anti--trampas-servidor-2e7d32" alt="anti-trampas en el servidor">
   <img src="https://img.shields.io/badge/armas-8-e8742a" alt="8 armas">
@@ -32,12 +32,14 @@
 - [Salas, admin y taller del huevo](#-salas-admin-y-taller-del-huevo)
 - [🤖 Bots](#-bots)
 - [🌐 Jugar sin servidor (GitHub Pages)](#-jugar-sin-servidor-github-pages)
+- [▲ Desplegar en Vercel](#-desplegar-en-vercel)
 - [Anti-trampas](#️-anti-trampas)
 - [Rendimiento y calidad gráfica](#-rendimiento-y-calidad-gráfica)
 - [Modo producción (código protegido)](#-modo-producción-código-protegido)
 - [Estructura del proyecto](#-estructura-del-proyecto)
 - [Pruebas](#-pruebas)
 - [Crear tu propio mapa](#-crear-tu-propio-mapa)
+- [© Licencia y derechos de autor](#-licencia-y-derechos-de-autor)
 
 ---
 
@@ -222,14 +224,21 @@ Además de la versión de red local, EGG WARS se puede jugar **en el navegador, 
 npm run build:pages      # crea la carpeta gh-pages/
 ```
 
-`gh-pages/` sólo contiene `index.html`, el CSS y **un único archivo JavaScript minificado** (el código fuente no se publica). Para subirlo:
-
-1. Crea en GitHub un repositorio **público** nuevo (por ejemplo `EggWars-web`).
-2. Sube el **contenido** de `gh-pages/` (en la web de GitHub: *Add file → Upload files*, arrastrando los archivos).
-3. En el repositorio: *Settings → Pages → Build and deployment → Deploy from a branch → main / (root)*.
-4. En un par de minutos estará en `https://TU-USUARIO.github.io/EggWars-web/`.
+`gh-pages/` sólo contiene `index.html`, el CSS y **un único archivo JavaScript minificado** con el aviso de copyright (el código fuente no se publica). En este repositorio está en la rama **`gh-pages`**: en *Settings → Pages → Deploy from a branch* elige **gh-pages / (root)** y estará en `https://campayoo.github.io/EggWars/`. También se puede desplegar en Vercel (siguiente apartado).
 
 En la versión web: entras sólo con un nombre (tu huevo, retos y estadísticas se guardan en ese navegador), **JUGAR** te mete en una partida rápida con 7 bots y en **Salas** hay salas de bots preparadas o puedes crear la tuya. No están los amigos ni Huevo Impostor, que necesitan el servidor. Para probarla en local: `npm run build:pages`, `npm start` y abre `http://localhost:3000/pages/`.
+
+---
+
+## ▲ Desplegar en Vercel
+
+El proyecto ya trae `vercel.json`. Vercel publica la **versión web contra bots** (la misma que GitHub Pages): Vercel no puede tener encendido el servidor de partidas (socket.io), así que el multijugador en red local sigue siendo con `npm start`.
+
+1. Entra en [vercel.com](https://vercel.com) con tu cuenta de GitHub → **Add New… → Project**.
+2. Importa el repositorio **EggWars**. No hay que tocar nada: `vercel.json` ya dice cómo compilar (`npm run build:pages`) y qué publicar (`gh-pages/`).
+3. **Deploy**. Cada `git push` a `main` vuelve a desplegar solo.
+
+Seguridad que añade `vercel.json` a todas las páginas: **Content-Security-Policy** estricta (sólo scripts propios y Three.js de unpkg, sin iframes ajenos ni plugins), **HSTS**, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` (sin cámara, micrófono ni ubicación). Three.js se carga con **Subresource Integrity**: si alguien manipulara el archivo en la CDN, el navegador no lo ejecutaría. El código publicado va minificado y con el aviso de copyright.
 
 ---
 
@@ -371,4 +380,15 @@ Después ejecuta `npm test`: el validador y la prueba de jugabilidad te dirán s
 
 ---
 
+
+
+---
+
+## © Licencia y derechos de autor
+
+**© 2026 Pablo Campayo Viñes. Todos los derechos reservados.**
+
+EGG WARS (código, mapas, gráficos y textos) es obra de Pablo Campayo Viñes. Que el código se pueda ver en este repositorio **no da permiso** para copiarlo, modificarlo, redistribuirlo, alojarlo en otro sitio ni usarlo con fines comerciales sin autorización previa y por escrito del autor. Los detalles están en [LICENSE](LICENSE).
+
 <p align="center"><sub>Hecho por Pablo Campayo Viñes</sub></p>
+

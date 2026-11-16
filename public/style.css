@@ -890,3 +890,7 @@ body.rs-open #hud > *:not(#damage-flash) { visibility: hidden; }
 /* v6.2 — Modo sin conexión (GitHub Pages): lo que necesita servidor se oculta */
 .egg-offline .nav-imp, .egg-offline #btn-friends, .egg-offline .side-btn[data-panel="friends"],
 .egg-offline #acc-manage, .egg-offline .auth-tabs, .egg-offline #invite-toast { display: none !important; }
+
+/* v6.3 — aviso de copyright */
+.home-footer .copyright { opacity: .8; }
+.auth-copy { margin-top: 10px; text-align: center; font-size: .72rem; font-weight: 800; color: #9b6d48; opacity: .85; }
