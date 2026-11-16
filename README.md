@@ -22,6 +22,7 @@
 <p align="center">
   <a href="https://eggwars-plai.onrender.com"><img src="https://img.shields.io/badge/🌍_JUGAR_ONLINE-eggwars--plai.onrender.com-ff8c2a?style=for-the-badge" alt="Jugar online"></a>
   <a href="https://eggwars-ten.vercel.app"><img src="https://img.shields.io/badge/🤖_CONTRA_BOTS-eggwars--ten.vercel.app-1f6feb?style=for-the-badge" alt="Jugar contra bots"></a>
+  <a href="https://campayoo.github.io/EggWars/"><img src="https://img.shields.io/badge/📖_DOCUMENTACIÓN-campayoo.github.io-3b2412?style=for-the-badge" alt="Documentación"></a>
 </p>
 
 ## 🎮 Jugar ahora
@@ -31,6 +32,7 @@
 | 🌍 **Online** | **https://eggwars-plai.onrender.com** | Multijugador por Internet con cuenta (usuario + contraseña), amigos, salas privadas con código y bots que rellenan huecos. Servidor en Frankfurt. |
 | 🤖 **Contra bots** | **https://eggwars-ten.vercel.app** | Sin cuenta ni servidor: todo corre en tu navegador. Ideal para practicar. |
 | 🏠 **Red local** | `npm start` → `http://IP-del-PC:3000` | Para jugar en clase o en casa por la misma Wi‑Fi. |
+| 📖 **Documentación** | **https://campayoo.github.io/EggWars/** | La web con toda la guía: mapas, armas, modos, controles, instalación… (rama `gh-pages`, se genera desde `site/`). |
 
 > ⏳ La versión online usa el plan gratuito de Render: si nadie ha jugado en 15 min, el primero tarda unos 30 s en entrar mientras el servidor despierta.
 

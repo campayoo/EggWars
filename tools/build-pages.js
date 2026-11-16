@@ -1,7 +1,9 @@
 // ============================================================================
 // tools/build-pages.js — Versión web SIN SERVIDOR para GitHub Pages (v6.2)
 //
-//   npm run build:pages      → crea la carpeta gh-pages/
+//   npm run build:pages               → gh-pages/: web de documentación (site/)
+//                                        + el juego contra bots en gh-pages/jugar/
+//   npm run build:pages -- --solo-juego → gh-pages/: sólo el juego (para Vercel)
 //
 //  · Une en UN archivo minificado todo lo que necesita el navegador: shared/,
 //    js/ del cliente, el modo sin conexión (js/offline.js) y la lógica de las
@@ -19,7 +21,10 @@ const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 const PUB = path.join(ROOT, 'public');
-const OUT = path.join(ROOT, 'gh-pages');
+const DEST = path.join(ROOT, 'gh-pages');
+const SOLO_JUEGO = process.argv.includes('--solo-juego');
+const OUT = SOLO_JUEGO ? DEST : path.join(DEST, 'jugar');   // dónde va el juego
+const SITE = path.join(ROOT, 'site');
 const SERVER_MODS = ['anticheat.js', 'bots.js', 'gameRoom.js'];   // se ejecutan en el navegador
 
 async function minify(code) {
@@ -65,7 +70,7 @@ async function main() {
   min.code = `/*! EGG WARS v${pkg.version} · © 2026 Pablo Campayo Viñes · Todos los derechos reservados. Prohibida su copia, modificación o redistribución sin permiso del autor. */\n` + min.code;
   const hash = crypto.createHash('sha1').update(min.code).digest('hex').slice(0, 10);
 
-  fs.rmSync(OUT, { recursive: true, force: true });
+  fs.rmSync(DEST, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
   const appName = `app.${hash}.js`;
   fs.writeFileSync(path.join(OUT, appName), min.code);
@@ -85,16 +90,38 @@ async function main() {
     .replace(/<!--[\s\S]*?-->/g, '');
   if (!page.includes(appName)) throw new Error('No se pudo insertar el paquete en index.html');
   fs.writeFileSync(path.join(OUT, 'index.html'), page);
-  fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
-  fs.writeFileSync(path.join(OUT, 'README.md'),
+  fs.writeFileSync(path.join(DEST, '.nojekyll'), '');
+  if (!SOLO_JUEGO) await buildSite(pkg.version);
+  fs.writeFileSync(path.join(DEST, 'README.md'),
     '# 🥚 EGG WARS — versión web\n\nShooter 3D de huevos que se juega en el navegador **contra bots** (sin servidor).\n\n' +
     'Generado con `npm run build:pages`. Para jugar con amigos en la red local se usa el servidor del proyecto (`npm start`).\n\n' +
     '© 2026 Pablo Campayo Viñes. Todos los derechos reservados. Ver LICENSE.\n');
-  fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(OUT, 'LICENSE.txt'));
+  fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(DEST, 'LICENSE.txt'));
 
   const kb = f => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';
+  console.log(SOLO_JUEGO ? '✓ Sólo el juego (sin la web de documentación)' : '✓ Web de documentación en gh-pages/ y juego en gh-pages/jugar/');
   console.log(`✓ gh-pages/ listo · ${appName} (${kb(appName)}, minificado con ${min.tool}) · ${cssName} (${kb(cssName)})`);
   console.log('  Publícalo en Vercel (vercel.json) o en la rama gh-pages de GitHub Pages.');
+}
+
+// Web de documentación (site/) + imágenes de docs/img, con caché segura por hash
+async function buildSite(version) {
+  const hashOf = t => crypto.createHash('sha1').update(t).digest('hex').slice(0, 10);
+  const banner = `/*! EGG WARS v${version} · © 2026 Pablo Campayo Viñes · Todos los derechos reservados. */\n`;
+  const css = banner + fs.readFileSync(path.join(SITE, 'site.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').replace(/\s*([{};:,>])\s*/g, '$1').replace(/;}/g, '}').trim();
+  const js = banner + (await minify(fs.readFileSync(path.join(SITE, 'site.js'), 'utf8'))).code;
+  const cssName = `site.${hashOf(css)}.css`, jsName = `site.${hashOf(js)}.js`;
+  fs.writeFileSync(path.join(DEST, cssName), css);
+  fs.writeFileSync(path.join(DEST, jsName), js);
+  let html = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8')
+    .replace('href="site.css"', `href="${cssName}"`)
+    .replace('src="site.js"', `src="${jsName}"`)
+    .replace(/Versión \d+\.\d+/, 'Versión ' + version.split('.').slice(0, 2).join('.'));
+  if (!html.includes(cssName) || !html.includes(jsName)) throw new Error('No se pudo enlazar site.css / site.js');
+  fs.writeFileSync(path.join(DEST, 'index.html'), html);
+  fs.mkdirSync(path.join(DEST, 'img'), { recursive: true });
+  for (const f of fs.readdirSync(path.join(ROOT, 'docs', 'img'))) fs.copyFileSync(path.join(ROOT, 'docs', 'img', f), path.join(DEST, 'img', f));
+  console.log(`✓ Web: index.html · ${cssName} · ${jsName} · ${fs.readdirSync(path.join(DEST, 'img')).length} imágenes`);
 }
 
 main().catch(e => { console.error('✗', e && e.stack || e); process.exit(1); });

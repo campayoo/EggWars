@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "npm install --no-audit --no-fund",
-  "buildCommand": "npm run build:pages",
+  "buildCommand": "npm run build:pages -- --solo-juego",
   "outputDirectory": "gh-pages",
   "cleanUrls": true,
   "trailingSlash": false,
