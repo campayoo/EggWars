@@ -1,552 +1,390 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="author" content="Pablo Campayo Viñes"/>
-  <meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados."/>
-  <meta name="description" content="EGG WARS: shooter 3D de huevos en el navegador. Juego creado por Pablo Campayo Viñes."/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>🥚 EGG WARS — FPS 3D de huevos (contra bots)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E"/>
-  <link rel="stylesheet" href="style.78bfaf11df.css"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EGG WARS · Documentación oficial — FPS 3D de huevos</title>
+<meta name="description" content="EGG WARS: shooter 3D multijugador de huevos en el navegador. Juega online, contra bots o en red local. Guía de mapas, armas, modos, Huevo Impostor, controles e instalación.">
+<meta name="author" content="Pablo Campayo Viñes">
+<meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados.">
+<meta name="theme-color" content="#ff8c2a">
+<meta property="og:title" content="EGG WARS — FPS 3D de huevos">
+<meta property="og:description" content="Online, contra bots o en red local. 16 mapas, 8 armas, 4 modos + Huevo Impostor.">
+<meta property="og:image" content="img/banner.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.9c1edd3a46.css">
 </head>
 <body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<div class="progress" aria-hidden="true"><span id="progress"></span></div>
 
+<!-- ===================== CABECERA ===================== -->
+<header class="topbar" id="topbar">
+  <a class="brand" href="#inicio" aria-label="EGG WARS, inicio">
+    <svg class="brand-egg" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg>
+    <span><b>EGG WARS</b><small>Documentación</small></span>
+  </a>
+  <nav class="nav" id="nav" aria-label="Secciones">
+    <a href="#jugar">Jugar</a>
+    <a href="#mapas">Mapas</a>
+    <a href="#armas">Armas</a>
+    <a href="#modos">Modos</a>
+    <a href="#impostor">Impostor</a>
+    <a href="#controles">Controles</a>
+    <a href="#seguridad">Seguridad</a>
+    <a href="#instalar">Instalar</a>
+  </nav>
+  <a class="btn btn-sm btn-primary nav-cta" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">🌍 Jugar online</a>
+  <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+</header>
 
+<main id="contenido">
 
-
-<div id="menu-overlay">
-  <div class="home-shade"></div>
-
-  
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-egg"></span>
-      <div class="brand-text"><b>EGG WARS</b><small>LAN EDITION</small></div>
-    </div>
-    <nav class="nav-pills">
-      <button class="side-btn active" data-panel="home"><span>🎮</span>Jugar</button>
-      <button class="side-btn" data-panel="inventory"><span>🎨</span>Taller</button>
-      <button class="side-btn" data-panel="friends"><span>🤝</span>Amigos<i class="badge hidden" id="friends-badge">0</i></button>
-      <button class="side-btn" data-panel="rooms"><span>🌐</span>Salas</button>
-      <button class="side-btn" data-panel="profile"><span>👤</span>Perfil</button>
-      <a class="nav-imp" href="#" title="Nuevo modo: deducción social en una nave"><span>🔪</span>Huevo Impostor</a>
-    </nav>
-    <div class="top-right">
-      <div class="egg-counter" title="Huevos ganados con los retos"><span class="egg-ico"></span><b id="egg-count">0</b></div>
-      <div class="account-card" id="account-card" title="Tu cuenta">
-        <canvas id="acc-egg" width="44" height="56"></canvas>
-        <div class="acc-info"><b id="acc-name">—</b><small id="acc-type">Sin sesión</small></div>
-        <button class="icon-btn small-icon" id="btn-logout" title="Cerrar sesión">⏻</button>
+<!-- ===================== HERO ===================== -->
+<section class="hero" id="inicio">
+  <div class="blob b1" aria-hidden="true"></div><div class="blob b2" aria-hidden="true"></div><div class="blob b3" aria-hidden="true"></div>
+  <div class="hero-grid">
+    <div class="hero-text">
+      <span class="pill reveal"><i class="dot"></i> Versión 6.4 · ¡ahora online!</span>
+      <h1 class="reveal">La guerra de huevos<br><span class="grad">más crujiente</span> del navegador</h1>
+      <p class="lead reveal">Shooter 3D multijugador hecho desde cero con Three.js y Node.js. Juega <b>online</b> con tus amigos, <b>contra bots</b> sin instalar nada o en la <b>red local</b> de clase.</p>
+      <div class="cta reveal">
+        <a class="btn btn-primary btn-lg" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener"><span class="tri"></span>Jugar online</a>
+        <a class="btn btn-ghost btn-lg" href="jugar/">🤖 Contra bots</a>
+        <a class="btn btn-link" href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>Código en GitHub</a>
       </div>
-      <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
-      <button class="icon-btn" id="btn-fullscreen" title="Pantalla completa">⛶</button>
+      <dl class="stats reveal">
+        <div><dt><span class="count" data-to="16">16</span></dt><dd>mapas</dd></div>
+        <div><dt><span class="count" data-to="8">8</span></dt><dd>armas</dd></div>
+        <div><dt><span class="count" data-to="5">5</span></dt><dd>modos</dd></div>
+        <div><dt><span class="count" data-to="225">225</span></dt><dd>pruebas</dd></div>
+      </dl>
     </div>
+    <div class="hero-art reveal" id="heroArt">
+      <div class="shot tilt">
+        <img src="img/banner.jpg" alt="Escena del juego EGG WARS" width="1280" height="420">
+        <div class="shot-glare" aria-hidden="true"></div>
+      </div>
+      <div class="hero-maps" aria-hidden="true">
+        <img src="img/mapa-castle.jpg" alt="" class="hm hm1" loading="eager">
+        <img src="img/mapa-moonbase.jpg" alt="" class="hm hm2" loading="eager">
+      </div>
+      <svg class="float-egg fe1" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg-hat"/></svg>
+      <svg class="float-egg fe2" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg-blue"/></svg>
+      <svg class="float-egg fe3" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg-cracked"/></svg>
+    </div>
+  </div>
+  <div class="marquee" aria-hidden="true"><div class="track">
+    <span>🏰 Castle</span><span>🚜 Dirt</span><span>🐄 Feedlot</span><span>🌙 Moonbase</span><span>⚓ Shipyard</span><span>🏛️ Ruins</span><span>🔷 Blue</span><span>🪵 Fort Flip</span><span>🗼 Two Towers</span><span>🕌 Medina</span><span>🏔️ Nevada</span><span>🛕 Templo</span><span>🏭 Fábrica</span><span>🏙️ Centro</span><span>🪓 Aserradero</span><span>🥚 Ñemanave</span>
+    <span>🏰 Castle</span><span>🚜 Dirt</span><span>🐄 Feedlot</span><span>🌙 Moonbase</span><span>⚓ Shipyard</span><span>🏛️ Ruins</span><span>🔷 Blue</span><span>🪵 Fort Flip</span><span>🗼 Two Towers</span><span>🕌 Medina</span><span>🏔️ Nevada</span><span>🛕 Templo</span><span>🏭 Fábrica</span><span>🏙️ Centro</span><span>🪓 Aserradero</span><span>🥚 Ñemanave</span>
+  </div></div>
+</section>
+
+<!-- ===================== JUGAR ===================== -->
+<section class="sec" id="jugar">
+  <header class="sec-head reveal">
+    <span class="kicker">Empieza ya</span>
+    <h2>Tres formas de jugar</h2>
+    <p>Elige la que te venga mejor. La cuenta, tu huevo y tus estadísticas se guardan en cada versión.</p>
   </header>
-
-  
-  <main class="home-center">
-    <div class="egg-stage">
-      <canvas id="home-egg-canvas"></canvas>
-      <button class="rot-btn left" id="egg-rot-l" title="Girar">⟲</button>
-      <button class="rot-btn right" id="egg-rot-r" title="Girar">⟳</button>
-    </div>
-    <div class="outfit-chips" id="outfit-chips"></div>
-    <div class="home-play">
-      <div class="weapon-title" id="home-weapon-name">EggK-47</div>
-      <div class="weapon-sub" id="home-weapon-desc">Fusil de asalto automático</div>
-      <div class="weapon-picker" id="home-weapon-picker"></div>
-      <div class="weapon-stats" id="home-weapon-stats"></div>
-      <div class="home-actions">
-        <button id="btn-friends" class="btn-friends">JUGAR CON<br>AMIGOS</button>
-        <button id="join-btn" class="btn-play"><span class="play-tri"></span>JUGAR</button>
-        <div class="mode-select" id="mode-select">
-          <small>MODO DE JUEGO</small>
-          <span id="mode-select-label">Cualquiera</span>
-          <i class="mode-caret">▲</i>
-          <div class="mode-dropdown hidden" id="mode-dropdown"></div>
-        </div>
-      </div>
-    </div>
-    <footer class="home-footer"><span class="conn-dot" id="conn-dot"></span><span id="conn-text">Conectando…</span> · <span id="online-count">0</span> jugando · <a href="#" id="link-controls">Controles</a> · <span class="copyright">© 2026 Pablo Campayo Viñes · Todos los derechos reservados</span></footer>
-  </main>
-
-  
-  <section class="side-panel panel-dark" id="panel-challenges">
-    <div class="panel-head"><span>RETOS DIARIOS</span><span class="timer" id="challenge-timer">--:--:--</span></div>
-    <div class="challenge-list" id="challenge-list"></div>
-  </section>
-
-  
-  <section class="side-panel panel-dark workshop hidden" id="panel-inventory">
-    <div class="panel-head"><span>TALLER DEL HUEVO</span>
-      <span class="head-actions"><span class="saved-ind" id="saved-ind">✓ Guardado</span>
-        <button class="btn-ghost small" id="btn-undo-egg" title="Deshacer el último cambio" disabled>↶</button>
-        <button class="btn-ghost small" id="btn-random-egg" title="Combinación aleatoria">🎲</button>
-        <button class="btn-ghost small" id="btn-reset-egg" title="Volver al huevo básico">⟲</button></span>
-    </div>
-    <div class="inv-presets-wrap"><span class="inv-label">Estilos rápidos <small>(un clic y listo)</small></span><div class="inv-presets" id="inv-presets"></div></div>
-    <div class="inv-tabs" id="inv-tabs">
-      <button data-inv="color" class="active"><i>🎨</i><span>Color</span></button>
-      <button data-inv="pattern"><i>🌀</i><span>Diseño</span></button>
-      <button data-inv="eyes"><i>👀</i><span>Ojos</span></button>
-      <button data-inv="mouth"><i>👄</i><span>Boca</span></button>
-      <button data-inv="hat"><i>🎩</i><span>Gorro</span></button>
-      <button data-inv="glasses"><i>🕶️</i><span>Gafas</span></button>
-      <button data-inv="extra"><i>🎀</i><span>Extra</span></button>
-      <button data-inv="paint"><i>🖌️</i><span>Pintar</span></button>
-    </div>
-    <div class="inv-current" id="inv-current"></div>
-    <div class="inv-body" id="inv-body">
-      <div class="inv-pane" data-pane="color">
-        <label class="inv-label">Color principal</label>
-        <div class="swatches" id="swatches-1"></div>
-        <div class="inv-row"><span>Elegir otro</span><input type="color" id="color-picker" value="#fff1dc"/></div>
-        <label class="inv-label">Color secundario <small>(diseños, bufanda, capa…)</small></label>
-        <div class="swatches" id="swatches-2"></div>
-        <div class="inv-row"><span>Elegir otro</span><input type="color" id="color2-picker" value="#ff9a4d"/></div>
-        <label class="inv-label">Acabado de la cáscara</label>
-        <div class="item-grid small" id="finish-grid"></div>
-      </div>
-      <div class="inv-pane hidden" data-pane="grid"><div id="grid-extra"></div><div class="item-grid" id="item-grid"></div></div>
-      <div class="inv-pane hidden" data-pane="paint">
-        <div class="paint-callout">🖌️ <b>Pinta directamente sobre el huevo</b> de la izquierda. Arrastra fuera del huevo (o con clic derecho) para girarlo.</div>
-        <div class="paint-row">
-          <div class="brush-swatches" id="brush-swatches"></div>
-          <input type="color" id="brush-color" value="#ff8a3d" title="Otro color"/>
-        </div>
-        <div class="paint-row">
-          <div class="seg" id="brush-tool">
-            <button data-tool="brush" class="active">🖌️ Pincel</button><button data-tool="spray">💨 Spray</button><button data-tool="eraser">🧽 Goma</button>
-          </div>
-          <input type="checkbox" id="brush-eraser" hidden/>
-        </div>
-        <div class="paint-row">
-          <label class="inv-label">Grosor</label>
-          <input type="range" id="brush-size" min="1" max="24" value="5"/>
-          <span class="brush-dot" id="brush-dot"></span>
-        </div>
-        <div class="paint-row">
-          <label class="check-row small-check"><input type="checkbox" id="brush-mirror" checked/> Simetría (izq./dcha.)</label>
-        </div>
-        <div class="paint-row paint-actions">
-          <button id="painter-undo" class="btn-ghost small" title="Ctrl+Z">↶ Deshacer</button>
-          <button id="painter-clear" class="btn-ghost small">🗑️ Borrar todo</button>
-        </div>
-        <details class="paint-flat"><summary>Ver la cáscara desenrollada</summary>
-          <canvas id="texture-canvas" width="128" height="128"></canvas>
-          <p class="hint">También puedes pintar aquí: el centro del cuadro es la cara.</p>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  
-  <section class="side-panel panel-dark hidden" id="panel-friends">
-    <div class="panel-head"><span>AMIGOS</span><span class="timer" id="friends-online">0 en línea</span></div>
-    <div class="friend-add">
-      <input type="text" id="friend-input" placeholder="Nombre de usuario del amigo" maxlength="14" autocomplete="off"/>
-      <button class="btn-orange small" id="btn-friend-add">AÑADIR</button>
-    </div>
-    <div id="friend-requests"></div>
-    <div class="friend-list" id="friend-list"></div>
-  </section>
-
-  
-  <section class="side-panel panel-dark wide hidden" id="panel-rooms">
-    <div class="panel-head"><span>SALAS EN LA RED</span>
-      <span class="head-actions">
-        <button id="btn-refresh-rooms" class="btn-ghost small" title="Actualizar">⟳</button>
-        <button id="btn-open-create-room" class="btn-orange small">+ CREAR</button>
-      </span>
-    </div>
-    <div class="rooms-table-wrap">
-      <table class="rooms-table">
-        <thead><tr><th>SALA</th><th>MAPA</th><th>MODO</th><th>JUG.</th><th></th></tr></thead>
-        <tbody id="rooms-list-body"><tr><td colspan="5" class="rooms-empty">Conectando…</td></tr></tbody>
-      </table>
-    </div>
-    <div class="room-preview">
-      <canvas id="selected-map-thumb" width="600" height="320"></canvas>
-      <div class="room-sel"><strong id="selected-room-name-label">Partida rápida</strong><small id="selected-room-meta"></small></div>
-    </div>
-  </section>
-
-  
-  <section class="side-panel panel-dark hidden" id="panel-profile">
-    <div class="panel-head"><span>PERFIL</span></div>
-    <div class="profile-top"><canvas id="profile-egg" width="60" height="76"></canvas><div><div class="profile-name" id="profile-name">—</div><small class="profile-sub" id="profile-sub"></small></div></div>
-    <div class="stats-grid" id="stats-grid"></div>
-    <div class="acc-manage" id="acc-manage">
-      <div class="fr-title" id="pw-title">Contraseña</div>
-      <input type="password" id="pw-current" placeholder="Contraseña actual" autocomplete="current-password"/>
-      <input type="password" id="pw-new" placeholder="Nueva contraseña (mín. 4)" autocomplete="new-password"/>
-      <button class="btn-orange small" id="btn-pw">Guardar contraseña</button>
-      <p class="hint" id="pw-hint"></p>
-    </div>
-  </section>
-</div>
-<div id="lobby-toast" class="hidden"></div>
-
-
-
-
-<div id="auth-screen" class="hidden">
-  <div class="auth-card">
-    <div class="logo center">
-      <span class="logo-line1">EGG</span>
-      <span class="logo-line2">WARS</span>
-      <span class="logo-tag">LAN EDITION</span>
-    </div>
-    <div class="auth-tabs">
-      <button class="active" data-auth="login">Entrar</button>
-      <button data-auth="register">Crear cuenta</button>
-      <button data-auth="ip">Con mi IP</button>
-    </div>
-    <form class="auth-form" data-form="login" autocomplete="on">
-      <input type="text" id="login-user" placeholder="Usuario" maxlength="14" autocomplete="username"/>
-      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password"/>
-      <button type="submit" class="btn-orange">ENTRAR</button>
-    </form>
-    <form class="auth-form hidden" data-form="register" autocomplete="off">
-      <input type="text" id="reg-user" placeholder="Elige un usuario (3-14)" maxlength="14" autocomplete="username"/>
-      <input type="password" id="reg-pass" placeholder="Contraseña (mín. 4)" autocomplete="new-password"/>
-      <input type="password" id="reg-pass2" placeholder="Repite la contraseña" autocomplete="new-password"/>
-      <button type="submit" class="btn-orange">CREAR CUENTA</button>
-    </form>
-    <form class="auth-form hidden" data-form="ip" autocomplete="off">
-      <p class="auth-help">Sin contraseña: la cuenta queda ligada a <b>este ordenador</b> (su IP en la red). Útil en el aula; no la uses en un equipo compartido.</p>
-      <input type="text" id="ip-name" class="hidden" placeholder="Elige tu nombre (3-14)" maxlength="14"/>
-      <button type="submit" class="btn-orange" id="btn-ip">ENTRAR CON MI IP</button>
-    </form>
-    <div class="auth-error hidden" id="auth-error"></div>
-    <div class="auth-foot"><span class="conn-dot" id="auth-conn"></span><span id="auth-conn-text">Conectando con el servidor…</span></div>
-    <div class="auth-copy">© 2026 Pablo Campayo Viñes · Todos los derechos reservados</div>
+  <div class="play-cards">
+    <article class="pcard pc-online reveal">
+      <div class="pc-ico">🌍</div>
+      <h3>Online</h3>
+      <p>Multijugador por Internet con cuenta, amigos, invitaciones y salas privadas con código de 4 letras. Los bots rellenan los huecos.</p>
+      <ul class="ticks"><li>Servidor en Frankfurt</li><li>Cuentas guardadas en base de datos</li><li>Usuario + contraseña</li></ul>
+      <a class="btn btn-primary" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Entrar al servidor</a>
+      <small class="note">Plan gratuito: si nadie ha jugado en 15 min, tarda ~30 s en despertar.</small>
+    </article>
+    <article class="pcard pc-bots reveal">
+      <div class="pc-ico">🤖</div>
+      <h3>Contra bots</h3>
+      <p>Sin cuenta ni servidor: todo corre en tu navegador. Elige mapa, modo, cuántos bots y su dificultad, y a practicar.</p>
+      <ul class="ticks"><li>Funciona al instante</li><li>Fácil · Normal · Difícil</li><li>Ideal en PCs del aula</li></ul>
+      <a class="btn btn-dark" href="jugar/">Jugar aquí</a>
+      <small class="note">También en <a href="https://eggwars-ten.vercel.app" target="_blank" rel="noopener">eggwars-ten.vercel.app</a></small>
+    </article>
+    <article class="pcard pc-lan reveal">
+      <div class="pc-ico">🏠</div>
+      <h3>Red local</h3>
+      <p>Arranca el servidor en un ordenador y que el resto de la clase entre por su IP. Sin Internet y sin retraso.</p>
+      <div class="code mini"><code>npm install &amp;&amp; npm start</code><button class="copy" data-copy="npm install && npm start" aria-label="Copiar">Copiar</button></div>
+      <a class="btn btn-ghost" href="#instalar">Ver la guía</a>
+    </article>
   </div>
-</div>
+</section>
 
-<div id="invite-toast" class="hidden">
-  <div class="inv-msg" id="invite-msg"></div>
-  <div class="inv-actions"><button class="btn-orange small" id="invite-accept">UNIRSE</button><button class="btn-ghost small" id="invite-ignore">Ignorar</button></div>
-</div>
+<!-- ===================== CARACTERÍSTICAS ===================== -->
+<section class="sec sec-tint" id="caracteristicas">
+  <header class="sec-head reveal">
+    <span class="kicker">Lo que trae</span>
+    <h2>Pequeño huevo, mucho juego</h2>
+  </header>
+  <div class="features">
+    <article class="feat reveal"><span class="f-ico">🛡️</span><h3>Anti-trampas de verdad</h3><p>El servidor decide todo: gravedad, velocidad, impactos con compensación de latencia, munición y granadas. Nada imposible pasa.</p></article>
+    <article class="feat reveal"><span class="f-ico">🎨</span><h3>Taller del huevo</h3><p>Color, patrón, sombrero, gafas, extras y <b>pintura directa sobre el huevo 3D</b> con pincel, spray, goma y simetría.</p></article>
+    <article class="feat reveal"><span class="f-ico">⚡</span><h3>Fluido en cualquier PC</h3><p>Calidad automática de Baja a Ultra, sombras inteligentes y geometría fusionada: va bien hasta en gráficas integradas.</p></article>
+    <article class="feat reveal"><span class="f-ico">🤖</span><h3>Bots que juegan</h3><p>Navegan con A*, suben rampas y escaleras, se reparten roles y pasan por el mismo anti-trampas que una persona.</p></article>
+    <article class="feat reveal"><span class="f-ico">👑</span><h3>Salas con admin</h3><p>Pausa, reinicia, cambia mapa y modo, mueve jugadores de equipo o expulsa. Si el admin se va, el mando pasa al siguiente.</p></article>
+    <article class="feat reveal"><span class="f-ico">🔪</span><h3>Huevo Impostor</h3><p>Un modo aparte de deducción social en una nave espacial, con tareas, sabotajes, conductos y votaciones.</p></article>
+  </div>
+</section>
 
+<!-- ===================== MAPAS ===================== -->
+<section class="sec" id="mapas">
+  <header class="sec-head reveal">
+    <span class="kicker">16 escenarios propios</span>
+    <h2>Mapas</h2>
+    <p>Varios niveles, coberturas por todo el suelo y paisaje alrededor. Las imágenes salen directamente de la geometría real de cada mapa.</p>
+  </header>
+  <div class="chips reveal" id="mapFilter" role="tablist" aria-label="Filtrar mapas">
+    <button class="chip active" data-f="all" role="tab" aria-selected="true">Todos</button>
+    <button class="chip" data-f="L" role="tab" aria-selected="false">Grandes</button>
+    <button class="chip" data-f="M" role="tab" aria-selected="false">Medianos</button>
+    <button class="chip" data-f="new" role="tab" aria-selected="false">✨ Nuevos</button>
+  </div>
+  <div class="maps" id="maps"></div>
+</section>
 
+<!-- ===================== ARMAS ===================== -->
+<section class="sec sec-tint" id="armas">
+  <header class="sec-head reveal">
+    <span class="kicker">Arsenal</span>
+    <h2>Armas y granadas</h2>
+    <p>Eliges el arma principal al reaparecer. Todos llevan además la pistola <b>Cluck 9mm</b>, el golpe cuerpo a cuerpo y granadas.</p>
+  </header>
+  <div class="arsenal reveal">
+    <div class="w-list" id="wList" role="tablist" aria-label="Armas"></div>
+    <div class="w-detail" id="wDetail" role="tabpanel" aria-live="polite"></div>
+  </div>
+  <div class="mini-cards">
+    <article class="mcard reveal"><span>💣</span><h3>Granadas en el suelo</h3><p>No se regeneran solas: recógelas pasando por encima (máx. 3). Mantén <kbd>Q</kbd> para cargar el lanzamiento; la luz roja parpadea cada vez más rápido antes de explotar.</p></article>
+    <article class="mcard reveal"><span>🍳</span><h3>Animación de muerte</h3><p>El huevo se aplasta, estalla en cáscaras de su color y la yema cae, rebota y se aplasta en el suelo.</p></article>
+    <article class="mcard reveal"><span>🎯</span><h3>Cabeza o cuerpo</h3><p>Los disparos a la cabeza hacen más daño y los decide el servidor, no el navegador.</p></article>
+  </div>
+</section>
 
+<!-- ===================== MODOS ===================== -->
+<section class="sec" id="modos">
+  <header class="sec-head reveal">
+    <span class="kicker">Formas de ganar</span>
+    <h2>Modos de juego</h2>
+  </header>
+  <div class="modes">
+    <article class="mode reveal"><div class="m-ico">⚔️</div><h3>Todos contra todos</h3><p>Gana quien llegue antes al número de bajas.</p></article>
+    <article class="mode reveal"><div class="m-ico m-team"><i></i><i></i></div><h3>Duelo por equipos</h3><p>Rojos contra azules. Cámbiate de equipo desde el menú con <kbd>Esc</kbd>.</p></article>
+    <article class="mode reveal"><div class="m-ico">👑</div><h3>King of the Coop</h3><p>Conquista el gallinero y aguanta dentro para sumar puntos. El gallinero cambia de sitio.</p></article>
+    <article class="mode reveal"><div class="m-ico">🍳</div><h3>Capture the Spatula</h3><p>Roba la espátula del rival y llévala a tu base.</p></article>
+  </div>
+</section>
 
-<div id="friends-modal" class="modal-backdrop hidden">
-  <div class="modal-card narrow">
-    <div class="modal-top"><h3>JUGAR CON AMIGOS</h3><button class="btn-close-modal" data-close="friends-modal">✖</button></div>
-    <div class="friends-body">
-      <div class="friends-opt">
-        <h4>Crear sala privada</h4>
-        <p>Elige mapa y modo; te daremos un código de 4 letras para tus amigos.</p>
-        <button class="btn-orange" id="btn-friends-create">CREAR SALA</button>
-      </div>
-      <div class="friends-opt">
-        <h4>Unirse con código</h4>
-        <input type="text" id="join-code-input" placeholder="ABCD" maxlength="4" autocomplete="off"/>
-        <button class="btn-orange" id="btn-join-code">UNIRSE</button>
-      </div>
+<!-- ===================== IMPOSTOR ===================== -->
+<section class="sec space" id="impostor">
+  <div class="stars" aria-hidden="true"></div>
+  <header class="sec-head reveal">
+    <span class="kicker kicker-dark">Modo aparte</span>
+    <h2>🔪 Huevo Impostor</h2>
+    <p>Deducción social en primera persona a bordo de la <b>ÑEMANAVE</b>. De 4 a 10 huevos, de 1 a 3 impostores.</p>
+  </header>
+  <div class="imp-grid">
+    <article class="ipanel reveal"><h3>👷 Tripulantes</h3><p>Completad las tareas (la barra es común) o expulsad a todos los impostores en las reuniones.</p></article>
+    <article class="ipanel ipanel-red reveal"><h3>😈 Impostores</h3><p>Cascad a la tripulación, viajad por los conductos y sabotead luces, caldera o puertas. Sus tareas son falsas.</p></article>
+    <article class="ipanel reveal"><h3>🗳️ Reuniones</h3><p>Informa de un huevo roto o pulsa la yema de La Yema. Debate por chat y vota; si hay empate no sale nadie.</p></article>
+    <article class="ipanel reveal"><h3>👻 Fantasmas</h3><p>Los muertos atraviesan paredes, siguen haciendo tareas y sólo hablan con otros fantasmas.</p></article>
+  </div>
+  <div class="imp-stats reveal">
+    <div><b class="count" data-to="12">12</b><span>salas</span></div>
+    <div><b class="count" data-to="24">24</b><span>tareas</span></div>
+    <div><b class="count" data-to="13">13</b><span>minijuegos</span></div>
+    <div><b class="count" data-to="12">12</b><span>conductos</span></div>
+    <div><b class="count" data-to="18">18</b><span>puertas</span></div>
+    <div><b class="count" data-to="4">4</b><span>cámaras</span></div>
+  </div>
+  <div class="sabotage reveal">
+    <div class="sab"><span>💡</span><div><h4>Luces</h4><p>La tripulación casi no ve. Se arregla con los interruptores de Electricidad.</p></div></div>
+    <div class="sab"><span>🌡️</span><div><h4>Caldera</h4><p>De 20 °C a 100 °C en 45 s: a 100 °C, ¡huevos duros para todos! Dos huevos en los paneles del Reactor a la vez.</p></div></div>
+    <div class="sab"><span>🚪</span><div><h4>Puertas</h4><p>Las puertas de una sala se cierran 10 s y se abren solas.</p></div></div>
+  </div>
+  <p class="imp-note reveal">🤫 Pensado para jugar en la misma clase: la pantalla es igual para todos y <b>tu rol sólo se ve mientras mantienes <kbd>TAB</kbd></b>.</p>
+</section>
+
+<!-- ===================== CONTROLES ===================== -->
+<section class="sec" id="controles">
+  <header class="sec-head reveal">
+    <span class="kicker">Manos al teclado</span>
+    <h2>Controles</h2>
+    <p>Pasa el ratón por una acción para ver su tecla. Todas se pueden cambiar en <b>Ajustes</b>.</p>
+  </header>
+  <div class="controls reveal">
+    <div class="keyboard" id="keyboard" aria-hidden="true">
+      <div class="krow"><span class="k k-esc" data-k="esc">Esc</span><span class="k" data-k="1">1</span><span class="k" data-k="2">2</span><span class="k">3</span><span class="k">4</span><span class="k">5</span></div>
+      <div class="krow"><span class="k k-wide">Tab</span><span class="k" data-k="q">Q</span><span class="k" data-k="w">W</span><span class="k" data-k="e">E</span><span class="k" data-k="r">R</span><span class="k">T</span></div>
+      <div class="krow"><span class="k k-wider">Bloq</span><span class="k" data-k="a">A</span><span class="k" data-k="s">S</span><span class="k" data-k="d">D</span><span class="k" data-k="f">F</span><span class="k" data-k="g">G</span></div>
+      <div class="krow"><span class="k k-widest" data-k="shift">Shift</span><span class="k">Z</span><span class="k">X</span><span class="k">C</span><span class="k">V</span></div>
+      <div class="krow"><span class="k k-space" data-k="space">Espacio</span></div>
+      <div class="mouse"><span class="mb mb-l" data-k="ml"></span><span class="mb mb-r" data-k="mr"></span></div>
+    </div>
+    <ul class="actions" id="actions">
+      <li data-keys="w a s d"><b>Moverse</b><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></li>
+      <li data-keys="space"><b>Saltar</b><span><kbd>Espacio</kbd></span></li>
+      <li data-keys="ml"><b>Disparar</b><span><kbd>Clic izq.</kbd></span></li>
+      <li data-keys="mr shift"><b>Apuntar</b><span><kbd>Clic dcho.</kbd><kbd>Shift</kbd></span></li>
+      <li data-keys="r"><b>Recargar</b><span><kbd>R</kbd></span></li>
+      <li data-keys="e 1 2"><b>Pistola ⇄ principal</b><span><kbd>E</kbd><kbd>1</kbd><kbd>2</kbd></span></li>
+      <li data-keys="q"><b>Granada (mantén)</b><span><kbd>Q</kbd></span></li>
+      <li data-keys="f"><b>Golpe</b><span><kbd>F</kbd></span></li>
+      <li data-keys="g"><b>Inspeccionar arma</b><span><kbd>G</kbd></span></li>
+      <li data-keys="esc"><b>Menú / ajustes</b><span><kbd>Esc</kbd></span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== GRÁFICOS ===================== -->
+<section class="sec sec-tint" id="graficos">
+  <header class="sec-head reveal">
+    <span class="kicker">Rendimiento</span>
+    <h2>Calidad gráfica</h2>
+    <p>Detecta tu gráfica al arrancar y, si en partida baja de 42 FPS unos segundos, baja la calidad un escalón sola.</p>
+  </header>
+  <div class="quality reveal">
+    <div class="seg" id="qSeg" role="tablist" aria-label="Calidad">
+      <button data-q="0" role="tab">Baja</button><button data-q="1" role="tab">Media</button><button data-q="2" role="tab" class="active">Alta</button><button data-q="3" role="tab">Ultra</button>
+      <i class="seg-pill" aria-hidden="true"></i>
+    </div>
+    <div class="q-body">
+      <div class="q-meter"><span id="qBar"></span></div>
+      <dl class="q-list" id="qList"></dl>
     </div>
   </div>
-</div>
-
-
-
-
-<div id="settings-modal" class="modal-backdrop hidden">
-  <div class="modal-card settings-card">
-    <div class="modal-top"><h3>AJUSTES</h3><button class="btn-close-modal" data-close="settings-modal">✖</button></div>
-    <div class="settings-tabs">
-      <button class="set-tab active" data-stab="controls">⌨ 🖱 CONTROLES</button>
-      <button class="set-tab" data-stab="video">🖥 🔊 VÍDEO Y AUDIO</button>
-    </div>
-    <div class="set-pane" id="stab-controls">
-      <div class="set-cols">
-        <div>
-          <h4>TECLAS</h4>
-          <div class="bind-list" id="bind-list"></div>
-        </div>
-        <div>
-          <h4>RATÓN</h4>
-          <div class="set-row"><label>Sensibilidad <b id="sens-value-text">50</b></label><input type="range" id="mouse-sens-slider" min="1" max="100" step="1"/></div>
-          <label class="check-row"><input type="checkbox" id="invert-y"/> Invertir ratón</label>
-          <p class="hint">Haz clic en una tecla y pulsa la nueva (también botones del ratón). Esc cancela.</p>
-        </div>
-      </div>
-    </div>
-    <div class="set-pane hidden" id="stab-video">
-      <div class="set-row"><label>Campo de visión <b id="fov-value-text">75°</b></label><input type="range" id="fov-slider" min="60" max="100" step="1"/></div>
-      <div class="set-row"><label>Volumen <b id="vol-value-text">70%</b></label><input type="range" id="vol-slider" min="0" max="1" step="0.05"/></div>
-      <div class="set-row"><label>Calidad gráfica</label>
-        <select id="quality-select"><option value="low">Baja · máxima fluidez</option><option value="mid">Media</option><option value="high">Alta</option><option value="ultra">Ultra · PCs potentes</option></select></div>
-      <label class="check-row"><input type="checkbox" id="show-fps"/> Mostrar FPS y ping</label>
-    </div>
-    <div class="settings-actions">
-      <button class="btn-red" id="set-cancel">Cancelar</button>
-      <button class="btn-orange-dark" id="set-reset">Restablecer</button>
-      <button class="btn-green" id="set-confirm">Confirmar</button>
-    </div>
+  <div class="perf-points">
+    <p class="reveal">🧱 <b>Pocas llamadas de dibujo:</b> la geometría estática se fusiona por material (de ~400 a ~100).</p>
+    <p class="reveal">✂️ <b>Sólo lo que se ve:</b> las caras tapadas no se dibujan (−27 % de superficie) y se acabó el parpadeo entre piezas.</p>
+    <p class="reveal">🎨 <b>Texturas procedurales:</b> ladrillo, madera con vetas, chapa con óxido… sin descargar nada.</p>
+    <p class="reveal">📡 <b>Red suave:</b> los demás jugadores se interpolan y se extrapolan si un paquete llega tarde.</p>
   </div>
-</div>
+</section>
 
-
-
-
-<div id="create-room-modal" class="modal-backdrop hidden">
-  <div class="create-room-card wide">
-    <div class="modal-top">
-      <h3 id="create-title">🛠️ CREAR PARTIDA</h3>
-      <button id="btn-close-create-room" class="btn-close-modal" title="Cerrar (Esc)">✖</button>
-    </div>
-
-    <div class="create-layout">
-      <div class="create-col-maps">
-        <div class="create-section-title"><span><i class="step">1</i>ELIGE EL MAPA</span><span id="map-filter" class="map-filter">
-          <button data-size="all" class="active">Todos</button><button data-size="L">Grandes</button><button data-size="M">Medianos</button><button data-size="S">Arenas 1v1</button>
-        </span></div>
-        <div id="map-grid" class="map-grid"></div>
-      </div>
-
-      <div class="create-col-opts">
-        <div class="create-scroll">
-          <div class="create-hero">
-            <canvas id="create-preview" width="720" height="300"></canvas>
-            <div class="create-hero-info"><b id="create-hero-name">Castle</b><span id="create-hero-desc"></span></div>
-          </div>
-          <div class="create-section-title"><span><i class="step">2</i>MODO DE JUEGO</span></div>
-          <div id="mode-grid" class="mode-grid"></div>
-
-          <div class="create-section-title"><span><i class="step">3</i>OPCIONES</span></div>
-          <div class="form-group">
-            <label for="create-room-name">Nombre de la sala</label>
-            <input type="text" id="create-room-name" placeholder="Ej: Duelo de Reyes" maxlength="24"/>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="create-room-max-players">Jugadores</label>
-              <select id="create-room-max-players">
-                <option value="2">2</option><option value="4">4</option><option value="6">6</option>
-                <option value="8" selected>8</option><option value="12">12</option><option value="16">16</option><option value="18">18</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="create-room-limit" id="create-room-limit-label">Bajas para ganar</label>
-              <select id="create-room-limit"></select>
-            </div>
-            <div class="form-group">
-              <label for="create-room-time">Tiempo</label>
-              <select id="create-room-time"></select>
-            </div>
-          </div>
-
-          <div class="create-section-title"><span><i class="step">4</i>BOTS</span><small class="bots-hint" id="bots-hint">Rellenan las plazas libres y se apartan cuando entra alguien</small></div>
-          <div class="bots-box">
-            <div class="bots-count">
-              <input type="range" id="create-room-bots" min="0" max="7" value="0" step="1"/>
-              <output id="create-room-bots-val">Sin bots</output>
-            </div>
-            <div class="seg bots-diff" id="create-room-botdiff">
-              <button data-diff="easy">🐣 Fácil</button><button data-diff="normal" class="active">🥚 Normal</button><button data-diff="hard">🍳 Difícil</button>
-            </div>
-          </div>
-
-          <label class="check-row" id="create-private-row"><input type="checkbox" id="create-room-private"/> Sala privada (sólo se entra con código)</label>
-        </div>
-        <div class="create-footer">
-          <div class="create-summary" id="create-summary"></div>
-          <button id="btn-confirm-create-room" class="shell-btn-primary big">CREAR Y ENTRAR 💥</button>
-        </div>
-      </div>
-    </div>
+<!-- ===================== SEGURIDAD ===================== -->
+<section class="sec" id="seguridad">
+  <header class="sec-head reveal">
+    <span class="kicker">El servidor manda</span>
+    <h2>Anti-trampas y seguridad</h2>
+    <p>No se fía de nada de lo que dice el navegador. Aunque alguien toque el código del juego, lo que no cumple las reglas se rechaza.</p>
+  </header>
+  <div class="cheats">
+    <details class="cheat reveal"><summary><span>🕊️</span>Volar o flotar</summary><p>El servidor conoce la gravedad y la altura máxima de un salto: si subes más de lo posible o te quedas en el aire demasiado, vuelves al suelo.</p></details>
+    <details class="cheat reveal"><summary><span>💨</span>Speedhack o teletransporte</summary><p>Cada jugador tiene un "presupuesto" de distancia que se recarga a la velocidad máxima del juego.</p></details>
+    <details class="cheat reveal"><summary><span>🧱</span>Atravesar paredes</summary><p>Se comprueba todo el trayecto entre dos posiciones, no sólo el destino.</p></details>
+    <details class="cheat reveal"><summary><span>🎯</span>Disparos imposibles</summary><p>El impacto debe caer sobre el huevo donde estaba de verdad (con compensación de latencia) y el tirador debe verlo. Los headshots los decide el servidor.</p></details>
+    <details class="cheat reveal"><summary><span>♾️</span>Munición o granadas infinitas</summary><p>Balas, recargas, cadencia y granadas (máx. 3) se cuentan en el servidor.</p></details>
+    <details class="cheat reveal"><summary><span>📢</span>Spam</summary><p>Límite de mensajes por segundo y de chat. Los mensajes malformados nunca tumban el servidor.</p></details>
   </div>
+  <div class="secure reveal">
+    <h3>🌍 En el servidor online, además…</h3>
+    <ul class="ticks two">
+      <li>Sólo usuario + contraseña (hash <b>scrypt</b> con sal)</li>
+      <li>Bloqueo por IP ante intentos de contraseña, aunque reconecten</li>
+      <li>Máximo de conexiones simultáneas por IP</li>
+      <li>Sólo la web oficial puede conectarse al servidor</li>
+      <li>HSTS, CSP estricta, <code>X-Frame-Options: DENY</code></li>
+      <li>Se sirve sólo el código minificado: <code>server/</code> y <code>data/</code> dan 404</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== INSTALAR ===================== -->
+<section class="sec sec-tint" id="instalar">
+  <header class="sec-head reveal">
+    <span class="kicker">Para desarrolladores</span>
+    <h2>Instalar y desplegar</h2>
+    <p>Necesitas <b>Node.js 18</b> o superior.</p>
+  </header>
+  <ol class="steps">
+    <li class="reveal"><h3>Descarga el proyecto</h3><div class="code"><code>git clone https://github.com/campayoo/EggWars.git<br>cd EggWars</code><button class="copy" data-copy="git clone https://github.com/campayoo/EggWars.git&#10;cd EggWars" aria-label="Copiar">Copiar</button></div></li>
+    <li class="reveal"><h3>Instala y arranca</h3><div class="code"><code>npm install<br>npm start</code><button class="copy" data-copy="npm install&#10;npm start" aria-label="Copiar">Copiar</button></div><p>Abre <code>http://localhost:3000</code>. Los demás entran con la IP que sale en la consola.</p></li>
+    <li class="reveal"><h3>Comprueba que todo va</h3><div class="code"><code>npm test</code><button class="copy" data-copy="npm test" aria-label="Copiar">Copiar</button></div><p>225 comprobaciones: mapas, física, servidor, anti-trampas, bots, modo online y base de datos.</p></li>
+  </ol>
+  <div class="deploys">
+    <article class="dcard reveal"><h3><span class="d-logo d-render">R</span>Render · online</h3><p><b>New → Blueprint</b> → repo EggWars → <b>Apply</b>. <code>render.yaml</code> crea el servidor y la base de datos PostgreSQL. Cada push se publica solo.</p></article>
+    <article class="dcard reveal"><h3><span class="d-logo d-vercel">▲</span>Vercel · contra bots</h3><p>Importa el repo: <code>vercel.json</code> compila la versión sin servidor y añade cabeceras de seguridad.</p></article>
+    <article class="dcard reveal"><h3><span class="d-logo d-gh">⬢</span>GitHub Pages · esta web</h3><p><code>npm run build:pages</code> genera la documentación y el juego contra bots en <code>/jugar/</code>, en la rama <code>gh-pages</code>.</p></article>
+  </div>
+  <details class="tree reveal">
+    <summary>📁 Estructura del proyecto</summary>
+<pre><code>EggWars/
+├── server.js            arranque (npm start)
+├── server/              servidor: salas, cuentas, anti-trampas, bots, Huevo Impostor
+├── shared/              lógica común: mapas, física, armas, cosméticos
+├── public/              cliente: HTML, CSS y JS del juego (Three.js)
+├── site/                esta web de documentación
+├── tests/               pruebas automáticas (npm test)
+├── tools/               build de producción, GitHub Pages y vistas previas
+├── render.yaml          despliegue online en Render
+└── vercel.json          despliegue contra bots en Vercel</code></pre>
+  </details>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section class="sec" id="faq">
+  <header class="sec-head reveal">
+    <span class="kicker">Dudas</span>
+    <h2>Preguntas frecuentes</h2>
+  </header>
+  <div class="faq">
+    <details class="reveal"><summary>¿Necesito instalar algo para jugar?</summary><p>No. La versión online y la de bots se juegan en el navegador (Chrome, Edge o Firefox con WebGL).</p></details>
+    <details class="reveal"><summary>¿Por qué el servidor online tarda en entrar a veces?</summary><p>Usa el plan gratuito de Render: si nadie juega en 15 minutos se duerme y tarda unos 30 segundos en despertar con el primer jugador.</p></details>
+    <details class="reveal"><summary>¿Se guarda mi cuenta?</summary><p>En la versión online, sí: en una base de datos PostgreSQL. En la de bots, en tu navegador. En red local, en el ordenador que hace de servidor.</p></details>
+    <details class="reveal"><summary>¿Por qué no puedo "entrar con mi IP" online?</summary><p>En Internet mucha gente comparte IP (casa, instituto…), así que online sólo se entra con usuario y contraseña. En red local sí está disponible.</p></details>
+    <details class="reveal"><summary>Me va a tirones, ¿qué hago?</summary><p>En <b>Ajustes → Calidad</b> elige <b>Baja · máxima fluidez</b> y activa <b>Mostrar FPS</b>. El juego también baja la calidad solo si lo necesita.</p></details>
+    <details class="reveal"><summary>¿Puedo usar el código para mi proyecto?</summary><p>No sin permiso. El código es visible para consultarlo, pero todos los derechos están reservados. Escribe al autor en GitHub si quieres pedir permiso.</p></details>
+  </div>
+</section>
+
+<!-- ===================== CTA FINAL ===================== -->
+<section class="final reveal">
+  <svg class="final-egg" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg-hat"/></svg>
+  <h2>¿Listo para la batalla?</h2>
+  <p>Coge tu EggK-47 y que no te hagan tortilla.</p>
+  <div class="cta center">
+    <a class="btn btn-primary btn-lg" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener"><span class="tri"></span>Jugar online</a>
+    <a class="btn btn-ghost btn-lg" href="jugar/">🤖 Contra bots</a>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="f-brand"><svg viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg><b>EGG WARS</b></div>
+  <p>© 2026 <b>Pablo Campayo Viñes</b> · Todos los derechos reservados.<br>Prohibida la copia, modificación o redistribución sin permiso del autor. <a href="https://github.com/campayoo/EggWars/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a></p>
+  <nav class="f-links"><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Online</a><a href="jugar/">Contra bots</a><a href="#inicio">Arriba ↑</a></nav>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>
+
+<!-- Visor de imágenes -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Vista ampliada del mapa" hidden>
+  <button class="lb-close" id="lbClose" aria-label="Cerrar">✕</button>
+  <button class="lb-nav lb-prev" id="lbPrev" aria-label="Anterior">‹</button>
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <button class="lb-nav lb-next" id="lbNext" aria-label="Siguiente">›</button>
 </div>
 
+<!-- Huevos (dibujos propios) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="gEgg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fffdf7"/><stop offset=".6" stop-color="#ffe9c9"/><stop offset="1" stop-color="#f4c48d"/></radialGradient>
+    <radialGradient id="gBlue" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#e6f3ff"/><stop offset=".6" stop-color="#8cc4ff"/><stop offset="1" stop-color="#3f86d8"/></radialGradient>
+    <radialGradient id="gOr" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#ffe2c2"/><stop offset=".6" stop-color="#ffab5c"/><stop offset="1" stop-color="#e8701e"/></radialGradient>
+    <symbol id="egg" viewBox="0 0 40 50"><ellipse cx="20" cy="28" rx="16" ry="20" fill="url(#gOr)"/><ellipse cx="14" cy="20" rx="4" ry="6" fill="#fff" opacity=".45"/></symbol>
+    <symbol id="egg-hat" viewBox="0 0 40 50"><ellipse cx="20" cy="29" rx="15" ry="19" fill="url(#gEgg)"/><circle cx="15" cy="27" r="2.2" fill="#3b2412"/><circle cx="25" cy="27" r="2.2" fill="#3b2412"/><path d="M15 34q5 4 10 0" stroke="#3b2412" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M6 13h28l-3 4H9z" fill="#ff7a1a"/><path d="M11 13q1-10 9-10t9 10z" fill="#ff8c2a"/><rect x="11" y="10" width="18" height="2.5" fill="#3b2412" opacity=".7"/></symbol>
+    <symbol id="egg-blue" viewBox="0 0 40 50"><ellipse cx="20" cy="28" rx="15" ry="19" fill="url(#gBlue)"/><rect x="9" y="22" width="22" height="7" rx="3.5" fill="#1c2b40"/><rect x="11" y="23.5" width="7" height="4" rx="2" fill="#5fd0ff" opacity=".8"/><rect x="22" y="23.5" width="7" height="4" rx="2" fill="#5fd0ff" opacity=".8"/><path d="M15 36h10" stroke="#1c2b40" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="egg-cracked" viewBox="0 0 40 50"><ellipse cx="20" cy="28" rx="15" ry="19" fill="url(#gEgg)"/><path d="M8 24l5 3 3-4 4 5 4-4 4 4 4-3" stroke="#c98a4b" stroke-width="1.6" fill="none" stroke-linejoin="round"/><path d="M13 30l3 3m0-3l-3 3M24 30l3 3m0-3l-3 3" stroke="#3b2412" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="20" cy="39" rx="3" ry="2" fill="#3b2412"/></symbol>
+  </defs>
+</svg>
 
-
-
-<div id="respawn-screen" class="hidden">
-  <div class="rs-streak"><b id="rs-streak">x0</b><span>MEJOR<br>RACHA</span></div>
-  <div class="rs-killed hidden" id="rs-killed"></div>
-  <div class="rs-grid">
-    <div class="rs-left">
-      <section class="panel-dark rs-admin hidden" id="rs-admin">
-        <div class="panel-head"><span>👑 ADMIN DE LA SALA</span><span class="admin-state" id="admin-state">EN JUEGO</span></div>
-        <div class="admin-actions">
-          <button class="admin-btn" id="adm-pause"><i>⏸</i><span>Pausar</span></button>
-          <button class="admin-btn" id="adm-restart"><i>🔄</i><span>Reiniciar ronda</span></button>
-          <button class="admin-btn danger" id="adm-end"><i>🏁</i><span>Terminar ronda</span></button>
-          <button class="admin-btn primary" id="adm-settings"><i>🗺️</i><span>Mapa y ajustes</span></button>
-        </div>
-        <div class="admin-players" id="admin-players"></div>
-      </section>
-      <section class="panel-dark rs-challenges">
-        <div class="panel-head"><span>RETOS</span><span class="timer" id="rs-challenge-timer">--:--:--</span></div>
-        <div class="challenge-list" id="rs-challenge-list"></div>
-      </section>
-    </div>
-    <div class="rs-right">
-      <section class="panel-dark rs-weapons">
-        <div class="panel-head center"><span>¿CAMBIAR DE ARMA?</span></div>
-        <div class="weapon-picker small" id="rs-weapon-picker"></div>
-        <div class="rs-weapon-name" id="rs-weapon-name">EggK-47</div>
-        <div class="weapon-stats small" id="rs-weapon-stats"></div>
-        <div class="rs-loadout-hint">+ <b>Cluck 9mm</b> (E) · golpe (F) · granadas (Q)</div>
-      </section>
-      <div class="rs-team hidden" id="rs-team">
-        <span class="rs-team-now" id="rs-team-now">Equipo Rojo</span>
-        <button class="btn-ghost" id="rs-team-switch">⇄ Cambiar de equipo</button>
-      </div>
-      <button class="btn-play wide" id="rs-play"><span class="play-tri"></span><span id="rs-play-label">JUGAR</span></button>
-      <div class="rs-small">
-        <button class="btn-ghost" id="rs-settings">⚙ Ajustes</button>
-        <button class="btn-ghost" id="rs-exit">Salir al lobby</button>
-      </div>
-      <div class="rs-invite" id="rs-invite"></div>
-      <div class="rs-room" id="pause-room-info"></div>
-    </div>
-  </div>
-</div>
-
-
-
-
-<div id="scoreboard-overlay" class="hidden">
-  <div class="shell-scoreboard">
-    <div class="sb-top">
-      <h2>MARCADOR</h2>
-      <span id="sb-game-info">—</span>
-    </div>
-    <table class="sb-table">
-      <thead>
-        <tr><th>#</th><th>JUGADOR</th><th>EQUIPO</th><th id="sb-score-col">PUNTOS</th><th>BAJAS</th><th>MUERTES</th><th>K/D</th></tr>
-      </thead>
-      <tbody id="scoreboard-entries"></tbody>
-    </table>
-  </div>
-</div>
-
-
-
-
-<div id="gameover-overlay" class="hidden">
-  <div class="death-box victory-box">
-    <div class="trophy-icon">🏆</div>
-    <h2 id="gameover-title">¡RONDA FINALIZADA!</h2>
-    <p id="gameover-text">—</p>
-    <table class="sb-table go-table"><tbody id="gameover-standings"></tbody></table>
-    <p class="next-round" id="next-round-line">Siguiente ronda en <strong id="next-round-count">9</strong>…</p>
-    <div class="go-admin hidden" id="go-admin">
-      <button class="shell-btn-primary" id="go-start">▶ EMPEZAR OTRA RONDA</button>
-      <button class="btn-ghost" id="go-settings">🗺️ Cambiar mapa y ajustes</button>
-    </div>
-  </div>
-</div>
-
-
-
-
-<div id="hud" class="hidden">
-  <div id="vignette"></div>
-  <div id="grenade-charge" class="hidden"><div id="grenade-charge-fill"></div><span>💣 Suelta para lanzar</span></div>
-  <div id="paused-banner" class="hidden"><b>⏸ PARTIDA EN PAUSA</b><small id="paused-by">El admin ha pausado la partida</small></div>
-  <div id="scope-overlay" class="hidden"><div class="scope-lens"></div></div>
-
-  <div id="crosshair">
-    <div class="ch-part ch-u"></div>
-    <div class="ch-part ch-d"></div>
-    <div class="ch-part ch-l"></div>
-    <div class="ch-part ch-r"></div>
-    <div class="ch-core"></div>
-    <div id="hitmarker" class="hitmarker hidden">
-      <div class="hm-line hm-1"></div>
-      <div class="hm-line hm-2"></div>
-    </div>
-  </div>
-
-  <div id="damage-indicators"></div>
-  <div id="damage-numbers"></div>
-  <div id="waypoints"></div>
-
-  
-  <div id="ss-left-leaderboard"></div>
-
-  
-  <div id="ss-top-match-info">
-    <div class="ss-team-pill red" id="ss-team-red-pill">
-      <span class="ss-team-letter">R</span>
-      <span class="ss-team-count" id="ss-red-count">0</span>
-    </div>
-    <div class="ss-center-box">
-      <div class="ss-timer" id="ss-timer">--:--</div>
-      <div class="ss-goal" id="ss-goal">—</div>
-    </div>
-    <div class="ss-team-pill blue" id="ss-team-blue-pill">
-      <span class="ss-team-letter">B</span>
-      <span class="ss-team-count" id="ss-blue-count">0</span>
-    </div>
-  </div>
-
-  
-  <div id="objective-panel" class="hidden">
-    <div class="obj-title" id="obj-title">—</div>
-    <div class="obj-bar"><div class="obj-fill" id="obj-fill"></div></div>
-    <div class="obj-sub" id="obj-sub">—</div>
-  </div>
-
-  <div id="ss-top-right-stats">
-    <div class="ss-fps-ping-box">
-      <div>FPS: <span id="ss-fps-val">--</span></div>
-      <div>PING: <span id="ss-ping-val">--</span></div>
-    </div>
-  </div>
-
-  <div id="ss-health-circle">
-    <svg class="ss-hp-svg" viewBox="0 0 100 100">
-      <circle class="ss-hp-bg" cx="50" cy="50" r="42"></circle>
-      <circle id="ss-hp-bar" class="ss-hp-progress" cx="50" cy="50" r="42"></circle>
-    </svg>
-    <div class="ss-hp-number" id="health-text">100</div>
-  </div>
-  <div id="spawn-protect" class="hidden">🛡️ PROTECCIÓN DE SPAWN</div>
-
-  <div id="shell-ammo-widget">
-    <div class="ss-grenades-row" id="grenade-icons">
-      <span class="ss-grenade-icon active">🥚</span>
-      <span class="ss-grenade-icon active">🥚</span>
-      <span class="ss-grenade-icon active">🥚</span>
-    </div>
-    <div class="ammo-digits">
-      <span id="ammo-current">30</span><span class="ammo-div">/</span><span id="ammo-max">30</span>
-    </div>
-    <div class="ammo-visual-list" id="ammo-bullet-icons"></div>
-    <div id="reload-hint" class="hidden">PULSA [R] PARA RECARGAR</div>
-    <div class="weapon-tag-label" id="active-weapon-name">EggK-47</div>
-    <div class="weapon-slots" id="weapon-slots"></div>
-  </div>
-
-  <div id="kill-feed"></div>
-  <div id="chat-log"></div>
-
-  <div id="chat-bar-container" class="hidden">
-    <span class="chat-prefix">💬 Chat:</span>
-    <input type="text" id="chat-input" placeholder="Escribe y pulsa Enter (Esc para cancelar)" maxlength="60" autocomplete="off"/>
-  </div>
-
-  <div id="damage-flash"></div>
-  <div id="center-toast" class="hidden"></div>
-  <div id="big-banner" class="hidden"></div>
-</div>
-
-<div id="loading-overlay" class="hidden"><div class="loading-egg">🥚</div><p id="loading-text">Entrando en la partida…</p></div>
-
-
-
-
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js" integrity="sha384-qOkzR5Ke/XkQxuGVJ9hpFEpDlcoLtWwVYhnJf06cLIZa2vaIptSqaubivErzmD5O" crossorigin="anonymous"></script>
-<script src="app.a18db75809.js"></script>
+<script src="site.eb5c3fd807.js" defer></script>
 </body>
 </html>
