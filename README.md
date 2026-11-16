@@ -235,7 +235,7 @@ En la versión web: entras sólo con un nombre (tu huevo, retos y estadísticas 
 
 El multijugador por Internet necesita el servidor de partidas encendido siempre. Va en **[Render](https://render.com)** (plan gratuito), con las cuentas en una base de datos **PostgreSQL** para que no se pierdan al reiniciar.
 
-**Versión online:** https://eggwars.onrender.com · **Contra bots (sin servidor):** https://eggwars-ten.vercel.app
+**Versión online:** https://eggwars-plai.onrender.com · **Contra bots (sin servidor):** https://eggwars-ten.vercel.app
 
 1. Entra en Render con tu cuenta de GitHub → **New → Blueprint**.
 2. Elige el repositorio **EggWars** → **Apply**. `render.yaml` crea solo el servidor (Frankfurt) y la base de datos.
