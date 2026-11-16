@@ -1,7 +1,9 @@
 // ============================================================================
 // server/accounts.js — Cuentas de jugador, sesiones y amigos
 // - Usuario + contraseña (hash scrypt con sal) o cuenta ligada a la IP del equipo
-// - Persistencia en data/users.json (escritura atómica con retardo)
+// - Persistencia en data/users.json (escritura atómica con retardo) o, si existe
+//   la variable DATABASE_URL, en PostgreSQL (servidor online: el disco de Render
+//   se borra en cada reinicio y la base de datos no).
 // ============================================================================
 const fs = require('fs');
 const path = require('path');
@@ -27,19 +29,51 @@ function load() {
     try { fs.copyFileSync(FILE, FILE + '.corrupto-' + Date.now()); } catch (e2) { /* nada que copiar */ }
   }
 }
+// ---- PostgreSQL opcional (DATABASE_URL) ----
+let pool = null;
+let pgChain = Promise.resolve();   // las escrituras van en fila: nunca se pisan
+function pgSave() {
+  const json = JSON.stringify(db);
+  pgChain = pgChain.then(() => pool.query(
+    'INSERT INTO egg_store (id, data, updated_at) VALUES ($1, $2::jsonb, now()) ' +
+    'ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', ['accounts', json]
+  )).catch(e => console.error('[cuentas] Error guardando en la base de datos:', e.message));
+  return pgChain;
+}
+async function init() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return { storage: 'file', file: FILE };
+  let pg;
+  try { pg = require('pg'); } catch (e) { throw new Error('Falta el paquete "pg" (npm install pg) para usar DATABASE_URL'); }
+  // Las URL externas de Render (…render.com) exigen SSL; la interna (dpg-…) no
+  const ssl = process.env.PGSSL === '0' ? false : /\.render\.com|sslmode=require/.test(url) || process.env.PGSSL === '1' ? { rejectUnauthorized: false } : false;
+  pool = new pg.Pool({ connectionString: url, ssl, max: 3 });
+  await pool.query('CREATE TABLE IF NOT EXISTS egg_store (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())');
+  const r = await pool.query('SELECT data FROM egg_store WHERE id = $1', ['accounts']);
+  if (r.rows.length) {
+    const raw = typeof r.rows[0].data === 'string' ? JSON.parse(r.rows[0].data) : r.rows[0].data;
+    db = Object.assign({ users: {}, sessions: {}, ipIndex: {} }, raw);
+  } else if (Object.keys(db.users).length) {
+    await pgSave();   // primera vez: se sube lo que hubiera en data/users.json
+  }
+  return { storage: 'postgres', users: Object.keys(db.users).length };
+}
+
 function saveNow() {
+  if (pool) return pgSave();
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const tmp = FILE + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, FILE);
   } catch (e) { console.error('[cuentas] Error guardando:', e.message); }
+  return Promise.resolve();
 }
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, 400);
 }
-function flush() { clearTimeout(saveTimer); saveNow(); }
+function flush() { clearTimeout(saveTimer); return saveNow(); }
 
 const key = name => String(name || '').trim().toLowerCase();
 function normIp(ip) {
@@ -223,6 +257,6 @@ load();
 module.exports = {
   register, login, loginToken, loginIp, logout, setPassword, get, key, normIp,
   publicProfile, saveProfile, addStats,
-  sendRequest, respond, removeFriend, displayName, flush, validateName,
+  sendRequest, respond, removeFriend, displayName, flush, validateName, init,
   _db: () => db,
 };

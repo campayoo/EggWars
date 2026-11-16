@@ -32,6 +32,7 @@
 - [Salas, admin y taller del huevo](#-salas-admin-y-taller-del-huevo)
 - [🤖 Bots](#-bots)
 - [🌐 Jugar sin servidor (GitHub Pages)](#-jugar-sin-servidor-github-pages)
+- [🌍 Jugar online (Render)](#-jugar-online-render)
 - [▲ Desplegar en Vercel](#-desplegar-en-vercel)
 - [Anti-trampas](#️-anti-trampas)
 - [Rendimiento y calidad gráfica](#-rendimiento-y-calidad-gráfica)
@@ -227,6 +228,30 @@ npm run build:pages      # crea la carpeta gh-pages/
 `gh-pages/` sólo contiene `index.html`, el CSS y **un único archivo JavaScript minificado** con el aviso de copyright (el código fuente no se publica). En este repositorio está en la rama **`gh-pages`**: en *Settings → Pages → Deploy from a branch* elige **gh-pages / (root)** y estará en `https://campayoo.github.io/EggWars/`. También se puede desplegar en Vercel (siguiente apartado).
 
 En la versión web: entras sólo con un nombre (tu huevo, retos y estadísticas se guardan en ese navegador), **JUGAR** te mete en una partida rápida con 7 bots y en **Salas** hay salas de bots preparadas o puedes crear la tuya. No están los amigos ni Huevo Impostor, que necesitan el servidor. Para probarla en local: `npm run build:pages`, `npm start` y abre `http://localhost:3000/pages/`.
+
+---
+
+## 🌍 Jugar online (Render)
+
+El multijugador por Internet necesita el servidor de partidas encendido siempre. Va en **[Render](https://render.com)** (plan gratuito), con las cuentas en una base de datos **PostgreSQL** para que no se pierdan al reiniciar.
+
+**Versión online:** https://eggwars.onrender.com · **Contra bots (sin servidor):** https://eggwars-ten.vercel.app
+
+1. Entra en Render con tu cuenta de GitHub → **New → Blueprint**.
+2. Elige el repositorio **EggWars** → **Apply**. `render.yaml` crea solo el servidor (Frankfurt) y la base de datos.
+3. Cada `git push` a `main` se publica solo.
+
+| Qué | Cómo queda protegido en modo online |
+|---|---|
+| Cuentas | Sólo usuario + contraseña (hash scrypt con sal). "Entrar con mi IP" se desactiva: en Internet mucha gente comparte IP |
+| Fuerza bruta | Máx. 8 intentos/min por conexión y 30 cada 10 min por IP, aunque reconecten |
+| Abuso | Máx. 8 conexiones a la vez por IP, 160 mensajes/s por conexión, salas limitadas |
+| Origen | Sólo la propia página y los dominios de `ALLOWED_ORIGINS` pueden conectarse |
+| Cabeceras | CSP estricta, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Permissions-Policy` |
+| Código | Se sirve sólo el paquete minificado de `dist/`; `server/`, `data/` y `tests/` dan 404 |
+
+Variables (ya puestas en `render.yaml`): `EGG_PUBLIC=1`, `DATABASE_URL` (la base de datos), `ALLOWED_ORIGINS`, `MAX_CONN_PER_IP`.
+En el plan gratuito el servidor **se duerme tras 15 min sin jugadores** y tarda unos 30 s en despertar; la base de datos gratuita de Render caduca a los 30 días (se puede renovar o pasar a un plan de pago).
 
 ---
 

@@ -15,6 +15,20 @@ const Accounts = require('./accounts');
 const Cosmetics = require('../shared/cosmetics.js');
 
 const PORT = process.env.PORT || 3000;
+// Modo público (servidor en Internet, p. ej. Render): sin "entrar con mi IP",
+// IP real tras el proxy y límites por IP. En Render se activa solo.
+const PUBLIC = process.env.EGG_PUBLIC === '1' || (!!process.env.RENDER && process.env.EGG_PUBLIC !== '0');
+// Otros dominios que pueden conectarse (p. ej. la web de Vercel), separados por comas
+const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '').split(',').map(x => x.trim().replace(/\/+$/, '')).filter(Boolean);
+const MAX_CONN_PER_IP = Number(process.env.MAX_CONN_PER_IP) || 8;
+const connPerIp = new Map();
+function reqIp(req) {
+  if (PUBLIC) {
+    const xf = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    if (xf) return xf;
+  }
+  return String((req.socket && req.socket.remoteAddress) || req.connection && req.connection.remoteAddress || '');
+}
 const EMPTY_ROOM_TTL_MS = 60000;
 const MAX_ROOMS = 40;
 
@@ -23,10 +37,17 @@ const server = http.createServer(app);
 const io = new Server(server, {
   // Sin CORS abierto: sólo la propia página del juego puede conectarse al servidor
   allowRequest: (req, cb) => {
+    // Límite de conexiones simultáneas por IP (anti-abuso)
+    if (PUBLIC && (connPerIp.get(reqIp(req)) || 0) >= MAX_CONN_PER_IP) return cb('Demasiadas conexiones', false);
     const origin = req.headers.origin;
     if (!origin) return cb(null, true);
-    try { cb(null, new URL(origin).host === req.headers.host); } catch (e) { cb(null, false); }
+    try {
+      const o = new URL(origin);
+      cb(null, o.host === req.headers.host || ALLOWED_ORIGINS.includes(o.origin));
+    } catch (e) { cb(null, false); }
   },
+  // Cabeceras CORS sólo para los dominios permitidos (la web de Vercel)
+  cors: ALLOWED_ORIGINS.length ? { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'] } : undefined,
   pingInterval: 5000,
   pingTimeout: 8000,
   maxHttpBufferSize: 2e5, // texturas de huevo pintadas (~60 KB)
@@ -44,11 +65,16 @@ if (PROD && !fs.existsSync(path.join(DIST, 'index.html'))) {
   process.exit(1);
 }
 app.disable('x-powered-by');
+if (PUBLIC) app.set('trust proxy', 1);
+// Comprobación de salud para el proveedor (Render la usa para saber si está vivo)
+app.get('/healthz', (req, res) => res.type('text').set('Cache-Control', 'no-store').send('ok'));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');                 // nadie puede meter el juego en un iframe ajeno
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  if (PUBLIC) res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' https://unpkg.com",
@@ -208,7 +234,21 @@ createDefaultRooms();
 // socket.id -> función que cambia la sala de ese socket (para expulsar desde el admin)
 const roomSetters = new Map();
 
+// Conexiones abiertas por IP: se cuentan en el mismo momento del handshake
+// (si llegan muchas a la vez, ninguna se cuela antes de contarse)
+io.engine.on('connection', raw => {
+  const ip = reqIp(raw.request);
+  connPerIp.set(ip, (connPerIp.get(ip) || 0) + 1);
+  raw.once('close', () => { const n = (connPerIp.get(ip) || 1) - 1; if (n > 0) connPerIp.set(ip, n); else connPerIp.delete(ip); });
+});
+
+// Intentos fallidos de contraseña por IP (aunque reconecten no pueden probar sin fin)
+const failsByIp = new Map();
+setInterval(() => { const now = Date.now(); for (const [ip, l] of failsByIp) { const f = l.filter(t => now - t < 600000); if (f.length) failsByIp.set(ip, f); else failsByIp.delete(ip); } }, 60000).unref();
+
 io.on('connection', (socket) => {
+  const ip = reqIp(socket.request);
+  socket.emit('server:config', { online: PUBLIC, ipLogin: !PUBLIC });
   // Ningún mensaje malformado puede tumbar el servidor: cada evento va protegido
   const rawOn = socket.on.bind(socket);
   socket.on = (ev, fn) => rawOn(ev, (...args) => {
@@ -251,19 +291,22 @@ io.on('connection', (socket) => {
   function throttled() {
     const now = Date.now();
     fails = fails.filter(t => now - t < 60000);
-    if (fails.length >= 8) { socket.emit('auth:error', { message: 'Demasiados intentos. Espera un minuto.' }); return true; }
+    const ipFails = (failsByIp.get(ip) || []).filter(t => now - t < 600000);
+    if (fails.length >= 8 || ipFails.length >= 30) { socket.emit('auth:error', { message: 'Demasiados intentos. Espera unos minutos.' }); return true; }
     return false;
   }
+  const failed = () => { fails.push(Date.now()); const l = failsByIp.get(ip) || []; l.push(Date.now()); failsByIp.set(ip, l); };
   const authWrap = fn => data => {
     if (throttled()) return;
     const res = fn(data || {});
-    if (res.error) fails.push(Date.now());
+    if (res.error) failed();
     finishAuth(res);
   };
   socket.on('auth:register', authWrap(d => Accounts.register(d.username, d.password)));
   socket.on('auth:login', authWrap(d => Accounts.login(d.username, d.password)));
   socket.on('auth:token', d => finishAuth(Accounts.loginToken(d && d.token)));
-  socket.on('auth:ip', authWrap(d => Accounts.loginIp(socket.handshake.address, d.name)));
+  // En Internet muchos jugadores comparten IP (casa, instituto…): ahí sólo usuario + contraseña
+  socket.on('auth:ip', authWrap(d => PUBLIC ? { error: 'En el servidor online entra con usuario y contraseña (pestaña "Crear cuenta")' } : Accounts.loginIp(ip, d.name)));
   socket.on('auth:logout', d => {
     if (d && d.token) Accounts.logout(d.token);
     if (room()) { socket.leave(currentRoomId); room().handlePlayerDisconnect(socket.id); setRoom(null); broadcastRoomsList(); }
@@ -275,7 +318,7 @@ io.on('connection', (socket) => {
     if (!account || !d) return;
     if (throttled()) return;
     const res = Accounts.setPassword(account, d.current, d.next);
-    if (res.error) { fails.push(Date.now()); socket.emit('auth:pwResult', { error: res.error }); return; }
+    if (res.error) { failed(); socket.emit('auth:pwResult', { error: res.error }); return; }
     socket.emit('auth:pwResult', { ok: true, profile: Accounts.publicProfile(res.user) });
   });
 
@@ -458,21 +501,33 @@ io.on('connection', (socket) => {
 
 process.on('uncaughtException', e => { console.error('[error no capturado]', e && e.stack || e); });
 process.on('unhandledRejection', e => { console.error('[promesa rechazada]', e && e.stack || e); });
-process.on('SIGINT', () => { Accounts.flush(); process.exit(0); });
-process.on('SIGTERM', () => { Accounts.flush(); process.exit(0); });
+function shutdown() {
+  // Se guarda todo (también en la base de datos) antes de salir; como mucho 5 s
+  Promise.race([Promise.resolve(Accounts.flush()), new Promise(r => setTimeout(r, 5000))]).then(() => process.exit(0));
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
-server.listen(PORT, '0.0.0.0', () => {
+function start() { server.listen(PORT, '0.0.0.0', () => {
   const ips = [];
   for (const list of Object.values(os.networkInterfaces())) {
     for (const ni of list || []) if (ni.family === 'IPv4' && !ni.internal) ips.push(ni.address);
   }
   console.log('========================================================');
-  console.log('  🥚 EGG WARS 3D — SERVIDOR LAN');
+  console.log(PUBLIC ? '  🥚 EGG WARS 3D — SERVIDOR ONLINE' : '  🥚 EGG WARS 3D — SERVIDOR LAN');
   console.log(`  🌐 Local:  http://localhost:${PORT}`);
   ips.forEach(ip => console.log(`  📡 LAN:    http://${ip}:${PORT}`));
   console.log(`  🗺️  ${MapDefs.LIST.length} mapas · modos: ${Object.keys(MODES).join(', ')}`);
   console.log(`  🔪 Huevo Impostor: http://localhost:${PORT}/impostor.html`);
   console.log('========================================================');
-});
+}); }
+
+if (process.env.DATABASE_URL) {
+  Accounts.init().then(info => { console.log(`  💾 Cuentas en PostgreSQL (${info.users} jugadores)`); start(); })
+    .catch(e => { console.error('✗ No se pudo conectar con la base de datos:', e.message); process.exit(1); });
+} else {
+  if (PUBLIC) console.warn('⚠️  Sin DATABASE_URL: las cuentas se guardan en disco y se pierden si el servidor se reinicia.');
+  start();
+}
 
 module.exports = { rooms, io, server };

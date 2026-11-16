@@ -2432,6 +2432,7 @@
 
   // Modo sin conexión (GitHub Pages): las salas y los bots corren en el navegador (public/js/offline.js)
   const OFFLINE = !!(window.EGG_OFFLINE && window.EggOffline);
+  let serverCfg = {};   // lo manda el servidor al conectar: { online, ipLogin }
   function setupOfflineUI() {
     document.body.classList.add('egg-offline');
     document.querySelectorAll('.logo-tag, .brand-text small').forEach(e => { e.textContent = 'VS BOTS'; });
@@ -2449,11 +2450,24 @@
     socket = OFFLINE ? window.EggOffline.connect() : io({ transports: ['websocket', 'polling'] });
     socket.on('connect', () => {
       $('conn-dot').classList.add('online'); $('auth-conn').classList.add('online');
-      const ct = OFFLINE ? 'Sin conexión · partidas contra bots' : 'Conectado al servidor';
+      const ct = OFFLINE ? 'Sin conexión · partidas contra bots' : serverCfg.online ? 'Online · conectado al servidor' : 'Conectado al servidor';
       setText($('conn-text'), ct); setText($('auth-conn-text'), ct);
       socket.emit('rooms:get');
       const token = store.get('token', null);
       if (token) socket.emit('auth:token', { token }); else showAuth('login');
+    });
+    socket.on('server:config', c => {
+      serverCfg = c || {};
+      const ipBtn = document.querySelector('.auth-tabs button[data-auth="ip"]');
+      if (ipBtn) ipBtn.classList.toggle('hidden', !OFFLINE && serverCfg.ipLogin === false);
+      if (!OFFLINE && serverCfg.online) {
+        const ct = 'Online · conectado al servidor';
+        setText($('conn-text'), ct); setText($('auth-conn-text'), ct);
+        const tag = document.querySelector('.brand-text small'); if (tag) tag.textContent = 'ONLINE';
+        const lt = document.querySelector('.logo-tag'); if (lt) lt.textContent = 'ONLINE';
+      }
+      const active = document.querySelector('.auth-tabs button.active');
+      if (active && active.dataset.auth === 'ip' && serverCfg.ipLogin === false) switchAuthTab('login');
     });
     socket.on('auth:ok', onAuthOk);
     socket.on('auth:error', d => {
@@ -2864,6 +2878,7 @@
   function showAuth(tab) {
     $('auth-screen').classList.remove('hidden');
     if (OFFLINE) tab = 'ip';   // sin conexión: sólo el nombre
+    else if (tab === 'ip' && serverCfg.ipLogin === false) tab = 'login';
     switchAuthTab(tab || 'login');
   }
   function hideAuth() { $('auth-screen').classList.add('hidden'); $('auth-error').classList.add('hidden'); }
