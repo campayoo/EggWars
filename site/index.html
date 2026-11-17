@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EGG WARS · Documentación oficial — FPS 3D de huevos</title>
+<title>EGG WARS · Guía del juego — FPS 3D de huevos</title>
 <meta name="description" content="EGG WARS: shooter 3D multijugador de huevos en el navegador. Juega online, contra bots o en red local. Guía de mapas, armas, modos, Huevo Impostor, controles e instalación.">
 <meta name="author" content="Pablo Campayo Viñes">
 <meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados.">
 <meta name="theme-color" content="#ff8c2a">
-<meta property="og:title" content="EGG WARS — FPS 3D de huevos">
+<meta property="og:title" content="EGG WARS · Guía del juego">
 <meta property="og:description" content="Online, contra bots o en red local. 16 mapas, 8 armas, 4 modos + Huevo Impostor.">
 <meta property="og:image" content="img/banner.jpg">
 <meta property="og:type" content="website">
@@ -26,7 +26,7 @@
 <header class="topbar" id="topbar">
   <a class="brand" href="#inicio" aria-label="EGG WARS, inicio">
     <svg class="brand-egg" viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg>
-    <span><b>EGG WARS</b><small>Documentación</small></span>
+    <span><b>EGG WARS</b><small>Guía del juego</small></span>
   </a>
   <nav class="nav" id="nav" aria-label="Secciones">
     <a href="#jugar">Jugar</a>
@@ -312,7 +312,7 @@
   <div class="deploys">
     <article class="dcard reveal"><h3><span class="d-logo d-render">R</span>Render · online</h3><p><b>New → Blueprint</b> → repo EggWars → <b>Apply</b>. <code>render.yaml</code> crea el servidor y la base de datos PostgreSQL. Cada push se publica solo.</p></article>
     <article class="dcard reveal"><h3><span class="d-logo d-vercel">▲</span>Vercel · contra bots</h3><p>Importa el repo: <code>vercel.json</code> compila la versión sin servidor y añade cabeceras de seguridad.</p></article>
-    <article class="dcard reveal"><h3><span class="d-logo d-gh">⬢</span>GitHub Pages · esta web</h3><p><code>npm run build:pages</code> genera la documentación y el juego contra bots en <code>/jugar/</code>, en la rama <code>gh-pages</code>.</p></article>
+    <article class="dcard reveal"><h3><span class="d-logo d-gh">⬢</span>GitHub Pages · esta web</h3><p><code>npm run build:pages</code> genera la guía del juego, la documentación técnica y el juego contra bots en <code>/jugar/</code>, en la rama <code>gh-pages</code>.</p></article>
   </div>
   <a class="code-banner reveal" href="codigo.html">
     <span class="cb-ico">🧩</span>
@@ -326,7 +326,7 @@
 ├── server/              servidor: salas, cuentas, anti-trampas, bots, Huevo Impostor
 ├── shared/              lógica común: mapas, física, armas, cosméticos
 ├── public/              cliente: HTML, CSS y JS del juego (Three.js)
-├── site/                esta web de documentación
+├── site/                esta web (guía del juego y documentación técnica)
 ├── tests/               pruebas automáticas (npm test)
 ├── tools/               build de producción, GitHub Pages y vistas previas
 ├── render.yaml          despliegue online en Render

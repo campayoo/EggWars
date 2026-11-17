@@ -164,9 +164,10 @@
   // Galería de tiro: el arma dispara con su cadencia, cargador y recarga reales
   function Range(cv, w) {
     const ctx = cv.getContext('2d');
-    const DPR = Math.min(2, devicePixelRatio || 1), W = 760, H = 230;
+    const DPR = Math.min(2, devicePixelRatio || 1), W = Math.round(Math.max(340, Math.min(760, cv.clientWidth || 760))), H = W < 520 ? 250 : 230;
+    cv.style.aspectRatio = W + ' / ' + H;
     cv.width = W * DPR; cv.height = H * DPR; ctx.scale(DPR, DPR);
-    const MX = 128, MY = 128, TX = 610, TY = 128;   // boca del arma y huevo diana
+    const MX = W < 520 ? 96 : 128, MY = H - 102, TX = W - (W < 520 ? 70 : 150), TY = H - 102;   // boca del arma y huevo diana
     let aim = 'body', paused = false, raf = 0, last = performance.now(), t = 0, visible = true;
     let ammo = w.mag, hp = 100, next = 400, burstLeft = 0, reloadEnd = 0, deadUntil = 0, shots = 0, kills = 0, flash = 0;
     const tracers = [], nums = [], rockets = [], booms = [], bits = [];
@@ -208,7 +209,7 @@
       rockets.forEach(r => { r.x += dt * .9; });
       for (let k = rockets.length - 1; k >= 0; k--) if (rockets[k].x >= TX - 18) { booms.push({ t: 0 }); hit(w.proj.direct, false); rockets.splice(k, 1); }
       booms.forEach(o => o.t += dt); while (booms.length && booms[0].t > 600) booms.shift();
-      bits.forEach(b => { b.t += dt; b.x += b.vx * dt / 1000; b.y += b.vy * dt / 1000; b.vy += 900 * dt / 1000; if (b.y > 196) { b.y = 196; b.vy *= -.3; b.vx *= .7; } });
+      bits.forEach(b => { b.t += dt; b.x += b.vx * dt / 1000; b.y += b.vy * dt / 1000; b.vy += 900 * dt / 1000; if (b.y > H - 34) { b.y = H - 34; b.vy *= -.3; b.vx *= .7; } });
       while (bits.length && bits[0].t > 1300) bits.shift();
     }
     function egg(x, y, s, alpha) {
@@ -224,13 +225,13 @@
     }
     function draw() {
       ctx.clearRect(0, 0, W, H);
-      const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#ffe9cf'); sky.addColorStop(.72, '#fff5e8'); sky.addColorStop(.72, '#e9c9a0'); sky.addColorStop(1, '#d9b080');
+      const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#ffe9cf'); sky.addColorStop(.74, '#fff5e8'); sky.addColorStop(.74, '#e9c9a0'); sky.addColorStop(1, '#d9b080');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(140,90,40,.25)'; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.moveTo(150, 200); ctx.lineTo(W - 30, 200); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(140,90,40,.25)'; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.moveTo(MX + 22, H - 30); ctx.lineTo(W - 20, H - 30); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(120,70,30,.5)'; ctx.font = '700 11px Nunito, sans-serif';
-      for (let k = 1; k <= 4; k++) { const x = 150 + k * 110; ctx.fillRect(x, 194, 2, 12); ctx.fillText(Math.round(w.rng * k / 5) + ' m', x - 10, 220); }
+      for (let k = 1; k <= 4; k++) { const x = MX + 22 + k * (TX - MX - 22) / 4.6; ctx.fillRect(x, H - 36, 2, 12); ctx.fillText(Math.round(w.rng * k / 5) + ' m', x - 10, H - 10); }
       // arma
-      ctx.fillStyle = '#3b2412'; ctx.beginPath(); ctx.roundRect(28, MY - 8, MX - 28, 16, 5); ctx.fill();
+      ctx.fillStyle = '#3b2412'; ctx.beginPath(); ctx.roundRect(MX - 100 < 8 ? 8 : 28, MY - 8, MX - (MX - 100 < 8 ? 8 : 28), 16, 5); ctx.fill();
       ctx.fillStyle = '#ff8c2a'; ctx.beginPath(); ctx.roundRect(54, MY + 6, 18, 30, 5); ctx.fill();
       ctx.fillStyle = '#5a3a24'; ctx.beginPath(); ctx.roundRect(8, MY - 12, 30, 22, 6); ctx.fill();
       if (flash > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const r = 16 + Math.random() * 8; const g = ctx.createRadialGradient(MX + 8, MY, 0, MX + 8, MY, r); g.addColorStop(0, '#fff'); g.addColorStop(.4, w.col); g.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(MX + 8, MY, r, 0, 7); ctx.fill(); ctx.restore(); }
@@ -239,7 +240,7 @@
       rockets.forEach(r => { const ty = TY + (r.head ? -46 : -6); const y = MY + (ty - MY) * ((r.x - MX) / (TX - MX)); ctx.fillStyle = '#5a3a24'; ctx.beginPath(); ctx.ellipse(r.x, y, 14, 6, 0, 0, 7); ctx.fill(); ctx.fillStyle = w.col; ctx.beginPath(); ctx.arc(r.x - 16, y, 5 + Math.random() * 3, 0, 7); ctx.fill(); });
       // huevo
       if (hp > 0) egg(TX, TY + 40, 1, 1);
-      else if (t < deadUntil) { const k = (deadUntil - t) / 900; ctx.fillStyle = '#ffc94a'; ctx.beginPath(); ctx.ellipse(TX, 196, 34 * (1.4 - k * .4), 9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(TX, 196, 52 * (1.4 - k * .4), 13, 0, 0, 7); ctx.globalAlpha = .6; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = '#ff9f1a'; ctx.beginPath(); ctx.ellipse(TX, 194, 16, 7, 0, 0, 7); ctx.fill(); }
+      else if (t < deadUntil) { const k = (deadUntil - t) / 900; ctx.fillStyle = '#ffc94a'; ctx.beginPath(); ctx.ellipse(TX, H - 34, 34 * (1.4 - k * .4), 9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(TX, H - 34, 52 * (1.4 - k * .4), 13, 0, 0, 7); ctx.globalAlpha = .6; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = '#ff9f1a'; ctx.beginPath(); ctx.ellipse(TX, H - 36, 16, 7, 0, 0, 7); ctx.fill(); }
       bits.forEach(b => { ctx.fillStyle = b.yolk ? '#ffb020' : '#fff4e2'; ctx.globalAlpha = Math.max(0, 1 - b.t / 1300); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1; });
       booms.forEach(o => { const k = o.t / 600; ctx.globalAlpha = 1 - k; const g = ctx.createRadialGradient(TX, TY - 10, 0, TX, TY - 10, 30 + k * 90); g.addColorStop(0, '#fff'); g.addColorStop(.3, '#ffc94a'); g.addColorStop(.7, '#ff6a1a'); g.addColorStop(1, 'rgba(255,106,26,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(TX, TY - 10, 30 + k * 90, 0, 7); ctx.fill(); ctx.globalAlpha = 1; });
       // vida
@@ -251,7 +252,7 @@
       ctx.fillStyle = '#3b2412'; ctx.font = '400 30px "Lilita One", sans-serif'; ctx.fillText(ammo, 22, 44);
       const aw = ctx.measureText(String(ammo)).width; ctx.font = '800 13px Nunito, sans-serif'; ctx.fillStyle = '#9a7a62'; ctx.fillText('/ ' + w.mag, 28 + aw, 44);
       if (reloadEnd) { const k = 1 - (reloadEnd - t) / w.rl; ctx.fillStyle = 'rgba(59,36,18,.12)'; ctx.beginPath(); ctx.roundRect(22, 56, 120, 8, 4); ctx.fill(); ctx.fillStyle = '#ff8c2a'; ctx.beginPath(); ctx.roundRect(22, 56, 120 * Math.min(1, k), 8, 4); ctx.fill(); ctx.fillStyle = '#b34b00'; ctx.font = '900 11px Nunito, sans-serif'; ctx.fillText('RECARGANDO… ' + ((reloadEnd - t) / 1000).toFixed(1).replace('.', ',') + ' s', 22, 80); }
-      ctx.fillStyle = '#9a7a62'; ctx.font = '800 11px Nunito, sans-serif'; ctx.textAlign = 'right'; ctx.fillText(`disparos: ${shots} · huevos rotos: ${kills}`, W - 16, 18); ctx.textAlign = 'left';
+      ctx.fillStyle = '#9a7a62'; ctx.font = '800 11px Nunito, sans-serif'; ctx.textAlign = 'right'; ctx.fillText(W < 520 ? `${shots} disp. · ${kills} rotos` : `disparos: ${shots} · huevos rotos: ${kills}`, W - 12, 18); ctx.textAlign = 'left';
     }
     function loop(now) {
       const dt = Math.min(50, now - last); last = now;
