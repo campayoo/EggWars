@@ -1157,8 +1157,8 @@
         // Pupitres (mesa + silla) mirando a la pizarra
         for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
           const dx = cx - 1.6 + r * 2.3, dz = -25.1 + c * 2.1;
-          b.box(dx, 0, dz, 0.7, 0.76, 1.15, 'plank');
-          b.box(dx + 0.65, 0, dz, 0.45, 0.46, 0.45, i % 2 ? 'blue' : 'red');
+          b.decoAt('desk', dx, 0, dz, { color: i % 2 ? 0x2f6fb5 : 0xc0392b });
+          b.box(dx + 0.25, 0, dz, 1.2, 0.76, 1.15, 'invisible');
         }
         sign(`AULA ${i + 1}`, cx + 4, 2.9, -18.95, 0, 1.8);
       });
@@ -1172,8 +1172,10 @@
       b.slab(0, -16, TOP, 52, 6, 0.3, 'concrete');
       floor(-25.6, -19, 25.6, -13.4, 0xe2ddd2);
       // Taquillas a lo largo del pasillo (entre puertas)
-      [[-24, -21.5], [-12.3, -8.6], [0.7, 4.4], [13.7, 17.4]].forEach(([x0, x1]) => b.aabb(x0, 0, -18.95, x1, 1.9, -18.45, 'blue'));
-      b.decoAt('lamp', -20, 0, -14.2); 
+ [[-24, -21.5], [-12.3, -8.6], [0.7, 4.4], [13.7, 17.4]].forEach(([x0, x1]) => {
+        b.aabb(x0, 0, -18.95, x1, 1.9, -18.45, 'invisible');
+        b.decoAt('lockers', (x0 + x1) / 2, 0, -18.71, { n: Math.round((x1 - x0) / 0.5), color: 0x2f6fb5 });
+      });
 
       // ---------------- Ala oeste: gimnasio y vestuarios ----------------
       b.room(-19.5, -2, 0, 13, 22, 5.2, 'brick', {
@@ -1187,7 +1189,7 @@
       b.decoAt('hoop', -19.5, 0, -12.5, { rotY: Math.PI, wall: true });
       b.decoAt('hoop', -19.5, 0, 8.5, { rotY: 0, wall: true });
       // Espalderas, plinto y colchonetas (coberturas bajas)
-      for (let z = -9; z <= 5; z += 2) b.aabb(-25.75, 0, z - 0.6, -25.6, 2.6, z + 0.6, 'wood', { solid: false });
+      for (let z = -9; z <= 5; z += 2) { if (Math.abs(z) > 1.5) b.decoAt('wallbars', -25.7, 0, z, { w: 1.3 }); }
       b.box(-17, 0, -6, 1.6, 1.1, 0.9, 'wood');
       b.box(-22, 0, 2, 2.2, 0.25, 1.2, 'blue'); b.box(-22, 0.25, 2, 2.2, 0.25, 1.2, 'blue');
       b.box(-16.5, 0, 3.5, 1.2, 0.8, 1.2, 'red');
@@ -1232,6 +1234,17 @@
       b.aabb(3.5, 0, 18.2, 7.4, 1.1, 19.0, 'counter');
       sign('CONSERJERÍA', 5.4, 2.6, 17.45, 0, 2.6);
       b.decoAt('textsign', 0, 3.25, 25.3, { text: 'IES ABASTOS', w: 7, h: 0.9, bg: '#1f3d7a' });
+      // Marquesina de la entrada y mástiles con las banderas
+      b.slab(0, 26.4, 2.95, 6.4, 2.4, 0.15, 'metalDark');
+      [-2.9, 2.9].forEach(x => b.pillar(x, 0, 27.4, 0.18, 2.8, 'metalDark'));
+      [[6.5, [0xc60b1e, 0xffc400, 0xffc400, 0xc60b1e]], [8, [0xffcc00, 0xd52b1e, 0xffcc00, 0xd52b1e, 0xffcc00, 0xd52b1e, 0xffcc00, 0xd52b1e, 0xffcc00]], [9.5, [0x003399]]].forEach(([x, colors]) => {
+        b.decoAt('flag', x, 0, 26.6, { colors }); b.box(x, 0, 26.6, 0.16, 6, 0.16, 'invisible');
+      });
+      // Máquinas del aire acondicionado en los tejados (no se sube: son decorado)
+      [[-15, -23.5], [11, -23], [20, 8], [-17, 21], [17, 21.5]].forEach(([x, z]) => {
+        b.box(x, TOP, z, 1.6, 0.9, 1.1, 'metal', { solid: false });
+        b.box(x, TOP + 0.9, z, 1.0, 0.05, 0.9, 'metalDark', { solid: false });
+      });
       b.decoAt('textsign', 0, 3.25, 16.7, { text: 'IES ABASTOS', w: 5, h: 0.7, bg: '#1f3d7a', rotY: Math.PI });
       // Aula de informática (oeste) y secretaría (este)
       b.room(-16.5, 21, 0, 17, 8, H, WALL, {
@@ -1326,9 +1339,9 @@
       b.box(0, 1.35, -1.36, 10.2, 0.12, 0.04, 'metalDark', { solid: false });
       b.box(0, 1.35, 1.36, 10.2, 0.12, 0.04, 'metalDark', { solid: false });
 
-      const half = () => {
-        // ---- Casa de dos plantas (amarilla) con escalera interior y azotea ----
-        b.house2(-7, -11.5, 12, 9, 'cYellow', { doors: ['s', 'e'], roofMat: 'roofRed', trim: 'white', chimney: true });
+      const half = (houseMat, roofMat, carColor) => {
+        // ---- Casa de dos plantas con escalera interior y azotea (amarilla en un lado, verde en el otro) ----
+        b.house2(-7, -11.5, 12, 9, houseMat, { doors: ['s', 'e'], roofMat, trim: 'white', chimney: true });
         // Porche y valla baja del jardín delantero (con hueco en la puerta)
         b.fence(-14, -6.6, -8.6, -6.6, { h: 0.9, mat: 'white' });
         b.fence(-5.4, -6.6, -0.6, -6.6, { h: 0.9, mat: 'white' });
@@ -1336,7 +1349,7 @@
         b.decoAt('bigegg', -11.5, 0, -7.4, { s: 1.1, color: 0xf7e7cf });           // maniquí de pruebas
         // ---- Garaje abierto con coche ----
         b.shed(4.5, -11, 5.4, 7, 2.9, 'roofGrey', { postMat: 'white' });
-        b.decoAt('car', 4.5, 0, -11.5, { color: 0x2f80c8 }); b.box(4.5, 0, -11.5, 2.1, 1.5, 4.3, 'invisible');
+        b.decoAt('car', 4.5, 0, -11.5, { color: carColor }); b.box(4.5, 0, -11.5, 2.1, 1.5, 4.3, 'invisible');
         b.crate(2.6, 0, -14.2, 1.2); b.box(6.6, 0, -14.4, 0.9, 1.2, 0.9, 'barnRed');
         // ---- Jardín trasero: piscina, cobertizo y vallas ----
         b.fence(-20, -16.6, -14, -16.6, { h: 1.1, mat: 'wood' });
@@ -1364,8 +1377,8 @@
         b.decoAt('planter', -15, 0, -9.5, { color: 0xb8b2a4 }); b.box(-15, 0, -9.5, 1.4, 0.6, 1.4, 'invisible'); b.box(-15, 0, -9.5, 0.3, 2.2, 0.3, 'invisible');
         b.decoAt('lamp', -10, 0, -5.8); b.decoAt('lamp', 10, 0, -5.8);
       };
-      half();
-      b.with({ rot: 2 }, half);
+      half('cYellow', 'roofRed', 0x2f80c8);
+      b.with({ rot: 2 }, () => half('cGreen', 'roofGrey', 0xc0392b));
     },
     spawns: [
       { x: -18, z: -12 }, { x: 18, z: 12 }, { x: -2, z: -24 }, { x: 2, z: 24 }, { x: 12, z: -19 }, { x: -12, z: 19 },

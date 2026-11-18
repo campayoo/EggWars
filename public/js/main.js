@@ -3469,7 +3469,8 @@
   function showCrateReel(crate, prize, dup, refund) {
     const ov = $('crate-overlay'), reel = $('crate-reel');
     const pool = Cos.LOOT;
-    const cell = l => { const r = Cos.RARITY[l.rarity]; return `<div class="reel-item" style="--rc:${r.color}"><span class="ri-ico">${l.icon}</span><b>${escapeHtml(l.name)}</b><i>${r.name}</i></div>`; };
+    const ico = l => l.cat === 'weapon' ? `<img class="ri-gun" src="${skinThumb('rifle', l.id)}" alt="">` : `<span class="ri-ico">${l.icon}</span>`;
+    const cell = l => { const r = Cos.RARITY[l.rarity]; return `<div class="reel-item" style="--rc:${r.color}">${ico(l)}<b>${escapeHtml(l.name)}</b><i>${r.name}</i></div>`; };
     const items = [];
     for (let i = 0; i < 40; i++) items.push(i === 34 ? prize : Cos.rollCrate(crate.id));
     reel.innerHTML = items.map(cell).join('');
@@ -3487,7 +3488,7 @@
       const r = Cos.RARITY[prize.rarity], res = $('crate-result');
       res.style.setProperty('--rc', r.color);
       const what = prize.cat === 'weapon' ? 'Skin de arma' : ({ finish: 'Acabado', pattern: 'Diseño', hat: 'Gorro', glasses: 'Gafas', extra: 'Extra', eyes: 'Ojos', mouth: 'Boca' })[prize.cat];
-      res.innerHTML = `<div class="cr-ico">${prize.icon}</div><div><i>${r.name} · ${what}</i><b>${escapeHtml(prize.name)}</b><small>${dup ? `Ya la tenías: te devolvemos ${refund} huevos` : '¡Nuevo! Ya puedes equipártelo'}</small></div>`;
+      res.innerHTML = `<div class="cr-ico">${prize.cat === 'weapon' ? `<img src="${skinThumb('rifle', prize.id)}" alt="" style="width:120px">` : prize.icon}</div><div><i>${r.name} · ${what}</i><b>${escapeHtml(prize.name)}</b><small>${dup ? `Ya la tenías: te devolvemos ${refund} huevos` : '¡Nuevo! Ya puedes equipártelo'}</small></div>`;
       res.classList.remove('hidden');
       playSound(prize.rarity === 'legendaria' || prize.rarity === 'epica' ? 'capture' : 'pickup', 0.8);
       renderArmory(); renderInventory();
@@ -3614,7 +3615,7 @@
     Object.values(MODES).forEach(m => {
       const b = document.createElement('button');
       b.className = 'mode-card'; b.dataset.mode = m.id;
-      const ico = { ffa: '🥚', tdm: '⚔️', kotc: '👑', cts: '🍳' }[m.id] || '🎮';
+      const ico = { ffa: '🥚', tdm: '⚔️', kotc: '👑', cts: '🍳', dem: '💣', conf: '🍳' }[m.id] || '🎮';
       b.innerHTML = `<span class="mode-ico">${ico}</span><span class="mode-txt"><span class="mode-short">${m.short}</span><span class="mode-name">${escapeHtml(m.name)}</span></span>`;
       b.title = m.desc;
       b.addEventListener('click', () => { createState.mode = m.id; refreshCreate(true); playSound('click'); });

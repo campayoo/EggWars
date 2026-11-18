@@ -433,6 +433,46 @@ window.MapRenderer = (function () {
         g.add(mesh(new THREE.SphereGeometry(0.28 * s, 8, 6), L(0x6b4a2a), 0.6 * s, 4.15 * s, 0));
         break;
       }
+      case 'desk': {
+        // Pupitre escolar (mesa con patas metálicas) y silla detrás. Mira hacia -X local.
+        const wood = L(0xc9a46b), metal = L(0x5b6370), seat = L(d.color || 0x2f6fb5);
+        g.add(mesh(new THREE.BoxGeometry(0.62, 0.04, 1.1), wood, 0, 0.74, 0));
+        [[-0.27, -0.5], [0.27, -0.5], [-0.27, 0.5], [0.27, 0.5]].forEach(([x, z]) => g.add(mesh(new THREE.BoxGeometry(0.04, 0.72, 0.04), metal, x, 0.36, z)));
+        g.add(mesh(new THREE.BoxGeometry(0.5, 0.03, 0.9), metal, 0.05, 0.6, 0, false));        // bandeja de libros
+        g.add(mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), seat, 0.62, 0.45, 0));
+        g.add(mesh(new THREE.BoxGeometry(0.04, 0.38, 0.4), seat, 0.84, 0.68, 0));
+        [[0.44, -0.18], [0.8, -0.18], [0.44, 0.18], [0.8, 0.18]].forEach(([x, z]) => g.add(mesh(new THREE.BoxGeometry(0.03, 0.45, 0.03), metal, x, 0.22, z)));
+        break;
+      }
+      case 'wallbars': {
+        // Espalderas del gimnasio: d.w de ancho (eje Z local), 2,6 m de alto
+        const w = d.w || 1.2, wood = L(0xd8b07a);
+        [-w / 2, w / 2].forEach(z => g.add(mesh(new THREE.BoxGeometry(0.08, 2.6, 0.08), wood, 0, 1.3, z)));
+        for (let y = 0.25; y < 2.6; y += 0.24) { const r = mesh(new THREE.CylinderGeometry(0.025, 0.025, w, 6), wood, 0, y, 0, false); r.rotation.x = Math.PI / 2; g.add(r); }
+        break;
+      }
+      case 'lockers': {
+        // Fila de taquillas (d.n puertas de 0,5 m) con rejillas y tiradores. Frente hacia +Z local.
+        const n = d.n || 4, col = L(d.color || 0x2f6fb5), dark = L(0x1d2733);
+        for (let i = 0; i < n; i++) {
+          const x = -n * 0.25 + 0.25 + i * 0.5;
+          g.add(mesh(new THREE.BoxGeometry(0.48, 1.9, 0.48), col, x, 0.95, 0));
+          [1.55, 1.48, 1.41].forEach(y => g.add(mesh(new THREE.BoxGeometry(0.3, 0.025, 0.02), dark, x, y, 0.245, false)));
+          g.add(mesh(new THREE.BoxGeometry(0.03, 0.14, 0.03), L(0xc0c6cc), x + 0.17, 1.0, 0.25, false));
+        }
+        break;
+      }
+      case 'flag': {
+        // Mástil con bandera de franjas (d.colors, de arriba abajo)
+        const cols = d.colors || [0xc60b1e, 0xffc400, 0xc60b1e];
+        g.add(mesh(new THREE.CylinderGeometry(0.05, 0.06, 6, 8), L(0xd6dbe0), 0, 3, 0));
+        g.add(mesh(new THREE.SphereGeometry(0.09, 8, 6), L(0xd4af37), 0, 6.05, 0));
+        const fg = new THREE.Group(); fg.position.set(0, 5.75, 0); g.add(fg);
+        const sh = cols.length, fh = 0.9;
+        cols.forEach((c, i) => fg.add(mesh(new THREE.BoxGeometry(1.4, fh / sh, 0.02), L(c, { side: THREE.DoubleSide }), 0.75, -i * fh / sh, 0, false)));
+        if (anim) anim.push(t => { fg.rotation.y = Math.sin(t * 1.3 + d.x) * 0.25; });
+        break;
+      }
       case 'textsign': {
         // Cartel con texto (rótulos de aulas, nombre del instituto…): d.text, d.w, d.h, d.bg, d.fg
         const w = d.w || 3, h = d.h || 0.6;
