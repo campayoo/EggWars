@@ -1614,9 +1614,10 @@ window.MapRenderer = (function () {
     for (const [old] of conv) old.dispose();
     if (lights) {
       // Parte de la luz «plana» la aporta ahora el entorno: menos ambiente, sol más vivo
-      lights.amb.intensity *= 0.42;
-      lights.hemi.intensity *= 0.75;
-      lights.sun.intensity *= 1.45;
+      const night = !!th.stars;          // de noche el entorno aporta poca luz: se recorta menos
+      lights.amb.intensity *= night ? 0.8 : 0.42;
+      lights.hemi.intensity *= night ? 0.95 : 0.75;
+      lights.sun.intensity *= night ? 1.3 : 1.45;
     }
   }
 

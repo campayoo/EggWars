@@ -23,7 +23,7 @@
     ['downtown', '🏙️', 'Centro', 'M', 18, 'Cuatro edificios con las azoteas unidas por puentes, pasos de cebra, coches, jardineras, quioscos y torre del reloj en el cruce.', 1],
     ['sawmill', '🪓', 'Aserradero', 'M', 18, 'Serrería con altillo y tejado transitable, cobertizos con la sierra, arroyo con vados y pasarelas, pilas de troncos y torres de vigía.', 1],
     ['abastos', '🏫', 'Instituto Abastos', 'M', 18, 'La planta segunda del IES Abastos según su plano de evacuación: aulas 201–212, departamentos, dos patios interiores y el Aula 207 de Ciclo DAM.', 1],
-    ['pruebas', '🚌', 'Pueblo de Pruebas', 'S', 12, 'Barrio pequeño y simétrico: dos casas de dos plantas frente a frente, garajes, jardines con piscina y un autobús escolar en mitad de la calle.', 1],
+    ['pruebas', '🚌', 'ÑEM4TOWN', 'S', 12, 'Barrio pequeño y simétrico: dos casas de dos plantas frente a frente, garajes, jardines con piscina y un autobús escolar en mitad de la calle.', 1],
     ['nemanave', '🥚', 'Ñemanave', 'L', 12, 'La nave de Huevo Impostor, ahora para los tiros: combate en interiores por La Yema, 4 pasillos y 12 salas. Funciona en todos los modos.', 1],
   ];
   const SIZE = { L: 'Grande', M: 'Mediano', S: 'Pequeño' };

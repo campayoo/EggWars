@@ -1127,7 +1127,7 @@
   const abastos = {
     id: 'abastos', name: 'Instituto Abastos', size: 'M', players: 18,
     desc: 'Planta segunda del IES Abastos según el plano de evacuación: tres alas de aulas y departamentos separadas por dos patios interiores, pasillos acristalados y, al fondo a la izquierda del ala sur, el Aula 207 de Ciclo DAM con sus ordenadores.',
-    halfSize: 34, gravity: -22, ground: 'concrete', cover: false,
+    halfSize: 46, gravity: -22, ground: 'concrete', cover: false,
     theme: Object.assign({}, SKY_DAY, { sky: 0x8fc4ee, sunColor: 0xfff2d6 }),
     build(b) {
       // Planta del plano (oeste a la izquierda, norte arriba):
@@ -1178,8 +1178,11 @@
       };
 
       // ---------------- Estructura ----------------
-      b.perimeter(34, 2.2, 'metalDark', 0.4);
-      floor(-33.6, -33.6, 33.6, 33.6, 0x6f6c66, 0);
+      b.perimeter(46, 2.2, 'metalDark', 0.4);
+      floor(-45.6, -45.6, 45.6, 45.6, 0x6f6c66, 0);
+      // Nadie sale del edificio: pared invisible alta pegada a la fachada (por fuera)
+      b.aabb(X0 - 0.6, 0, Z0 - 0.6, X1 + 0.6, 30, Z0 - 0.2, 'invisible'); b.aabb(X0 - 0.6, 0, Z1 + 0.2, X1 + 0.6, 30, Z1 + 0.6, 'invisible');
+      b.aabb(X0 - 0.6, 0, Z0 - 0.6, X0 - 0.2, 30, Z1 + 0.6, 'invisible'); b.aabb(X1 + 0.2, 0, Z0 - 0.6, X1 + 0.6, 30, Z1 + 0.6, 'invisible');
       const W = X1 - X0, D = Z1 - Z0;
       const patioN = { x: 0, z: (PN[0] + PN[1]) / 2, w: RX1 - RX0, d: PN[1] - PN[0] };
       const patioS = { x: 0, z: (PS[0] + PS[1]) / 2, w: RX1 - RX0, d: PS[1] - PS[0] };
@@ -1217,6 +1220,16 @@
       // Fachadas oeste y este (pasillos con ventanas a la calle)
       glazed('z', X0 + T / 2, Z0, Z1, 4.5, 2.6);
       glazed('z', X1 - T / 2, Z0, Z1, 4.5, 2.6, [0]);                          // salida este (al edificio de al lado)
+      // Testeros de los pasillos oeste y este (antes estaban abiertos: te caías a la calle)
+      [[X0, RX0], [RX1, X1]].forEach(([a0, a1]) => {
+        b.wallSeg('x', Z0 + T / 2, a0, a1, Y, H, T, [{ at: 0, y: 1.0, w: 2, h: 1.6 }], WALL); glass('x', Z0 + T / 2, (a0 + a1) / 2 - 1, (a0 + a1) / 2 + 1, Y + 1, 1.6);
+        b.wallSeg('x', Z1 - T / 2, a0, a1, Y, H, T, [{ at: 0, y: 1.0, w: 2, h: 1.6 }], WALL); glass('x', Z1 - T / 2, (a0 + a1) / 2 - 1, (a0 + a1) / 2 + 1, Y + 1, 1.6);
+      });
+      // Detalles de los pasillos: tablones de anuncios, extintores, papeleras y bancos
+      [[-14, -20.82, 0], [10, -20.82, 0], [-6, 20.82, Math.PI], [16, 20.82, Math.PI]].forEach(([x, z, r]) => b.decoAt('board', x, Y + 1.5, z, { rotY: r, w: 2.2, text: ['Excursión 2ºESO', 'Erasmus+ 2027', 'Hackathon DAM', 'Biblioteca: horario'][Math.abs(x) % 4 | 0] }));
+      [[-30.6, -15], [-30.6, 15], [30.6, -15], [30.6, 15], [-3, -7.6], [3, 7.6]].forEach(([x, z]) => b.box(x, Y + 0.9, z, 0.22, 0.5, 0.22, 'red', { solid: false }));
+      [[-29, -20.5], [29, 20.5], [-20, 7.7], [20, -7.7]].forEach(([x, z]) => b.box(x, Y, z, 0.45, 0.7, 0.45, 'green'));
+      [[-30.2, -6], [30.2, 6]].forEach(([x, z]) => { b.decoAt('bench', x, Y, z, { rotY: Math.PI / 2 }); b.box(x, Y, z, 0.55, 0.55, 1.8, 'invisible'); });
       b.aabb(X1 + 0.1, Y, -1.3, X1 + 1.2, Y + 2.6, 1.3, 'glass');               // puerta acristalada cerrada
       // Paredes acristaladas hacia los patios
       glazed('x', PN[0] - T / 2, RX0, RX1, 4.5, 3.2); glazed('x', PN[1] + T / 2, RX0, RX1, 4.5, 3.2);
@@ -1319,11 +1332,34 @@
         }
       });
 
-      // ---------------- Calle y edificio de al lado (se ven por las ventanas) ----------------
-      [[-20, 30.5, 0xeef2f5], [6, 30.6, 0xc0392b], [-8, -30.6, 0x2f6fb5], [18, -30.4, 0xf1c40f]].forEach(([x, z, color]) => b.decoAt('car', x, 0, z, { rotY: Math.PI / 2, color }));
-      [[-32.5, -31], [32.5, -31], [-32.5, 31], [32.5, 31], [-24, -31.5], [24, 31.5]].forEach(([x, z]) => b.tree(x, z, 1.0));
-      [[-12, -32], [12, 32]].forEach(([x, z]) => b.decoAt('lamp', x, 0, z));
-      b.box(33, 0, 0, 1.6, 9, 20, 'brick', { solid: false });                  // edificio anexo (gimnasio)
+      // ---------------- Alrededores (se ven por las ventanas) ----------------
+      // Acera alrededor del edificio y calle
+      floor(-34, -34, 34, -27.2, 0xb9b4aa, 0); floor(-34, 27.2, 34, 34, 0xb9b4aa, 0);
+      floor(-34, -27.2, -31.2, 27.2, 0xb9b4aa, 0); floor(31.2, -27.2, 34, 27.2, 0xb9b4aa, 0);
+      floor(-45.6, -45.6, 45.6, -34, 0x4d4e52, 0); floor(-45.6, 34, 45.6, 45.6, 0x4d4e52, 0);
+      for (let x = -40; x <= 40; x += 6) { b.decoAt('plane', x, 0.03, -39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); b.decoAt('plane', x, 0.03, 39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); }
+      b.decoAt('stripes', 0, 0.02, 36.5, { w: 8, n: 6, d: 2.2, color: 0xf2f2ee });
+      [[-28, 37.5, 0xeef2f5], [-10, 42, 0xc0392b], [14, 37.5, 0x2f6fb5], [30, 42, 0xf1c40f], [-22, -37.5, 0x27ae60], [6, -42, 0x8e44ad], [26, -37.5, 0xeef2f5]].forEach(([x, z, color]) => b.decoAt('car', x, 0, z, { rotY: Math.PI / 2, color }));
+      for (let x = -40; x <= 40; x += 10) { b.tree(x, -35.5, 1.1); b.tree(x + 5, 35.5, 1.1); }
+      [[-30, -35.2], [0, -35.2], [30, -35.2], [-30, 35.2], [0, 35.2], [30, 35.2]].forEach(([x, z]) => b.decoAt('lamp', x, 0, z));
+      // Este: edificio anexo (como en el plano) con el gimnasio de cubierta a dos aguas
+      b.box(39.5, 0, -14, 11, 8, 18, 'white', { solid: false });
+      for (let z = -21; z <= -7; z += 3.5) [1.2, 4.6].forEach(y => b.box(33.95, y, z, 0.08, 1.4, 2.2, 'glass', { solid: false }));
+      b.slab(39.5, -14, 8.3, 11.4, 18.4, 0.3, 'concrete');
+      b.box(39.5, 0, 11, 11, 7, 20, 'brick', { solid: false });
+      b.gable(39.5, 11, 7, 11.6, 20.6, 2.6, false, 'roofGrey');
+      b.decoAt('textsign', 33.9, 5.2, 11, { text: 'POLIDEPORTIVO', w: 6, h: 0.9, bg: '#c0392b', rotY: -Math.PI / 2 });
+      b.box(34, 0, 0, 2.2, 7.8, 4, 'white', { solid: false });                  // pasarela al anexo
+      // Oeste: pistas deportivas con vallas y canastas
+      b.decoAt('court', -40, 0.03, -12, { w: 10, d: 18, color: 0x2f6fb5 });
+      b.decoAt('court', -40, 0.03, 12, { w: 10, d: 18, color: 0x3c7d5c });
+      [[-40, -21.5, 0], [-40, -2.5, Math.PI], [-40, 2.5, 0], [-40, 21.5, Math.PI]].forEach(([x, z, r]) => b.decoAt('hoop', x, 0, z, { rotY: r }));
+      b.fence(-45.4, -24, -45.4, 24); b.fence(-34.6, -24, -34.6, -1.5); b.fence(-34.6, 1.5, -34.6, 24);
+      // Norte y sur: bloques de pisos del barrio
+      [[-30, -43.5, 14, 3, 12], [-8, -43.5, 16, 3, 15], [16, -43.5, 14, 3, 10], [36, -43.5, 10, 3, 13], [-32, 43.5, 12, 3, 14], [-10, 43.5, 14, 3, 11], [12, 43.5, 16, 3, 16], [34, 43.5, 12, 3, 12]].forEach(([x, z, w, d, h], i) => {
+        b.box(x, 0, z, w, h, d, ['white', 'yellow', 'orange', 'white'][i % 4], { solid: false });
+        for (let y = 1.4; y < h - 1; y += 3) for (let xx = x - w / 2 + 1.5; xx < x + w / 2 - 1; xx += 2.6) b.box(xx, y, z + (z < 0 ? d / 2 : -d / 2) + (z < 0 ? 0.05 : -0.05), 1.3, 1.4, 0.08, 'glass', { solid: false });
+      });
     },
     spawns: [
       { x: -29, y: 4.2, z: -24 }, { x: -29, y: 4.2, z: 24 }, { x: 29, y: 4.2, z: -24 }, { x: 29, y: 4.2, z: 24 },
@@ -1346,8 +1382,8 @@
   // autobús en medio de la calle (mapa pequeño y rápido, simétrico)
   // =========================================================================
   const pruebas = {
-    id: 'pruebas', name: 'Pueblo de Pruebas', size: 'S', players: 12,
-    desc: 'Barrio de pruebas de los años 50: dos casas de dos plantas una frente a otra, garajes, jardines traseros con piscina y un autobús escolar atravesado en mitad de la calle. Pequeño, simétrico y muy rápido.',
+    id: 'pruebas', name: 'ÑEM4TOWN', size: 'S', players: 12,
+    desc: 'ÑEM4TOWN, el barrio de pruebas de los años 50: dos casas de dos plantas una frente a otra, garajes, jardines traseros con piscina y un autobús escolar atravesado en mitad de la calle. Pequeño, simétrico y muy rápido.',
     halfSize: 26, gravity: -22, ground: 'grass', cover: false,
     theme: Object.assign({}, SKY_DAY, { sky: 0x9fd3f5, sunColor: 0xfff0c8, sun: 1.05 }),
     bombSites: [{ id: 'A', x: -7, y: 0, z: -11.5, r: 2.4 }, { id: 'B', x: 7, y: 0, z: 11.5, r: 2.4 }],
@@ -1464,7 +1500,7 @@
   const MAPS = {};
   LIST.forEach(m => { MAPS[m.id] = m; });
   // Alias de los ids antiguos
-  const ALIASES = { fort: 'fortflip', instituto: 'abastos', ies: 'abastos', nuketown: 'pruebas', pueblo: 'pruebas' };
+  const ALIASES = { fort: 'fortflip', instituto: 'abastos', ies: 'abastos', nuketown: 'pruebas', pueblo: 'pruebas', nem4town: 'pruebas', 'ñem4town': 'pruebas' };
 
   function resolveId(id) {
     if (MAPS[id]) return id;
