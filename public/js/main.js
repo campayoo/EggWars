@@ -2235,6 +2235,13 @@
       if (lights.sun.shadow.map) { lights.sun.shadow.map.dispose(); lights.sun.shadow.map = null; }
     }
     scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); });
+    // Gráficos HD (materiales físicos + luz del entorno) en calidad alta y ultra: hay que reconstruir el mapa
+    const hd = q === 'high' || q === 'ultra';
+    if (window.MapRenderer.setHD && applySettings.hd !== hd) {
+      applySettings.hd = hd;
+      window.MapRenderer.setHD(hd, renderer);
+      if (mapData && currentMapId) { const id = currentMapId; currentMapId = null; loadMap(id); }
+    }
     applyDrawDistance();
   }
   // Distancia de visión según la calidad (la niebla del mapa se aleja o se acerca):

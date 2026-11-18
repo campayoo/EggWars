@@ -261,7 +261,9 @@ window.MapRenderer = (function () {
     const opts = { map: makeTexture(name), vertexColors: true };
     if (m.transparent) { opts.transparent = true; opts.opacity = m.transparent; opts.depthWrite = false; opts.map = null; opts.color = m.color; }
     if (m.emissive) opts.emissive = new THREE.Color(m.emissive);
-    return new THREE.MeshLambertMaterial(opts);
+    const mm = new THREE.MeshLambertMaterial(opts);
+    mm.userData.src = name;
+    return mm;
   }
 
   // ---------------------------------------------------------------------------
@@ -442,6 +444,74 @@ window.MapRenderer = (function () {
         g.add(mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), seat, 0.62, 0.45, 0));
         g.add(mesh(new THREE.BoxGeometry(0.04, 0.38, 0.4), seat, 0.84, 0.68, 0));
         [[0.44, -0.18], [0.8, -0.18], [0.44, 0.18], [0.8, 0.18]].forEach(([x, z]) => g.add(mesh(new THREE.BoxGeometry(0.03, 0.45, 0.03), metal, x, 0.22, z)));
+        break;
+      }
+      case 'pc': {
+        // Puesto de ordenador: monitor con la pantalla encendida, teclado, ratón y torre.
+        // Pantalla hacia +Z local; con d.seat, silla de oficina delante (+Z).
+        if (!texCache.__pcScreens) {
+          texCache.__pcScreens = [0, 1, 2, 3].map(k => {
+            const cv = document.createElement('canvas'); cv.width = 128; cv.height = 80;
+            const c2 = cv.getContext('2d');
+            const bg = ['#1e1f29', '#0f2a44', '#1b1b1b', '#22313f'][k];
+            c2.fillStyle = bg; c2.fillRect(0, 0, 128, 80);
+            if (k === 3) {   // escritorio con ventanas
+              c2.fillStyle = '#2f6fb5'; c2.fillRect(0, 70, 128, 10);
+              c2.fillStyle = '#e8ecf1'; c2.fillRect(14, 10, 70, 46); c2.fillStyle = '#3d7bd9'; c2.fillRect(14, 10, 70, 7);
+              c2.fillStyle = '#9aa7b8'; for (let i = 0; i < 5; i++) c2.fillRect(20, 22 + i * 6, 30 + (i * 13) % 30, 3);
+            } else {         // código con colores (Kotlin, Java, terminal)
+              const cols = [['#c678dd', '#61afef', '#98c379', '#e5c07b', '#abb2bf'], ['#569cd6', '#4ec9b0', '#ce9178', '#dcdcaa', '#9cdcfe'], ['#4af626', '#4af626', '#9dfc8a', '#4af626', '#ffffff']][k];
+              for (let i = 0; i < 9; i++) {
+                let x = 6 + ((i * 7) % 4) * 6;
+                for (let j = 0; j < 3; j++) { const w = 8 + ((i * 5 + j * 11) % 22); c2.fillStyle = cols[(i + j) % 5]; c2.fillRect(x, 6 + i * 8, w, 4); x += w + 4; if (x > 110) break; }
+              }
+            }
+            const t = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t;
+          });
+        }
+        const dark = L(0x22252b), grey = L(0x8b929c);
+        const scr = texCache.__pcScreens[Math.abs(Math.round(d.x * 3 + d.z * 7)) % 4];
+        g.add(mesh(new THREE.BoxGeometry(0.62, 0.4, 0.04), dark, 0, 0.36, -0.12));
+        g.add(mesh(new THREE.PlaneGeometry(0.56, 0.34), new THREE.MeshBasicMaterial({ map: scr }), 0, 0.36, -0.099, false));
+        g.add(mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), dark, 0, 0.08, -0.14, false));
+        g.add(mesh(new THREE.BoxGeometry(0.22, 0.02, 0.16), dark, 0, 0.01, -0.14, false));
+        g.add(mesh(new THREE.BoxGeometry(0.44, 0.02, 0.14), L(0x2c3038), 0, 0.01, 0.14, false));
+        g.add(mesh(new THREE.BoxGeometry(0.06, 0.025, 0.1), grey, 0.3, 0.012, 0.14, false));
+        g.add(mesh(new THREE.BoxGeometry(0.18, 0.42, 0.42), dark, 0.42, -0.55, -0.1, false));
+        if (d.seat) {
+          const blue = L(0x24476b);
+          g.add(mesh(new THREE.BoxGeometry(0.46, 0.07, 0.44), blue, 0, -0.3, 0.62, false));
+          g.add(mesh(new THREE.BoxGeometry(0.44, 0.48, 0.06), blue, 0, -0.02, 0.85, false));
+          g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.36, 6), grey, 0, -0.52, 0.62, false));
+          g.add(mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 5), grey, 0, -0.7, 0.62, false));
+        }
+        break;
+      }
+      case 'screen': {
+        // Pantalla de proyector enrollable con la imagen proyectada
+        const w = d.w || 3, h = d.h || 1.8;
+        g.add(mesh(new THREE.BoxGeometry(w + 0.2, 0.12, 0.12), L(0x5b6370), 0, h / 2 + 0.06, 0.04, false));
+        const cv = document.createElement('canvas'); cv.width = 256; cv.height = 150;
+        const c2 = cv.getContext('2d');
+        c2.fillStyle = '#f4f6f8'; c2.fillRect(0, 0, 256, 150);
+        c2.fillStyle = '#7f52ff'; c2.fillRect(0, 0, 256, 26);
+        c2.fillStyle = '#fff'; c2.font = '800 16px Nunito, Arial'; c2.fillText('Kotlin · Android Studio', 10, 18);
+        c2.fillStyle = '#3ddc84'; c2.fillRect(170, 50, 60, 80);
+        c2.fillStyle = '#1e1f29'; c2.fillRect(10, 40, 150, 100);
+        ['#c678dd', '#61afef', '#98c379', '#e5c07b', '#61afef', '#98c379'].forEach((c, i) => { c2.fillStyle = c; c2.fillRect(18 + (i % 2) * 12, 50 + i * 14, 40 + (i * 23) % 70, 6); });
+        const t = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+        g.add(mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, color: 0xdddddd }), 0, 0, 0.06, false));
+        break;
+      }
+      case 'rack': {
+        // Armario de servidores con luces que parpadean
+        const leds = [];
+        for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) {
+          const m = new THREE.MeshBasicMaterial({ color: (i + j) % 3 ? 0x3ddc84 : 0x4aa3ff });
+          const led = mesh(new THREE.BoxGeometry(0.02, 0.025, 0.05), m, 0.46, 0.25 + i * 0.2, -0.5 + j * 0.12, false);
+          g.add(led); leds.push(m);
+        }
+        if (anim) anim.push(t => { leds.forEach((m, k) => { m.visible = Math.sin(t * (3 + (k % 5)) + k) > -0.3; }); });
         break;
       }
       case 'wallbars': {
@@ -1478,7 +1548,76 @@ window.MapRenderer = (function () {
     batchStatic(staticDecos, root);
     buildSky(th, root, data.halfSize, fns);
     if (th.particles && !(opts && opts.preview)) buildParticles(th.particles, root, data.halfSize, fns);
+    if (HD.on && HD.renderer) upgradeHD(scene, root, th, lights);
+    else scene.environment = null;
     return data;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Gráficos HD (calidad alta/ultra): materiales físicos (PBR) + luz del entorno
+  // ---------------------------------------------------------------------------
+  // Se genera un mapa de entorno con el cielo del propio mapa (degradado + sol) y
+  // todo pasa a MeshStandardMaterial: las sombras dejan de verse planas, el cristal
+  // y el agua reflejan el cielo y las texturas cogen relieve (bumpMap).
+  const HD = { on: false, renderer: null, env: {} };
+  function setHD(on, renderer) { HD.on = !!on; if (renderer) HD.renderer = renderer; }
+  function envFor(th) {
+    const key = [th.sky, th.hemiSky, th.hemiGround, th.sunColor, (th.sunDir || []).join()].join('|');
+    if (HD.env[key]) return HD.env[key];
+    const es = new THREE.Scene();
+    const g = new THREE.SphereGeometry(50, 32, 16), p = g.attributes.position, cols = [];
+    const top = new THREE.Color(th.hemiSky || th.sky).lerp(new THREE.Color(0x2f5fa8), th.stars ? 0.1 : 0.35);
+    const hor = new THREE.Color(th.sky), gr = new THREE.Color(th.hemiGround || 0x4a4a40);
+    for (let i = 0; i < p.count; i++) {
+      const y = p.getY(i) / 50;
+      const c = y > 0 ? hor.clone().lerp(top, Math.pow(y, 0.6)) : hor.clone().lerp(gr, Math.min(1, -y * 3));
+      cols.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    es.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    const d = sunDir(th);
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(th.sunColor || 0xffffff).multiplyScalar(th.stars ? 3 : 8) }));
+    sun.position.set(d[0] * 40, d[1] * 40, d[2] * 40); es.add(sun);
+    const pm = new THREE.PMREMGenerator(HD.renderer);
+    const tex = pm.fromScene(es, 0.02).texture;
+    pm.dispose(); g.dispose();
+    return (HD.env[key] = tex);
+  }
+  const ROUGH = { flat: 0.7, tiles: 0.55, panels: 0.5, ribs: 0.45, noise: 0.9, straw: 0.95, shingles: 0.85, planks: 0.8, planksV: 0.8, crate: 0.8, brick: 0.88, blocks: 0.85 };
+  function upgradeHD(scene, root, th, lights) {
+    scene.environment = envFor(th);
+    const conv = new Map();
+    const up = m => {
+      if (!m || !(m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return m;
+      if (conv.has(m)) return conv.get(m);
+      const glossy = m.isMeshPhongMaterial;
+      const src = m.userData && m.userData.src;
+      const md = src ? MB.MATERIALS[src] : null;
+      const metal = md && /metal|steel|scifi|chrome|iron|alu/i.test(src) ? 0.35 : 0;
+      const s = new THREE.MeshStandardMaterial({
+        color: m.color, map: m.map, vertexColors: m.vertexColors, emissive: m.emissive, emissiveIntensity: m.emissiveIntensity,
+        emissiveMap: m.emissiveMap || null, transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite, side: m.side,
+        flatShading: m.flatShading, fog: m.fog, alphaTest: m.alphaTest,
+        roughness: glossy ? 0.18 : (md && md.transparent ? 0.1 : (md ? (ROUGH[md.pattern] || 0.8) : 0.8)) - metal * 0.3,
+        metalness: glossy ? 0.05 : metal, envMapIntensity: th.stars ? 0.45 : 0.7,
+      });
+      if (m.map && md && md.pattern && md.pattern !== 'flat') { s.bumpMap = m.map; s.bumpScale = 0.012; }
+      s.name = m.name; s.userData = m.userData;
+      conv.set(m, s);
+      return s;
+    };
+    root.traverse(o => {
+      if (!o.isMesh && !o.isInstancedMesh) return;
+      if (o.material && o.material.isMeshBasicMaterial) return;
+      o.material = Array.isArray(o.material) ? o.material.map(up) : up(o.material);
+    });
+    for (const [old] of conv) old.dispose();
+    if (lights) {
+      // Parte de la luz «plana» la aporta ahora el entorno: menos ambiente, sol más vivo
+      lights.amb.intensity *= 0.42;
+      lights.hemi.intensity *= 0.75;
+      lights.sun.intensity *= 1.45;
+    }
   }
 
   // Fusiona todas las mallas opacas de un grupo estático en una malla por material
@@ -1732,5 +1871,5 @@ window.MapRenderer = (function () {
     if (!pvBusy) requestAnimationFrame(pumpPreviews);
   }
 
-  return { build, animate, thumbnail, preview, makeTexture, setAnisotropy, fitSun };
+  return { build, animate, thumbnail, preview, makeTexture, setAnisotropy, fitSun, setHD };
 })();

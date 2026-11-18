@@ -94,9 +94,27 @@ table.rooms td small { display: block; color: #8896b3; }
 #chat-log div { margin: 2px 0; }
 #chat-log .ghost { color: #aab9e6; font-style: italic; }
 #chat-in { width: 100%; margin-top: 4px; }
-#vent-ui { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); text-align: center; }
-#vent-ui .lbl { margin-bottom: 6px; color: #ff9f95; }
+#vent-ui { position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%); text-align: center; z-index: 6; }
+#vent-ui .vent-card { background: rgba(8,10,18,.82); border: 1px solid rgba(255,90,100,.35); border-radius: 14px; padding: 12px 16px 10px; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+#vent-ui .lbl { margin-bottom: 6px; color: #ff9f95; font-size: 15px; }
+#vent-ui .lbl b { color: #fff; }
+#vent-seen { font-size: 14px; margin-bottom: 10px; color: #8ff0b0; }
+#vent-seen.warn { color: #ffd166; animation: ventWarn 1s ease-in-out infinite; }
+@keyframes ventWarn { 50% { opacity: .55; } }
 #vent-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#vent-btns kbd { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 4px; border-radius: 4px; background: rgba(255,255,255,.14); font-size: 12px; }
+#vent-btns .exit { background: #c8323f; border-color: #ff6b77; }
+#vent-ui .hint { margin-top: 8px; font-size: 12px; color: #a9b6d3; }
+/* Iris al entrar/salir/moverse por los conductos, con rejilla y túnel */
+#vent-iris { --r: 160%; position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0;
+  background: radial-gradient(circle at 50% 55%, transparent calc(var(--r) - 6%), rgba(0,0,0,.85) var(--r), #000 calc(var(--r) + 2%)); }
+#vent-iris.on { opacity: 1; }
+#vent-iris.on::after { content: ''; position: absolute; inset: 0; opacity: .5;
+  background: repeating-linear-gradient(0deg, rgba(120,130,145,.0) 0 18px, rgba(120,130,145,.35) 18px 22px); }
+#vent-iris.tube.on::before { content: ''; position: absolute; inset: 0;
+  background: repeating-radial-gradient(circle at 50% 55%, rgba(255,80,90,.0) 0 26px, rgba(255,80,90,.22) 26px 30px);
+  animation: ventTube .35s linear infinite; }
+@keyframes ventTube { from { transform: scale(1); } to { transform: scale(1.35); } }
 
 /* ---------- Overlays ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(2,4,10,.72); display: flex; align-items: center; justify-content: center; z-index: 10; }

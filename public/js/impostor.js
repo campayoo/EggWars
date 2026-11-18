@@ -78,6 +78,10 @@
     meeting: () => { beep(520, 0.35, 'square', 0.12); setTimeout(() => beep(390, 0.6, 'square', 0.12), 300); },
     alarm: () => beep(880, 0.25, 'square', 0.07, 660),
     role: () => { beep(110, 1.2, 'sawtooth', 0.12, 55); },
+    ventIn: () => { beep(300, 0.08, 'square', 0.09, 120); setTimeout(() => beep(90, 0.35, 'sawtooth', 0.08, 45), 60); },
+    ventOut: () => { beep(140, 0.1, 'square', 0.09, 320); setTimeout(() => beep(520, 0.08, 'square', 0.05), 90); },
+    ventMove: () => { beep(60, 0.5, 'sawtooth', 0.06, 160); setTimeout(() => beep(180, 0.25, 'triangle', 0.05, 70), 260); },
+    clank: v => beep(210, 0.12, 'square', 0.07 * (v == null ? 1 : v), 110),
   };
 
   // ---------------------------------------------------------------------------
@@ -194,6 +198,7 @@
     // Sin las aristas negras de los bloques (eran lo que daba aspecto de «cubos»)
     mapRoot.traverse(o => { if (o.isLineSegments) o.visible = false; });
     buildShipDecor(MapDefs.build(I.MAP_ID));
+    buildVentFx();
     // Todo lo estático: matrices congeladas (no se recalculan cada fotograma)
     mapRoot.traverse(o => { o.updateMatrix(); o.matrixAutoUpdate = false; });
     world = Phys.createWorld(MapDefs.build(I.MAP_ID));
@@ -358,7 +363,7 @@
     setRoster(d.players);
     serverOff = d.serverNow - Date.now();
     state = d.state; role = d.spectator ? 'spectator' : null; practice = false; impIds = []; myTasks = [];
-    alive = !d.spectator; inVent = null; sab = null;
+    alive = !d.spectator; inVent = null; sab = null; VV.mode = 'fp'; VV.pending = null;
     st = Phys.newState(d.x, d.y, d.z);
     cam.yaw = d.rotY; cam.pitch = 0;
     show('scr-auth', false); show('scr-browser', false); show('scr-game', true);
@@ -458,7 +463,7 @@
     const prev = state;
     state = d.st; you = d.you || {};
     alive = !!you.al || state === 'lobby' || state === 'ended';
-    if (inVent !== (you.v || null)) { inVent = you.v || null; renderVent(); }
+    if (inVent !== (you.v || null)) setVent(you.v || null);
     const prevSab = sab ? sab.k : null;
     sab = d.sab;
     if ((sab ? sab.k : null) !== prevSab) { renderTasks(); if (!sab && prevSab) closeMinigameIf('fix_luces'); }
@@ -625,6 +630,7 @@
     if (k === 'Enter') { openChat(); e.preventDefault(); return; }
     if (k === 'KeyM') { toggleMap(); return; }
     if (anyOverlay()) return;
+    if (ventKey(k)) return;
     if (k === 'KeyE') useAction(true);
     else if (k === 'KeyR') reportAction();
     else if (k === 'KeyQ') killAction();
@@ -731,13 +737,155 @@
     if (inVent) { socket.emit('imp:act', { a: 'vent', op: 'exit', id: inVent }); return; }
     if (target.vent) socket.emit('imp:act', { a: 'vent', op: 'enter', id: target.vent });
   }
-  socket.on('imp:vent', d => { inVent = d.id; renderVent(); });
+  socket.on('imp:vent', d => setVent(d.id));
+  // ---------------------------------------------------------------------------
+  // Conductos: transición (iris + caída), vista cenital de la sala y salida
+  // ---------------------------------------------------------------------------
+  // Dentro del conducto la cámara se coloca a 12 m sobre la rejilla mirando hacia
+  // abajo; el plano cercano recorta el techo, así se ve la sala entera desde arriba
+  // y el impostor decide si salir o no. Sólo aparecen los huevos que el servidor
+  // le manda (los que se ven desde la rejilla), así que no da ventaja extra.
+  const camFov = 75;
+  const VV = { mode: 'fp', x: 0, z: 0, irisT0: -1e9, pending: null, riseT0: -1e9, dropT0: -1e9 };
+  const IRIS_CLOSE = 0.24, IRIS_HOLD = 0.14, IRIS_OPEN = 0.34;
+  function setVent(id) {
+    const prev = inVent;
+    if (prev === id) return;
+    inVent = id;
+    const v = id && I.VENT[id];
+    if (v) {
+      if (!prev) { sfx.ventIn(); VV.dropT0 = performance.now(); }
+      else sfx.ventMove();
+      VV.pending = { mode: 'top', x: v.x, z: v.z, tube: !!prev };
+    } else {
+      sfx.ventOut();
+      const o = prev && I.VENT[prev];
+      VV.pending = { mode: 'fp', x: o ? o.x : 0, z: o ? o.z : 0 };
+    }
+    VV.irisT0 = performance.now() + (v && !prev ? 180 : 0);   // al entrar, primero se agacha
+    $('vent-iris').classList.toggle('tube', !!(VV.pending && VV.pending.tube));
+    renderVent();
+  }
   function renderVent() {
     show('vent-ui', !!inVent);
     if (!inVent) return;
     releasePointer();
     const v = I.VENT[inVent];
-    $('vent-btns').innerHTML = v.links.map(id => `<button class="btn" data-vent="${id}">➜ ${esc(I.VENT[id].name)}</button>`).join('') + '<button class="btn ghost" data-vent="__exit">⬆ Salir (V)</button>';
+    $('vent-here').textContent = v.name;
+    $('vent-btns').innerHTML = v.links.map((id, i) => `<button class="btn" data-vent="${id}"><kbd>${i + 1}</kbd> ${esc(I.VENT[id].name)}</button>`).join('') + '<button class="btn exit" data-vent="__exit"><kbd>V</kbd> Salir aquí</button>';
+  }
+  function ventKey(k) {
+    if (!inVent) return false;
+    const v = I.VENT[inVent];
+    const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[k];
+    if (n != null && v.links[n]) { socket.emit('imp:act', { a: 'vent', op: 'move', id: v.links[n] }); return true; }
+    return false;
+  }
+  // Fotograma: actualiza el iris y coloca la cámara. Devuelve true si la ha colocado.
+  function ventCamera(dt) {
+    const now = performance.now();
+    const k = (now - VV.irisT0) / 1000;
+    let r = 1;
+    if (k >= 0) {
+      if (k < IRIS_CLOSE) r = 1 - k / IRIS_CLOSE;
+      else if (k < IRIS_CLOSE + IRIS_HOLD) r = 0;
+      else r = Math.min(1, (k - IRIS_CLOSE - IRIS_HOLD) / IRIS_OPEN);
+      if (k >= IRIS_CLOSE && VV.pending) {
+        const pd = VV.pending; VV.pending = null;
+        VV.mode = pd.mode; VV.x = pd.x; VV.z = pd.z;
+        if (pd.mode === 'fp') VV.riseT0 = now;
+      }
+    }
+    const iris = $('vent-iris');
+    const rr = r >= 1 ? 160 : Math.max(0, r * r * (3 - 2 * r)) * 150;
+    iris.style.setProperty('--r', rr.toFixed(1) + '%');
+    iris.classList.toggle('on', rr < 150);
+    if (VV.mode === 'top') {
+      // A/D o flechas giran la vista; la cámara baja un poco al abrirse el iris
+      if (keys.KeyA || keys.ArrowLeft) cam.yaw += dt * 1.6;
+      if (keys.KeyD || keys.ArrowRight) cam.yaw -= dt * 1.6;
+      const settle = Math.min(1, Math.max(0, (k - IRIS_CLOSE - IRIS_HOLD) / 0.6));
+      const h = 15 - 3 * (1 - Math.pow(1 - settle, 3));
+      camera.position.set(VV.x, h, VV.z);
+      camera.rotation.set(-Math.PI / 2, cam.yaw, 0);
+      const near = h - (I.H - 0.05);
+      if (Math.abs(camera.near - near) > 0.01 || camera.fov !== 62) { camera.near = near; camera.fov = 62; camera.updateProjectionMatrix(); }
+      ventMarker.visible = true; ventMarker.position.set(VV.x, 0.06, VV.z);
+      ventMarker.scale.setScalar(1 + 0.12 * Math.sin(now / 180));
+      ventMarker.rotation.z = now / 900;
+      let n = 0; for (const [, o] of others) if (o.m.root.visible) n++;
+      setText($('vent-seen'), n ? `👀 ${n === 1 ? 'Hay 1 huevo' : 'Hay ' + n + ' huevos'} a la vista` : '✅ No se ve a nadie cerca');
+      $('vent-seen').classList.toggle('warn', n > 0);
+      return true;
+    }
+    ventMarker.visible = false;
+    if (camera.near !== 0.05 || camera.fov !== camFov) { camera.near = 0.05; camera.fov = camFov; camera.updateProjectionMatrix(); }
+    // Al entrar: se agacha hacia la rejilla. Al salir: sube de un salto.
+    const dk = (now - VV.dropT0) / 1000;
+    if (inVent && dk < 0.6) {
+      const e = Math.min(1, dk / 0.4);
+      camera.position.set(st.x, st.y + P.EYE - (P.EYE - 0.25) * e * e, st.z);
+      camera.rotation.set(cam.pitch + (-1.2 - cam.pitch) * e, cam.yaw, 0);
+      return true;
+    }
+    const rk = (now - VV.riseT0) / 1000;
+    if (!inVent && rk < 0.55) {
+      const e = Math.min(1, rk / 0.45), b = 1 - Math.pow(1 - e, 3);
+      camera.position.set(st.x, st.y + 0.25 + (P.EYE - 0.25) * b + Math.sin(e * Math.PI) * 0.25, st.z);
+      camera.rotation.set(cam.pitch * b - 0.6 * (1 - b), cam.yaw, 0);
+      return true;
+    }
+    return false;
+  }
+  // Los demás ven la tapa del conducto abrirse y una nube de polvo
+  const ventLids = new Map();
+  let ventMarker = null;
+  function buildVentFx() {
+    const grill = document.createElement('canvas'); grill.width = grill.height = 64;
+    const g = grill.getContext('2d'); g.fillStyle = '#5d6672'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#1b1f26'; for (let i = 0; i < 6; i++) g.fillRect(6, 6 + i * 9.4, 52, 5);
+    g.strokeStyle = '#8b96a5'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, 61, 61);
+    const tex = new THREE.CanvasTexture(grill);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.6, roughness: 0.45 });
+    for (const v of I.VENTS) {
+      const pivot = new THREE.Group(); pivot.position.set(v.x, 0.05, v.z - 0.38);
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.03, 0.76), mat);
+      lid.position.set(0, 0.015, 0.38); pivot.add(lid);
+      objRoot.add(pivot);
+      ventLids.set(v.id, { pivot, t0: -1e9 });
+    }
+    const rg = new THREE.RingGeometry(0.55, 0.75, 32, 1, 0, Math.PI * 1.6);
+    ventMarker = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xff4a5c, transparent: true, opacity: 0.85, depthWrite: false, fog: false }));
+    ventMarker.rotation.x = -Math.PI / 2; ventMarker.visible = false;
+    const holder = new THREE.Group(); holder.add(ventMarker); objRoot.add(holder);
+    // el anillo gira sobre sí mismo (rotation.z en el plano local)
+    ventMarker.rotation.order = 'XYZ';
+  }
+  const puffs = [];
+  socket.on('imp:ventfx', d => {
+    const L = ventLids.get(d.id); if (!L) return;
+    L.t0 = performance.now();
+    const v = I.VENT[d.id];
+    if (st) sfx.clank(Math.max(0.15, 1 - Math.hypot(v.x - st.x, v.z - st.z) / 14));
+    for (let i = 0; i < 7; i++) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0x9aa3ad, transparent: true, opacity: 0.55, depthWrite: false }));
+      const a = i / 7 * Math.PI * 2;
+      m.position.set(v.x, 0.1, v.z); objRoot.add(m);
+      puffs.push({ m, vx: Math.cos(a) * 0.9, vz: Math.sin(a) * 0.9, vy: 0.7 + (i % 3) * 0.25, t0: performance.now() });
+    }
+  });
+  function animVentFx(dt) {
+    const now = performance.now();
+    for (const [, L] of ventLids) {
+      const k = (now - L.t0) / 1000;
+      L.pivot.rotation.x = k < 0.7 ? -Math.sin(Math.min(1, k / 0.7) * Math.PI) * 1.25 : 0;
+    }
+    for (let i = puffs.length - 1; i >= 0; i--) {
+      const p = puffs[i], k = (now - p.t0) / 1000;
+      if (k > 0.9) { objRoot.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); puffs.splice(i, 1); continue; }
+      p.m.position.x += p.vx * dt; p.m.position.z += p.vz * dt; p.m.position.y += p.vy * dt; p.vy *= 0.94;
+      p.m.scale.setScalar(1 + k * 2.5); p.m.material.opacity = 0.55 * (1 - k / 0.9);
+    }
   }
   $('vent-btns').addEventListener('click', e => {
     const b = e.target.closest('[data-vent]'); if (!b || !inVent) return;
@@ -1460,8 +1608,11 @@
       if (key !== lastSent) { lastSent = key; socket.emit('player:move', pkt); }
     }
     // Cámara
-    camera.position.set(st.x, st.y + (inVent ? 0.45 : P.EYE), st.z);
-    camera.rotation.set(cam.pitch, cam.yaw, 0);
+    animVentFx(dt);
+    if (!ventCamera(dt)) {
+      camera.position.set(st.x, st.y + (inVent ? 0.45 : P.EYE), st.z);
+      camera.rotation.set(cam.pitch, cam.yaw, 0);
+    }
     // Visión (niebla): menos con las luces apagadas, más para el impostor, total para los fantasmas
     // Misma visión en pantalla para impostores y tripulantes (que no se note mirando la pantalla)
     let vis = R.VISION;
@@ -1470,6 +1621,7 @@
     const fog = scene.fog;
     fog.far += (vis - fog.far) * Math.min(1, dt * 2.5);
     fog.near = fog.far * 0.45;
+    if (VV.mode === 'top') { fog.near = 22; fog.far = 34; }
     // Huevos remotos (interpolación + bamboleo al andar)
     const now = performance.now();
     for (const [id, o] of others) {

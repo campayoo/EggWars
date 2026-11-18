@@ -121,7 +121,15 @@
 
   <!-- Conductos -->
   <div id="cam-ui" class="hidden"><span>● CÁMARAS</span> · <b>E</b> o <b>Esc</b> para salir</div>
-  <div id="vent-ui" class="hidden"><div class="lbl">🕳️ En el conducto</div><div id="vent-btns"></div></div>
+  <div id="vent-iris"></div>
+  <div id="vent-ui" class="hidden">
+    <div class="vent-card">
+      <div class="lbl">🕳️ Conducto · <b id="vent-here"></b></div>
+      <div id="vent-seen"></div>
+      <div id="vent-btns"></div>
+      <div class="hint">Mira la sala desde arriba antes de salir · <kbd>A</kbd>/<kbd>D</kbd> giran la vista</div>
+    </div>
+  </div>
 
   <!-- Overlays -->
   <div id="ov-role" class="overlay hidden"><div class="role-box"><div id="role-title"></div><div id="role-sub"></div><div id="role-mates"></div></div></div>

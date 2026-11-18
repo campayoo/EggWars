@@ -561,6 +561,7 @@ class ImpostorRoom {
       p.inVent = v.id; p.pad = null;
       this.teleport(p, v.x, 0, v.z);
       this.to(p.id, 'imp:vent', { id: v.id });
+      this.ventFx(v, p);
     } else if (op === 'move') {
       const cur = p.inVent && I.VENT[p.inVent];
       if (!cur || !cur.links.includes(v.id)) return;
@@ -574,6 +575,16 @@ class ImpostorRoom {
       p.inVent = null;
       this.teleport(p, v.x, 0, v.z);
       this.to(p.id, 'imp:vent', { id: null });
+      this.ventFx(v, p);
+    }
+  }
+  // La tapa del conducto se abre: sólo lo ven (y oyen) quienes tienen la rejilla a la vista
+  ventFx(v, p) {
+    for (const o of Object.values(this.players)) {
+      if (o.id === p.id) continue;
+      const ghost = !o.alive && this.state !== 'lobby' && this.state !== 'ended';
+      if (!ghost && (Math.hypot(o.x - v.x, o.z - v.z) > 16 || !this.canSee(o, v.x, 0.3, v.z))) continue;
+      this.to(o.id, 'imp:ventfx', { id: v.id });
     }
   }
 
