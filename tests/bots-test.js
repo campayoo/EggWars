@@ -14,7 +14,7 @@ global.clearInterval = t => { const i = timers.indexOf(t); if (i >= 0) timers.sp
 const { GameRoom } = require('../server/gameRoom.js');
 
 const SECS = +(process.argv[2] || 60);
-const CASES = [['castle', 'ffa'], ['temple', 'cts'], ['alpine', 'kotc'], ['factory', 'tdm'], ['nemanave', 'ffa']];
+const CASES = [['castle', 'ffa'], ['temple', 'cts'], ['alpine', 'kotc'], ['factory', 'tdm'], ['nemanave', 'ffa'], ['abastos', 'tdm'], ['abastos', 'cts']];
 let fails = 0;
 const ok = (c, m) => { if (c) console.log('  ✓ ' + m); else { fails++; console.log('  ✗ ' + m); } };
 

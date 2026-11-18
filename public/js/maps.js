@@ -433,6 +433,63 @@ window.MapRenderer = (function () {
         g.add(mesh(new THREE.SphereGeometry(0.28 * s, 8, 6), L(0x6b4a2a), 0.6 * s, 4.15 * s, 0));
         break;
       }
+      case 'textsign': {
+        // Cartel con texto (rótulos de aulas, nombre del instituto…): d.text, d.w, d.h, d.bg, d.fg
+        const w = d.w || 3, h = d.h || 0.6;
+        const cv = document.createElement('canvas'); cv.width = 512; cv.height = Math.max(64, Math.round(512 * h / w));
+        const c2 = cv.getContext('2d');
+        c2.fillStyle = d.bg || '#1f3d7a'; c2.fillRect(0, 0, cv.width, cv.height);
+        c2.fillStyle = d.fg || '#ffffff';
+        c2.font = `800 ${Math.round(cv.height * 0.56)}px Nunito, Arial, sans-serif`;
+        c2.textAlign = 'center'; c2.textBaseline = 'middle';
+        c2.fillText(d.text || '', cv.width / 2, cv.height / 2 + cv.height * 0.03, cv.width * 0.94);
+        const tex = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+        g.add(mesh(new THREE.BoxGeometry(w, h, 0.06), [L(0x2b2b2b), L(0x2b2b2b), L(0x2b2b2b), L(0x2b2b2b), new THREE.MeshLambertMaterial({ map: tex }), L(0x2b2b2b)], 0, 0, 0, false));
+        break;
+      }
+      case 'board': {
+        // Pizarra de aula con marco y tiza
+        const w = d.w || 4;
+        const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96;
+        const c2 = cv.getContext('2d');
+        c2.fillStyle = '#2f5d46'; c2.fillRect(0, 0, 256, 96);
+        c2.strokeStyle = 'rgba(255,255,255,0.75)'; c2.lineWidth = 2; c2.font = '600 15px Nunito, Arial';
+        c2.fillStyle = 'rgba(255,255,255,0.8)';
+        c2.fillText(d.text || 'x² + 2x − 3 = 0', 14, 30);
+        c2.beginPath(); c2.moveTo(14, 52); c2.lineTo(120, 52); c2.moveTo(14, 70); c2.lineTo(90, 70); c2.stroke();
+        c2.beginPath(); c2.arc(190, 60, 18, 0, 7); c2.stroke();
+        const tex = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+        g.add(mesh(new THREE.BoxGeometry(w + 0.16, 1.36, 0.06), L(0xb8bcc2), 0, 0, 0, false));
+        g.add(mesh(new THREE.PlaneGeometry(w, 1.2), new THREE.MeshLambertMaterial({ map: tex }), 0, 0, 0.035, false));
+        g.add(mesh(new THREE.BoxGeometry(w, 0.05, 0.12), L(0xb8bcc2), 0, -0.68, 0.06, false));
+        break;
+      }
+      case 'hoop': {
+        // Canasta de baloncesto (poste, tablero y aro). Mira hacia -Z local.
+        const pole = d.wall ? null : mesh(new THREE.CylinderGeometry(0.09, 0.11, 3.2, 8), L(0x1f3d7a), 0, 1.6, 0.9);
+        if (pole) { g.add(pole); g.add(mesh(new THREE.BoxGeometry(0.12, 0.12, 0.9), L(0x1f3d7a), 0, 3.15, 0.45)); }
+        g.add(mesh(new THREE.BoxGeometry(1.8, 1.05, 0.06), L(0xffffff), 0, 3.3, 0));
+        g.add(mesh(new THREE.BoxGeometry(0.6, 0.45, 0.07), L(0xe34b2a), 0, 3.1, -0.005, false));
+        g.add(mesh(new THREE.BoxGeometry(0.5, 0.36, 0.08), L(0xffffff), 0, 3.11, -0.01, false));
+        const ring = mesh(new THREE.TorusGeometry(0.23, 0.02, 6, 18), L(0xe34b2a), 0, 2.95, -0.3, false); ring.rotation.x = Math.PI / 2; g.add(ring);
+        break;
+      }
+      case 'court': {
+        // Pista pintada en el suelo (baloncesto/fútbol sala): d.w × d.d
+        const w = d.w || 20, dd = d.d || 12;
+        const cv = document.createElement('canvas'); cv.width = 512; cv.height = Math.round(512 * dd / w);
+        const c2 = cv.getContext('2d'), W = cv.width, H = cv.height;
+        c2.fillStyle = d.color ? '#' + d.color.toString(16).padStart(6, '0') : '#3c7d5c'; c2.fillRect(0, 0, W, H);
+        c2.strokeStyle = '#f4f4ee'; c2.lineWidth = 4;
+        c2.strokeRect(8, 8, W - 16, H - 16);
+        c2.beginPath(); c2.moveTo(W / 2, 8); c2.lineTo(W / 2, H - 8); c2.stroke();
+        c2.beginPath(); c2.arc(W / 2, H / 2, H * 0.14, 0, 7); c2.stroke();
+        [8, W - 8].forEach((x, i) => { c2.beginPath(); c2.arc(x, H / 2, H * 0.38, i ? Math.PI / 2 : -Math.PI / 2, i ? Math.PI * 1.5 : Math.PI / 2); c2.stroke(); c2.strokeRect(i ? W - 8 - W * 0.16 : 8, H / 2 - H * 0.14, W * 0.16, H * 0.28); });
+        const tex = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+        const pl = mesh(new THREE.PlaneGeometry(w, dd), new THREE.MeshLambertMaterial({ map: tex }), 0, 0.025, 0, false);
+        pl.rotation.x = -Math.PI / 2; pl.receiveShadow = true; g.add(pl);
+        break;
+      }
       case 'billboard': {
         g.add(mesh(new THREE.BoxGeometry(7, 3, 0.25), L(d.color || 0x2f6fb5), 0, 1.5, 0));
         g.add(mesh(new THREE.BoxGeometry(6.2, 0.5, 0.27), L(0xffffff), 0, 2.2, 0, false));

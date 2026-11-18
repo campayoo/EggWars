@@ -699,7 +699,7 @@
   function createEggModel(o) {
     return window.EggModel.create(o.custom, { team: o.team, weapon: o.weapon });
   }
-  const buildGunModel = w => window.EggModel.buildGun(w);
+  const buildGunModel = (w, rp) => window.EggModel.buildGun(w, rp && rp.custom && rp.custom.wskins ? rp.custom.wskins[w] : null);
 
   function makeLabelSprite(text, color, scale) {
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
@@ -796,7 +796,7 @@
     rp.weapon = weapon;
     const old = rp.gunPivot.getObjectByName('gun');
     if (old) { rp.gunPivot.remove(old); disposeTree(old); }
-    rp.gunPivot.add(buildGunModel(weapon));
+    rp.gunPivot.add(buildGunModel(weapon, rp));
   }
 
   // Interpolación con buffer de instantáneas
@@ -2346,15 +2346,25 @@
         <div class="ch-bar"><i style="width:${Math.round(c.progress / c.n * 100)}%"></i></div>
         <div class="ch-foot"><span class="reward">${def.reward}</span><span>${Math.floor(c.progress)}/${c.n}</span>${btn}</div></div></div>`;
     }).join('');
-    ['challenge-list', 'rs-challenge-list'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
+    const done = challenges.list.filter(x => x.claimed).length;
+    const bonus = challenges.bonus === 'ready'
+      ? `<div class="challenge bonus done"><div class="ch-icon">🎁</div><div><div class="ch-title">HUEVERA DEL DÍA</div><div class="ch-desc">¡Conseguida! Ábrela en la Armería.</div><div class="ch-foot"><span></span><span></span><button class="ch-btn claim" data-open-bonus="1">Abrir</button></div></div></div>`
+      : challenges.bonus === 'opened' ? ''
+        : `<div class="challenge bonus"><div class="ch-icon">🎁</div><div><div class="ch-title">HUEVERA DEL DÍA</div><div class="ch-desc">Reclama los 3 retos y te llevas una huevera gratis</div><div class="ch-bar"><i style="width:${Math.round(done / 3 * 100)}%"></i></div><div class="ch-foot"><span></span><span>${done}/3</span></div></div></div>`;
+    ['challenge-list', 'rs-challenge-list'].forEach(id => { const el = $(id); if (el) el.innerHTML = html + bonus; });
   }
   function onChallengeClick(e) {
     const claim = e.target.closest('[data-claim]'), reroll = e.target.closest('[data-reroll]');
+    if (e.target.closest('[data-open-bonus]')) { if (!inGame) { showPanel('armory'); openCrate('basic', true); } return; }
     if (claim) {
       const c = challenges.list[+claim.dataset.claim];
       if (!c || c.claimed || c.progress < c.n) return;
       c.claimed = true;
       eggs += CH_POOL.find(d => d.id === c.id).reward;
+      if (challenges.list.every(x => x.claimed) && !challenges.bonus) {
+        challenges.bonus = 'ready';
+        showToast('🎁 ¡Retos del día completados! Tienes una huevera gratis en la Armería');
+      }
       playSound('pickup'); saveProgress(); renderChallenges(); updateEggCounter(); renderProfile();
     } else if (reroll) {
       const i = +reroll.dataset.reroll, c = challenges.list[i];
@@ -2857,17 +2867,21 @@
   // ===========================================================================
   const Cos = window.Cosmetics;
   let account = null;                       // perfil devuelto por el servidor
-  let custom = Cos.sanitize(store.get('custom', null) || {});
+  // Objetos desbloqueados (hueveras): skins de armas y piezas del huevo
+  let unlocks = Cos.sanitizeUnlocks(store.get('unlocks', []));
+  let custom = Cos.sanitize(store.get('custom', null) || {}, unlocks);
   let profileSaveTimer = null;
   let friendsData = { friends: [], requests: [], sent: [] };
   let ipNeedsName = false;
 
   function saveProfileSoon() {
     store.set('custom', custom);
+    store.set('unlocks', unlocks);
+    applyFPSSkins();
     if (!account || !socket) return;
     clearTimeout(profileSaveTimer);
     profileSaveTimer = setTimeout(() => {
-      socket.emit('profile:save', { custom, eggs, challenges });
+      socket.emit('profile:save', { custom, eggs, challenges, unlocks });
       const si = $('saved-ind');
       if (si) { si.classList.remove('flash'); void si.offsetWidth; si.classList.add('flash'); }
     }, 500);
@@ -2926,7 +2940,8 @@
   function onAuthOk(d) {
     store.set('token', d.token);
     account = d.profile;
-    custom = Cos.sanitize(account.custom);
+    unlocks = Cos.sanitizeUnlocks(account.unlocks);
+    custom = Cos.sanitize(account.custom, unlocks);
     store.set('custom', custom);
     eggs = account.eggs || 0;
     if (account.challenges) loadChallenges(account.challenges); else loadChallenges();
@@ -2941,7 +2956,8 @@
     loadPaintFromCustom();
     renderInventory();
     updatePreviewAvatar();
-    renderChallenges(); updateEggCounter(); renderProfile();
+    renderChallenges(); updateEggCounter(); renderProfile(); applyFPSSkins();
+    if (menuOverlay.dataset.panel === 'armory') renderArmory();
     lobbyToast(`¡Hola, ${account.username}! 🥚`);
   }
   function updateAccountCard() {
@@ -3056,7 +3072,7 @@
     if (!p) return;
     pushCustomHistory();
     Object.assign(custom, Cos.DEFAULT, p.c, { paint: custom.paint });
-    Object.assign(custom, Cos.sanitize(custom));
+    Object.assign(custom, Cos.sanitize(custom, unlocks));
     afterCustomChange();
     playSound('switch');
     showToast(`${p.icon} ${p.name}`);
@@ -3084,14 +3100,14 @@
     };
     sw('swatches-1', 'color'); sw('swatches-2', 'color2');
     colorPicker.value = custom.color; color2Picker.value = custom.color2;
-    $('finish-grid').innerHTML = Cos.CATALOG.finish.map(o => `<button class="item${custom.finish === o.id ? ' active' : ''}" data-finish="${o.id}"><img class="it-thumb" data-thumb="finish:${o.id}" alt=""><span class="it-name">${escapeHtml(o.name)}</span></button>`).join('');
+    $('finish-grid').innerHTML = Cos.CATALOG.finish.map(o => itemButton('finish', o, custom.finish === o.id, `<img class="it-thumb" data-thumb="finish:${o.id}" alt="">`, `data-finish="${o.id}"`)).join('');
     $('grid-extra').innerHTML = invTab === 'eyes'
       ? `<label class="inv-label">Color de ojos</label><div class="swatches eye-swatches">${Cos.EYE_COLORS.map(c => `<button class="swatch${custom.eyeColor === c ? ' active' : ''}" data-color="${c}" data-key="eyeColor" style="background:${c}"></button>`).join('')}</div><label class="inv-label">Forma</label>`
       : '';
     if (grid) {
       $('item-grid').innerHTML = Cos.CATALOG[invTab].map(o => {
         const preview = invTab === 'pattern' ? `<canvas width="72" height="40" data-pat="${o.id}"></canvas>` : `<img class="it-thumb" data-thumb="${invTab}:${o.id}" alt="">`;
-        return `<button class="item${custom[invTab] === o.id ? ' active' : ''}" data-item="${o.id}" title="${escapeHtml(o.name)}">${preview}<span class="it-name">${escapeHtml(o.name)}</span></button>`;
+        return itemButton(invTab, o, custom[invTab] === o.id, preview, `data-item="${o.id}"`);
       }).join('');
       if (invTab === 'pattern') document.querySelectorAll('#item-grid canvas[data-pat]').forEach(cv => {
         window.EggModel.drawPattern(cv.getContext('2d'), 72, 40, Object.assign({}, custom, { pattern: cv.dataset.pat }));
@@ -3104,6 +3120,15 @@
     $('inv-current').innerHTML = `<b>${labels[invTab]}</b><span>${escapeHtml(cur || '')}</span>`;
     previewFocus = ['eyes', 'mouth', 'glasses', 'hat'].includes(invTab) && menuOverlay.dataset.panel === 'inventory' ? 'head' : 'body';
   }
+
+  // Botón de un objeto del taller: rareza y candado si aún no lo tienes
+  function itemButton(cat, o, active, preview, attr) {
+    const owned = Cos.isUnlocked(cat, o.id, unlocks);
+    const rar = o.rarity ? Cos.RARITY[o.rarity] : null;
+    const tag = rar ? `<i class="rar" style="--rc:${rar.color}">${rar.name}</i>` : '';
+    return `<button class="item${active ? ' active' : ''}${owned ? '' : ' locked'}${rar ? ' rare' : ''}" ${attr} ${rar ? `style="--rc:${rar.color}"` : ''} title="${escapeHtml(o.name)}${owned ? '' : ' (consíguelo en una huevera)'}">${preview}${tag}<span class="it-name">${owned ? '' : '🔒 '}${escapeHtml(o.name)}</span></button>`;
+  }
+  function lockedToast(name) { showToast(`🔒 ${name}: consíguelo abriendo hueveras en la Armería`); playSound('click', 0.4); }
 
   // Etiquetas con lo que lleva puesto el huevo (clic = ir a esa categoría del taller)
   function renderOutfitChips() {
@@ -3175,9 +3200,9 @@
     $('egg-rot-r').addEventListener('click', () => { previewRot += 0.9; });
     $('outfit-chips').addEventListener('click', e => { const c = e.target.closest('[data-chip]'); if (c) { invTab = c.dataset.chip; showPanel('inventory'); renderInventory(); } });
     renderOutfitChips();
-    $('finish-grid').addEventListener('click', e => { const b = e.target.closest('[data-finish]'); if (b) { setCustom('finish', b.dataset.finish); playSound('click', 0.5); } });
+    $('finish-grid').addEventListener('click', e => { const b = e.target.closest('[data-finish]'); if (!b) return; if (!Cos.isUnlocked('finish', b.dataset.finish, unlocks)) return lockedToast(b.title.split(' (')[0]); setCustom('finish', b.dataset.finish); playSound('click', 0.5); });
     $('inv-tabs').addEventListener('click', e => { const b = e.target.closest('[data-inv]'); if (b) { invTab = b.dataset.inv; renderInventory(); playSound('click', 0.5); } });
-    $('item-grid').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (b) { setCustom(invTab, b.dataset.item); playSound('click', 0.5); } });
+    $('item-grid').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (!b) return; if (!Cos.isUnlocked(invTab, b.dataset.item, unlocks)) return lockedToast(b.title.split(' (')[0]); setCustom(invTab, b.dataset.item); playSound('click', 0.5); });
     $('inv-body').addEventListener('click', e => { const b = e.target.closest('[data-color]'); if (b) setCustom(b.dataset.key, b.dataset.color); });
     let ct = null;
     [colorPicker, color2Picker].forEach(cp => cp.addEventListener('focus', () => pushCustomHistory()));
@@ -3188,7 +3213,7 @@
     $('btn-undo-egg').addEventListener('click', () => {
       const prev = customHistory.pop();
       if (!prev) return;
-      try { Object.assign(custom, Cos.sanitize(JSON.parse(prev))); } catch (e) { return; }
+      try { Object.assign(custom, Cos.sanitize(JSON.parse(prev), unlocks)); } catch (e) { return; }
       $('btn-undo-egg').disabled = !customHistory.length;
       if (typeof loadPaintFromCustom === 'function') loadPaintFromCustom();
       afterCustomChange();
@@ -3196,7 +3221,7 @@
     });
     $('btn-reset-egg').addEventListener('click', () => {
       pushCustomHistory();
-      Object.assign(custom, Cos.DEFAULT, { paint: null });
+      Object.assign(custom, Cos.DEFAULT, { paint: null, wskins: custom.wskins || {} });
       if (textureCtx) textureCtx.clearRect(0, 0, 128, 128);
       afterCustomChange();
       showToast('⟲ Huevo básico (puedes deshacer con ↶)');
@@ -3204,13 +3229,153 @@
     $('btn-random-egg').addEventListener('click', () => {
       pushCustomHistory();
       const pick = a => a[Math.floor(Math.random() * a.length)];
-      ['finish', 'pattern', 'eyes', 'mouth', 'hat', 'glasses', 'extra'].forEach(k => { custom[k] = pick(Cos.CATALOG[k]).id; });
+      ['finish', 'pattern', 'eyes', 'mouth', 'hat', 'glasses', 'extra'].forEach(k => { custom[k] = pick(Cos.CATALOG[k].filter(o => Cos.isUnlocked(k, o.id, unlocks))).id; });
       custom.eyeColor = pick(Cos.EYE_COLORS);
       custom.color = pick(Cos.PALETTE); custom.color2 = pick(Cos.PALETTE);
       afterCustomChange();
       playSound('switch');
     });
     renderInventory();
+  }
+
+  // ===========================================================================
+  // ARMERÍA: skins de armas y hueveras (recompensas de los retos)
+  // ===========================================================================
+  let armoryWeapon = 'rifle';
+  const ARMORY_WEAPONS = PRIMARY_KEYS.concat(['pistol']);
+  function applyFPSSkins() {
+    if (typeof fpsWeapons === 'undefined' || !fpsWeapons) return;
+    const ws = custom.wskins || {};
+    Object.keys(fpsWeapons).forEach(k => {
+      const g = fpsWeapons[k];
+      if (g.userData.skin === (ws[k] || 'default')) return;
+      window.EggModel.skinGun(g, ws[k] || 'default');
+      g.traverse(o => { o.renderOrder = 10; });
+    });
+  }
+  // Miniatura 3D del arma con la skin puesta
+  const skinThumbCache = {};
+  let skinR = null, skinScene = null, skinCam = null;
+  function skinThumb(weapon, skinId) {
+    const k = weapon + ':' + skinId;
+    if (skinThumbCache[k]) return skinThumbCache[k];
+    if (!skinR) {
+      try { skinR = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return ''; }
+      skinR.setSize(200, 100);
+      skinScene = new THREE.Scene();
+      skinScene.add(new THREE.HemisphereLight(0xffffff, 0x555566, 1.1));
+      const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(3, 4, 2); skinScene.add(dl);
+      skinCam = new THREE.OrthographicCamera(-1, 1, 0.5, -0.5, 0.01, 10);
+    }
+    const g = FPS_BUILDERS[weapon]();
+    const rm = []; g.traverse(o => { if (o.name === 'hand' || o.name === 'flash') rm.push(o); }); rm.forEach(o => o.parent.remove(o));
+    window.EggModel.skinGun(g, skinId);
+    g.rotation.y = -Math.PI / 2; g.rotation.z = 0.08;
+    const box = new THREE.Box3().setFromObject(g);
+    const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+    g.position.sub(center);
+    const half = Math.max(size.x / 2, size.y) * 1.15;
+    skinCam.left = -half; skinCam.right = half; skinCam.top = half / 2; skinCam.bottom = -half / 2;
+    skinCam.position.set(0, 0.4, 3); skinCam.lookAt(0, 0, 0); skinCam.updateProjectionMatrix();
+    skinScene.add(g); skinR.render(skinScene, skinCam); skinScene.remove(g);
+    g.traverse(o => { if (o.userData.skinMat) o.userData.skinMat.dispose(); if (o.geometry) o.geometry.dispose(); });
+    return (skinThumbCache[k] = skinR.domElement.toDataURL('image/png'));
+  }
+  function renderArmory() {
+    const panel = $('panel-armory'); if (!panel || panel.classList.contains('hidden')) return;
+    setText($('armory-eggs'), eggs.toLocaleString('es-ES'));
+    $('armory-weapons').innerHTML = ARMORY_WEAPONS.map(k => `<button class="${k === armoryWeapon ? 'active' : ''}" data-aw="${k}">${weaponIcons[k] ? `<img src="${weaponIcons[k].light}" alt="">` : ''}<span>${escapeHtml(WEAPONS[k].name)}</span></button>`).join('');
+    const cur = (custom.wskins || {})[armoryWeapon] || 'default';
+    const owned = Cos.WEAPON_SKINS.filter(sk => Cos.isUnlocked('weapon', sk.id, unlocks)).length;
+    setText($('armory-count'), `${owned}/${Cos.WEAPON_SKINS.length}`);
+    $('skin-grid').innerHTML = Cos.WEAPON_SKINS.map(sk => {
+      const has = Cos.isUnlocked('weapon', sk.id, unlocks), r = Cos.RARITY[sk.rarity];
+      return `<button class="skin${sk.id === cur ? ' active' : ''}${has ? '' : ' locked'}" data-skin="${sk.id}" style="--rc:${r.color}" title="${escapeHtml(sk.name)}${has ? '' : ' (bloqueada)'}">
+        <img data-skin-thumb="${armoryWeapon}:${sk.id}" alt=""><i class="rar">${r.name}</i><span>${has ? '' : '🔒 '}${escapeHtml(sk.name)}</span></button>`;
+    }).join('');
+    // Las miniaturas se dibujan poco a poco para no congelar el menú
+    const imgs = [...document.querySelectorAll('#skin-grid img[data-skin-thumb]')];
+    (function pump() {
+      const t0 = performance.now();
+      while (imgs.length && performance.now() - t0 < 14) { const im = imgs.shift(); const [w, id] = im.dataset.skinThumb.split(':'); im.src = skinThumb(w, id); }
+      if (imgs.length) requestAnimationFrame(pump);
+    })();
+    const bonus = challenges && challenges.bonus === 'ready';
+    $('crate-list').innerHTML = (bonus ? `<div class="crate free"><div class="crate-art">🎁</div><div><b>Huevera del día</b><small>Premio por completar los 3 retos</small></div><button class="btn-crate" data-crate="basic" data-free="1">ABRIR GRATIS</button></div>` : '') +
+      Cos.CRATES.map(c => `<div class="crate ${c.id}"><div class="crate-art">${c.id === 'golden' ? '🌟' : '🥚'}</div><div><b>${escapeHtml(c.name)}</b><small>${['comun', 'rara', 'epica', 'legendaria'].filter(k => c.odds[k] > 0).map(k => `<span style="color:${Cos.RARITY[k].color}">${Cos.RARITY[k].name} ${Math.round(c.odds[k] * 100)}%</span>`).join(' · ')}</small></div>
+        <button class="btn-crate" data-crate="${c.id}" ${eggs < c.cost ? 'disabled' : ''}><span class="egg-ico"></span>${c.cost}</button></div>`).join('');
+    const got = Cos.LOOT.filter(l => unlocks.includes(l.key)).length;
+    setText($('loot-progress'), `Colección: ${got}/${Cos.LOOT.length} objetos`);
+  }
+  function openCrate(crateId, free) {
+    const crate = Cos.CRATES.find(c => c.id === crateId);
+    if (!crate) return;
+    if (free) { if (!challenges || challenges.bonus !== 'ready') return; }
+    else if (eggs < crate.cost) { showToast('No tienes huevos suficientes: completa retos para ganar más'); return; }
+    const prize = Cos.rollCrate(crateId);
+    const dup = unlocks.includes(prize.key);
+    if (free) challenges.bonus = 'opened'; else eggs -= crate.cost;
+    const refund = dup ? Math.round(crate.cost * Cos.DUPLICATE_REFUND) || 120 : 0;
+    if (dup) eggs += refund; else unlocks.push(prize.key);
+    saveProgress(); updateEggCounter();
+    showCrateReel(crate, prize, dup, refund);
+  }
+  // Animación de apertura: una tira de premios que se frena en el que ha salido
+  function showCrateReel(crate, prize, dup, refund) {
+    const ov = $('crate-overlay'), reel = $('crate-reel');
+    const pool = Cos.LOOT;
+    const cell = l => { const r = Cos.RARITY[l.rarity]; return `<div class="reel-item" style="--rc:${r.color}"><span class="ri-ico">${l.icon}</span><b>${escapeHtml(l.name)}</b><i>${r.name}</i></div>`; };
+    const items = [];
+    for (let i = 0; i < 40; i++) items.push(i === 34 ? prize : Cos.rollCrate(crate.id));
+    reel.innerHTML = items.map(cell).join('');
+    reel.style.transition = 'none'; reel.style.transform = 'translateX(0)';
+    $('crate-result').classList.add('hidden');
+    setText($('crate-title'), crate.name);
+    ov.classList.remove('hidden');
+    void reel.offsetWidth;
+    const W = reel.children[0].getBoundingClientRect().width + 10;
+    const target = 34 * W - (reel.parentElement.clientWidth / 2 - W / 2) + (Math.random() - 0.5) * W * 0.5;
+    reel.style.transition = 'transform 4.2s cubic-bezier(.12,.75,.12,1)';
+    reel.style.transform = `translateX(${-target}px)`;
+    let ticks = 0; const tick = setInterval(() => { if (ticks++ < 22) playSound('click', 0.25); else clearInterval(tick); }, 140);
+    setTimeout(() => {
+      const r = Cos.RARITY[prize.rarity], res = $('crate-result');
+      res.style.setProperty('--rc', r.color);
+      const what = prize.cat === 'weapon' ? 'Skin de arma' : ({ finish: 'Acabado', pattern: 'Diseño', hat: 'Gorro', glasses: 'Gafas', extra: 'Extra', eyes: 'Ojos', mouth: 'Boca' })[prize.cat];
+      res.innerHTML = `<div class="cr-ico">${prize.icon}</div><div><i>${r.name} · ${what}</i><b>${escapeHtml(prize.name)}</b><small>${dup ? `Ya la tenías: te devolvemos ${refund} huevos` : '¡Nuevo! Ya puedes equipártelo'}</small></div>`;
+      res.classList.remove('hidden');
+      playSound(prize.rarity === 'legendaria' || prize.rarity === 'epica' ? 'capture' : 'pickup', 0.8);
+      renderArmory(); renderInventory();
+      $('crate-equip').classList.toggle('hidden', dup);
+      $('crate-equip').onclick = () => {
+        if (prize.cat === 'weapon') { custom.wskins = Object.assign({}, custom.wskins, { [armoryWeapon]: prize.id }); afterCustomChange(); renderArmory(); }
+        else { setCustom(prize.cat, prize.id); }
+        ov.classList.add('hidden');
+        showToast(`✓ ${prize.name} equipado`);
+      };
+    }, 4400);
+  }
+  function initArmory() {
+    $('armory-weapons').addEventListener('click', e => { const b = e.target.closest('[data-aw]'); if (b) { armoryWeapon = b.dataset.aw; renderArmory(); playSound('click', 0.5); } });
+    $('skin-grid').addEventListener('click', e => {
+      const b = e.target.closest('[data-skin]'); if (!b) return;
+      const id = b.dataset.skin;
+      if (!Cos.isUnlocked('weapon', id, unlocks)) { lockedToast(b.title.split(' (')[0]); return; }
+      const ws = Object.assign({}, custom.wskins);
+      if (id === 'default') delete ws[armoryWeapon]; else ws[armoryWeapon] = id;
+      custom.wskins = ws;
+      if (armoryWeapon !== currentWeapon && PRIMARY_KEYS.includes(armoryWeapon)) choosePrimary(armoryWeapon);
+      afterCustomChange(); renderArmory(); playSound('switch', 0.6);
+    });
+    $('crate-list').addEventListener('click', e => { const b = e.target.closest('[data-crate]'); if (b && !b.disabled) openCrate(b.dataset.crate, !!b.dataset.free); });
+    $('crate-close').addEventListener('click', () => $('crate-overlay').classList.add('hidden'));
+    $('btn-armory-apply-all').addEventListener('click', () => {
+      const id = (custom.wskins || {})[armoryWeapon];
+      const ws = {};
+      if (id) ARMORY_WEAPONS.forEach(k => { ws[k] = id; });
+      custom.wskins = ws; afterCustomChange(); renderArmory();
+      showToast(id ? '✓ Skin puesta en todas las armas' : '✓ Todas las armas con la skin estándar');
+    });
   }
 
   // ===========================================================================
@@ -3226,7 +3391,8 @@
     $('panel-challenges').classList.toggle('hidden', name !== 'home');
     menuOverlay.dataset.panel = name;
     setTimeout(resizePreview, 360);
-    ['profile', 'inventory', 'rooms', 'friends'].forEach(p => $('panel-' + p).classList.toggle('hidden', p !== name));
+    ['profile', 'inventory', 'rooms', 'friends', 'armory'].forEach(p => $('panel-' + p).classList.toggle('hidden', p !== name));
+    if (name === 'armory') renderArmory();
     if (name === 'profile') { renderProfile(); if (socket && account) socket.emit('profile:get'); }
     if (name === 'inventory') renderInventory();
     if (name === 'friends') renderFriends();
@@ -3379,6 +3545,8 @@
     initAuth();
     initFriends();
     initInventory();
+    initArmory();
+    applyFPSSkins();
     updateAccountCard();
 
     // Botones principales

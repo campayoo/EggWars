@@ -87,9 +87,9 @@
   function saveProfile(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* almacenamiento lleno o bloqueado */ } }
   function makeProfile(name) {
     const C = window.Cosmetics;
-    return { username: name, type: 'local', created: Date.now(), custom: Object.assign({}, C && C.DEFAULT), stats: newStats(), eggs: 0, challenges: null };
+    return { username: name, type: 'local', created: Date.now(), custom: Object.assign({}, C && C.DEFAULT), stats: newStats(), eggs: 0, challenges: null, unlocks: [] };
   }
-  const publicProfile = u => ({ username: u.username, type: u.type, custom: u.custom, stats: u.stats, eggs: u.eggs, challenges: u.challenges, created: u.created });
+  const publicProfile = u => ({ username: u.username, type: u.type, custom: u.custom, stats: u.stats, eggs: u.eggs, challenges: u.challenges, created: u.created, unlocks: u.unlocks || [] });
   const NAME_RE = /^[A-Za-z0-9_ñÑáéíóúÁÉÍÓÚ]{3,14}$/;
 
   // ---------------------------------------------------------------------------
@@ -192,7 +192,8 @@
       on('profile:get', () => { if (profile) socket.emit('profile:data', publicProfile(profile)); });
       on('profile:save', d => {
         if (!profile || !d) return;
-        if (d.custom && window.Cosmetics) profile.custom = window.Cosmetics.sanitize(d.custom);
+        if (Array.isArray(d.unlocks) && window.Cosmetics) profile.unlocks = window.Cosmetics.sanitizeUnlocks(d.unlocks);
+        if (d.custom && window.Cosmetics) profile.custom = window.Cosmetics.sanitize(d.custom, profile.unlocks || []);
         if (typeof d.eggs === 'number' && isFinite(d.eggs) && d.eggs >= 0) profile.eggs = Math.min(1e7, Math.floor(d.eggs));
         if (d.challenges && typeof d.challenges === 'object') profile.challenges = d.challenges;
         saveProfile(profile);
@@ -232,7 +233,7 @@
         }
         if (!target) { socket.emit('rooms:error', { message: 'La sala ya no existe. Elige otra.' }); return; }
         if (data.impostor) { socket.emit('rooms:error', { message: 'Huevo Impostor necesita el servidor de la red local (npm start).' }); return; }
-        if (data.custom && window.Cosmetics) { profile.custom = window.Cosmetics.sanitize(data.custom); saveProfile(profile); }
+        if (data.custom && window.Cosmetics) { profile.custom = window.Cosmetics.sanitize(data.custom, profile.unlocks || []); saveProfile(profile); }
         if (room() && room() !== target) { room().handlePlayerDisconnect(sid); socket.leave(currentRoomId); }
         currentRoomId = target.id;
         socket.join(target.id);

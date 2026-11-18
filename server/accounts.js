@@ -95,7 +95,7 @@ function createUser(username, type, extra) {
   const u = Object.assign({
     username, type, created: Date.now(), lastSeen: Date.now(),
     custom: Object.assign({}, Cosmetics.DEFAULT),
-    stats: newStats(), eggs: 0, challenges: null,
+    stats: newStats(), eggs: 0, challenges: null, unlocks: [],
     friends: [], requests: [], sent: [],
   }, extra || {});
   db.users[key(username)] = u;
@@ -185,14 +185,16 @@ function get(username) { return db.users[key(username)] || null; }
 function publicProfile(u) {
   return {
     username: u.username, type: u.type, custom: u.custom, stats: u.stats, eggs: u.eggs,
-    challenges: u.challenges, created: u.created,
+    challenges: u.challenges, created: u.created, unlocks: u.unlocks || [],
   };
 }
 
 function saveProfile(username, data) {
   const u = get(username);
   if (!u || !data) return;
-  if (data.custom) u.custom = Cosmetics.sanitize(data.custom);
+  // Lo desbloqueado en las hueveras (el huevo sólo puede llevar lo que tiene)
+  if (Array.isArray(data.unlocks)) u.unlocks = Cosmetics.sanitizeUnlocks(data.unlocks);
+  if (data.custom) u.custom = Cosmetics.sanitize(data.custom, u.unlocks || []);
   if (typeof data.eggs === 'number' && isFinite(data.eggs) && data.eggs >= 0) u.eggs = Math.min(1e7, Math.floor(data.eggs));
   if (data.challenges && typeof data.challenges === 'object' && JSON.stringify(data.challenges).length < 4000) u.challenges = data.challenges;
   save();
