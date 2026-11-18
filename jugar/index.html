@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E"/>
-  <link rel="stylesheet" href="style.78bfaf11df.css"/>
+  <link rel="stylesheet" href="style.237a78698d.css"/>
 </head>
 <body>
 
@@ -30,6 +30,7 @@
     <nav class="nav-pills">
       <button class="side-btn active" data-panel="home"><span>🎮</span>Jugar</button>
       <button class="side-btn" data-panel="inventory"><span>🎨</span>Taller</button>
+      <button class="side-btn" data-panel="armory"><span>🎁</span>Armería</button>
       <button class="side-btn" data-panel="friends"><span>🤝</span>Amigos<i class="badge hidden" id="friends-badge">0</i></button>
       <button class="side-btn" data-panel="rooms"><span>🌐</span>Salas</button>
       <button class="side-btn" data-panel="profile"><span>👤</span>Perfil</button>
@@ -141,6 +142,22 @@
           <p class="hint">También puedes pintar aquí: el centro del cuadro es la cara.</p>
         </details>
       </div>
+    </div>
+  </section>
+
+  
+  <section class="side-panel panel-dark armory hidden" id="panel-armory">
+    <div class="panel-head"><span>ARMERÍA</span><span class="timer"><span class="egg-ico"></span> <b id="armory-eggs">0</b></span></div>
+    <div class="armory-sec">
+      <div class="armory-title"><b>Hueveras</b><small id="loot-progress"></small></div>
+      <p class="armory-hint">Los retos diarios dan huevos. Con ellos abres hueveras y te pueden tocar skins de armas, gorros, gafas, diseños y acabados nuevos.</p>
+      <div class="crate-list" id="crate-list"></div>
+    </div>
+    <div class="armory-sec">
+      <div class="armory-title"><b>Skins de armas</b><small id="armory-count"></small></div>
+      <div class="armory-weapons" id="armory-weapons"></div>
+      <div class="skin-grid" id="skin-grid"></div>
+      <button class="btn-ghost small" id="btn-armory-apply-all">Poner esta skin en todas las armas</button>
     </div>
   </section>
 
@@ -546,7 +563,17 @@
 
 
 
+
+<div id="crate-overlay" class="hidden">
+  <div class="crate-box">
+    <h2 id="crate-title">Huevera</h2>
+    <div class="reel-window"><div class="reel-marker"></div><div class="reel" id="crate-reel"></div></div>
+    <div class="crate-result hidden" id="crate-result"></div>
+    <div class="crate-actions"><button class="btn-crate" id="crate-equip">EQUIPAR</button><button class="btn-ghost" id="crate-close">Cerrar</button></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js" integrity="sha384-qOkzR5Ke/XkQxuGVJ9hpFEpDlcoLtWwVYhnJf06cLIZa2vaIptSqaubivErzmD5O" crossorigin="anonymous"></script>
-<script src="app.74d2615aab.js"></script>
+<script src="app.8dfb6e29fe.js"></script>
 </body>
 </html>
