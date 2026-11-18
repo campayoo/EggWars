@@ -9,7 +9,7 @@
     "build": "node tools/build.js",
     "build:pages": "node tools/build-pages.js",
     "start:prod": "node server.js --prod",
-    "test": "node tests/validate-maps.js && node tests/playtest.js && node tests/fuzz-physics.js 20 && node tests/server-test.js && node tests/fuzz-server.js && node tests/impostor-map.js && node tests/impostor-walk.js && node tests/impostor-server.js && node tests/bots-test.js && node tests/modes-test.js && node tests/accounts-pg-test.js && node tests/online-test.js",
+    "test": "node tests/validate-maps.js && node tests/doors-test.js && node tests/playtest.js && node tests/fuzz-physics.js 20 && node tests/server-test.js && node tests/fuzz-server.js && node tests/impostor-map.js && node tests/impostor-walk.js && node tests/impostor-server.js && node tests/bots-test.js && node tests/modes-test.js && node tests/accounts-pg-test.js && node tests/online-test.js",
     "start:online": "node server.js --prod"
   },
   "devDependencies": {

@@ -270,6 +270,17 @@
       if (axis === 'x') this.aabb(a, ya, fixed - t / 2, b, yb, fixed + t / 2, mat);
       else this.aabb(fixed - t / 2, ya, a, fixed + t / 2, yb, b, mat);
     };
+    // Huecos de puerta (a ras de suelo): se guardan para dejarlos siempre libres (ver clearDoorways)
+    for (const op of ops) {
+      if (op.y > 0.6 || op.b - op.a < 0.9 || op.h < 1.6) continue;
+      const a = Math.max(from, op.a), b = Math.min(to, op.b), dep = t / 2 + 0.45;
+      const p0 = axis === 'x' ? this._tp(a, fixed - dep) : this._tp(fixed - dep, a);
+      const p1 = axis === 'x' ? this._tp(b, fixed + dep) : this._tp(fixed + dep, b);
+      (this.doorways || (this.doorways = [])).push({
+        minX: Math.min(p0[0], p1[0]), maxX: Math.max(p0[0], p1[0]), minZ: Math.min(p0[1], p1[1]), maxZ: Math.max(p0[1], p1[1]),
+        minY: y0 + op.y + 0.05, maxY: y0 + op.y + Math.min(op.h, 2.3),
+      });
+    }
     let cur = from;
     for (const op of ops) {
       const a = Math.max(from, op.a), b = Math.min(to, op.b);
@@ -332,6 +343,42 @@
       if (o.parapet) this.ring(cx, cz, top, w, d, o.parapet, 0.3, o.parapetMat || mat, o.parapetGaps);
     }
     return { top: y0 + h + (o.roof ? (o.roofT || 0.3) : 0) };
+  };
+
+  // Deja libres todos los huecos de puerta: si otra pieza (una pared de otro
+  // edificio, un murete, una caja…) se mete en el paso, se recorta esa parte.
+  // Así nunca hay puertas tapadas en las que quedarse encerrado.
+  Builder.prototype.clearDoorways = function () {
+    const D = this.doorways || [];
+    if (!D.length) return 0;
+    let cut = 0;
+    const out = [];
+    for (const bx of this.boxes) {
+      let pieces = [bx];
+      if (bx.solid !== false) {
+        for (const r of D) {
+          const next = [];
+          for (const q of pieces) {
+            const ov = q.maxX > r.minX + 0.02 && q.minX < r.maxX - 0.02 && q.maxZ > r.minZ + 0.02 && q.minZ < r.maxZ - 0.02 && q.maxY > r.minY + 0.02 && q.minY < r.maxY - 0.02;
+            if (!ov) { next.push(q); continue; }
+            cut++;
+            // Resta de cajas alineadas: hasta 6 trozos alrededor del hueco
+            const c = Object.assign({}, q);
+            const piece = o => { const n = Object.assign({}, q, o); if (n.maxX - n.minX > 0.01 && n.maxY - n.minY > 0.01 && n.maxZ - n.minZ > 0.01) next.push(n); };
+            if (c.minX < r.minX) { piece({ maxX: r.minX }); c.minX = r.minX; }
+            if (c.maxX > r.maxX) { piece({ minX: r.maxX }); c.maxX = r.maxX; }
+            if (c.minZ < r.minZ) { piece({ minX: c.minX, maxX: c.maxX, maxZ: r.minZ }); c.minZ = r.minZ; }
+            if (c.maxZ > r.maxZ) { piece({ minX: c.minX, maxX: c.maxX, minZ: r.maxZ }); c.maxZ = r.maxZ; }
+            if (c.minY < r.minY) piece({ minX: c.minX, maxX: c.maxX, minZ: c.minZ, maxZ: c.maxZ, maxY: r.minY });
+            if (c.maxY > r.maxY) piece({ minX: c.minX, maxX: c.maxX, minZ: c.minZ, maxZ: c.maxZ, minY: r.maxY });
+          }
+          pieces = next;
+        }
+      }
+      for (const q of pieces) out.push(q);
+    }
+    this.boxes = out;
+    return cut;
   };
 
   // Anillo de pretil / murete alrededor de un rectángulo, con huecos

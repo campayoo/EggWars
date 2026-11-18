@@ -228,7 +228,7 @@
       });
       b.gable(-9.5, -23, 3.5, 8, 6, 1.6, true, 'roofRed');
       b.ladder(-5.5, -25, 0, 3.5, '-x');
-      b.crate(-11.5, 0, -24.5, 1.1); b.box(-7.9, 0, -21, 1.6, 0.8, 1, 'woodDark');
+      b.crate(-11.5, 0, -24.5, 1.1); b.box(-11.6, 0, -21.2, 1.6, 0.8, 1, 'woodDark');
       // Huerto con surcos y espantapájaros
       for (let i = 0; i < 5; i++) b.decoAt('plane', 12 + i * 1.6, 0.03, -2, { w: 0.9, d: 9, color: i % 2 ? 0x6b8f2e : 0x7a5530 });
       [[-34, -24], [34, 24], [-20, 34], [20, -36]].forEach(([x, z]) => b.decoAt('bush', x, 0, z));
@@ -385,7 +385,7 @@
       b.ramp(22, 17, 0, 3, 2, 1, '+z', 'metalDark');
       b.decoAt('padring', 22, 1, 22, { r: 3 });
       [[-20, -20, 3], [-21, 14, 2.4], [14, -21, 2.2], [-12, 20, 2], [20, -12, 1.8]].forEach(([x, z, r]) => b.decoAt('crater', x, 0.02, z, { r }));
-      [[-14, -14], [14, -14], [-14, 14], [-22, -6], [6, 22], [-8.5, -22], [12, 12]].forEach(([x, z], i) => b.box(x, 0, z, 1.6 + (i % 3) * 0.5, 1.2 + (i % 2) * 0.6, 1.4 + (i % 2) * 0.6, 'rock'));
+      [[-14, -14], [14, -14], [-12, 11.6], [-22, -6], [6, 22], [-8.5, -22], [12, 12]].forEach(([x, z], i) => b.box(x, 0, z, 1.6 + (i % 3) * 0.5, 1.2 + (i % 2) * 0.6, 1.4 + (i % 2) * 0.6, 'rock'));
       // Torre de comunicaciones con antena (punto alto) en la esquina NE
       b.box(21, 0, -21, 3, 7, 3, 'scifiDark');
       b.ring(21, -21, 7, 3, 3, 0.9, 0.2, 'rail', [{ side: 's', at: 0, w: 1.4 }]);
@@ -437,7 +437,7 @@
       b.ladder(-6, -1.6, 0, 4, '-z', { metal: true });
       b.ladder(6, -1.6, 0, 4, '-z', { metal: true });
       b.ladder(-10, -4, 0, 8.3, '+x', { metal: true });
-      b.crate(-6, 0, 3); b.crate(-4.6, 0, 3); b.crate(-5.3, 1.4, 3); b.crate(6, 0, 4); b.crate(3, 0, -4.8);
+      b.crate(-6, 0, 3); b.crate(-4.6, 0, 3); b.crate(-5.3, 1.4, 3); b.crate(8.4, 0, 3.6); b.crate(3, 0, -4.8);
       // Edificio pequeño (oeste)
       b.room(-22, 8, 0, 10, 8, 5, 'brick', { cornice: 'stoneDark',
         open: [{ side: 'e', at: 0, w: 2, h: 2.6 }, { side: 'n', at: 2, w: 2, h: 2.6 }, { side: 'w', at: 0, y: 1.2, w: 2, h: 1.3 }, { side: 's', at: 2, y: 1.2, w: 2, h: 1.3 }],
@@ -473,7 +473,7 @@
         t: 0.8, open: [{ side: 'n', at: -2.5, w: 2.2, h: 2.4 }, { side: 'w', at: 0, w: 2.2, h: 2.4 }, { side: 'e', at: 0, y: 1.2, w: 3, h: 0.8 }],
         roof: true, roofT: 0.6,
       });
-      [[12, 19], [24, 19], [14.5, 19]].forEach(([x, z]) => b.box(x, 0, z, 2.4, 1, 0.9, 'sandbag'));
+      [[11.5, 19], [24, 19], [20.6, 16.2]].forEach(([x, z]) => b.box(x, 0, z, 2.4, 1, 0.9, 'sandbag'));
       // Grúa pórtico
       for (const lx of [-6, 6]) for (const lz of [-23, -17]) b.pillar(-4 + lx, 0, lz, 0.8, 12, 'yellow');
       b.decoAt('crane', -4, 12, -20, { w: 14, d: 7 });
@@ -574,7 +574,7 @@
       for (const s of [-1, 1]) {
         b.with({ mx: s < 0 }, () => {
           b.room(20, 0, 0, 8, 14, 3.4, 'blue', { cornice: 'concrete',
-            open: [{ side: 'w', at: -3, w: 2.2, h: 2.6 }, { side: 'w', at: 3, w: 2.2, h: 2.6 }, { side: 'n', at: 0, w: 2.2, h: 2.6 }, { side: 's', at: 0, w: 2.2, h: 2.6 }, { side: 'e', at: 0, y: 1.1, w: 3, h: 1.2 }],
+            open: [{ side: 'w', at: -3, w: 2.2, h: 2.6 }, { side: 'w', at: 3, w: 2.2, h: 2.6 }, { side: 's', at: 0, w: 2.2, h: 2.6 }, { side: 'e', at: 0, y: 1.1, w: 3, h: 1.2 }],
             roof: true, roofMat: 'white',
           });
           b.room(20, 3.5, 3.7, 8, 7, 3, 'white', { cornice: 'concrete',
@@ -840,7 +840,7 @@
       [0, 2].forEach(rot => b.with({ rot }, () => {
         // Chalé de dos pisos (azotea con pretil) y su leñera
         b.house2(-15, -15, 12, 9, 'wood', { h1: 2.6, doors: ['s', 'e'], trim: 'woodDark', roofMat: 'roofRed' });
-        b.box(-15, 0, -8.8, 6, 1.3, 1.2, 'logs');
+        b.box(-19.2, 0, -8.6, 3.4, 1.3, 1.2, 'logs');
         // Torre del telesilla (francotirador) con tejadillo
         b.tower(18, -20, 9, 3.4, 'logs', 'w', { roof: 'roofRed' });
         // Montículo de nieve con rampas y muretes de nieve
@@ -1156,7 +1156,7 @@
         b.box(cx - 4.4, 0, -23.4, 0.9, 0.78, 2, 'wood');
         // Pupitres (mesa + silla) mirando a la pizarra
         for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-          const dx = cx - 1.6 + r * 2.3, dz = -25.1 + c * 2.1;
+          const dx = cx - 2.6 + r * 2.2, dz = -25.4 + c * 1.9;
           b.decoAt('desk', dx, 0, dz, { color: i % 2 ? 0x2f6fb5 : 0xc0392b });
           b.box(dx + 0.25, 0, dz, 1.2, 0.76, 1.15, 'invisible');
         }
@@ -1208,8 +1208,8 @@
       });
       glassZ(25.8, -10, -6, 1.1, 1.4);
       floor(13.4, -12.6, 25.6, 2.6, 0xd9cfba);
-      [[-9.5, 'bookRed'], [-6, 'bookBlue'], [-2.5, 'bookGreen'], [1, 'bookRed']].forEach(([z, m]) => {
-        b.box(21.5, 0, z, 6, 2.1, 0.6, m);
+      [[-10, 'bookRed'], [-6.8, 'bookBlue'], [-3.6, 'bookGreen'], [-0.4, 'bookRed']].forEach(([z, m]) => {
+        b.box(22.4, 0, z, 5.2, 2.1, 0.6, m);
       });
       b.box(16, 0, -8, 1.8, 0.76, 3, 'wood'); b.box(16, 0, 0, 1.8, 0.76, 3, 'wood');
       sign('BIBLIOTECA', 12.75, 2.9, -2, -Math.PI / 2, 2.6);
@@ -1278,7 +1278,7 @@
       b.aabb(-7, 0, -11.8, 7, 0.5, -10.6, 'concrete');
       [[-9, 11], [9, 11], [0, 13]].forEach(([x, z]) => { b.box(x, 0, z, 1.4, 0.6, 1.4, 'invisible'); b.box(x, 0, z, 0.3, 2.2, 0.3, 'invisible'); b.decoAt('planter', x, 0, z, { color: 0xa9aaa4 }); });
       [[-5, 12.5, 0], [5, 12.5, 0]].forEach(([x, z, r]) => { b.decoAt('bench', x, 0, z, { rotY: r }); b.box(x, 0, z, 1.8, 0.55, 0.55, 'invisible'); });
-      b.box(-11, 0, 13, 1.2, 1.1, 1.2, 'stone'); b.decoAt('fountain', -11, 1.1, 13, { s: 0.35 });
+      b.box(-10.5, 0, 9.5, 1.2, 1.1, 1.2, 'stone'); b.decoAt('fountain', -10.5, 1.1, 9.5, { s: 0.35 });
       b.box(11.6, 0, -9, 0.8, 1.1, 0.8, 'green'); b.box(11.6, 0, -7.8, 0.8, 1.1, 0.8, 'yellow');
       // Porche con columnas delante del pasillo (sombra y cobertura)
       b.slab(0, -11.2, 3.4, 26, 3.2, 0.2, 'concrete');
@@ -1342,6 +1342,14 @@
       const half = (houseMat, roofMat, carColor) => {
         // ---- Casa de dos plantas con escalera interior y azotea (amarilla en un lado, verde en el otro) ----
         b.house2(-7, -11.5, 12, 9, houseMat, { doors: ['s', 'e'], roofMat, trim: 'white', chimney: true });
+        // Muebles: cocina, mesa, sofá y tele abajo; cama y armario arriba (dan cobertura dentro de la casa)
+        b.aabb(-12.6, 0, -13, -11.9, 0.95, -8.6, 'counter'); b.aabb(-12.6, 0.95, -13, -11.9, 1.0, -8.6, 'worktop');
+        b.box(-12.3, 0, -8.0, 0.7, 1.8, 0.7, 'appliance');                       // nevera
+        b.box(-9.6, 0, -9.2, 1.4, 0.76, 0.9, 'wood'); b.decoAt('bigegg', -9.6, 0.76, -9.2, { s: 0.35, color: 0xfff1dc });
+        b.box(-3.2, 0, -7.9, 2.2, 0.5, 0.8, 'red'); b.box(-3.2, 0.5, -7.6, 2.2, 0.45, 0.2, 'red');   // sofá
+        b.box(-3.2, 0, -9.6, 1.4, 0.5, 0.5, 'woodDark'); b.box(-3.2, 0.5, -9.6, 1.1, 0.65, 0.1, 'metalDark', { solid: false });   // tele
+        b.box(-3.4, 3.4, -9.2, 2.1, 0.55, 1.5, 'white'); b.box(-3.4, 3.95, -9.85, 2.1, 0.5, 0.2, 'woodDark', { solid: false });   // cama
+        b.box(-12.2, 3.4, -9.0, 0.7, 2.0, 1.6, 'woodDark');                     // armario
         // Porche y valla baja del jardín delantero (con hueco en la puerta)
         b.fence(-14, -6.6, -8.6, -6.6, { h: 0.9, mat: 'white' });
         b.fence(-5.4, -6.6, -0.6, -6.6, { h: 0.9, mat: 'white' });
@@ -1440,6 +1448,7 @@
     const b = new MB.Builder();
     def.build(b);
     if (def.ground && def.cover !== false) autoCover(b, def);
+    b.clearDoorways();
     // Límite duro en todos los mapas: pared invisible muy alta pegada al borde (1 m de grosor).
     // Así nadie puede saltar por encima de los muros visibles ni quedarse en el hueco del borde.
     b.perimeter(def.halfSize, 80, 'invisible', 1);
@@ -1515,6 +1524,11 @@
       }
       for (const l of b.ladders) {
         if (x1 + 2.2 > l.minX && x0 - 2.2 < l.maxX && z1 + 2.2 > l.minZ && z0 - 2.2 < l.maxZ) return false;
+      }
+      // Nunca delante de una puerta (2,2 m de margen)
+      for (const dw of b.doorways || []) {
+        if (dw.minY > 3.1) continue;
+        if (x1 + 2.2 > dw.minX && x0 - 2.2 < dw.maxX && z1 + 2.2 > dw.minZ && z0 - 2.2 < dw.maxZ) return false;
       }
       for (const d of decos) {
         if (d.x > x0 - 2 && d.x < x1 + 2 && d.z > z0 - 2 && d.z < z1 + 2) return false;
