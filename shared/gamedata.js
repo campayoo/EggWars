@@ -123,6 +123,10 @@
             desc: 'Quédate dentro del gallinero sin enemigos hasta capturarlo. El gallinero cambia de sitio tras cada captura.' },
     cts:  { id: 'cts',  name: 'Capture the Spatula', short: 'CTS', teams: true, defLimit: 3, limits: [1, 3, 5, 7],
             desc: 'Coge la espátula del centro y llévala a tu base. Si mueres, la sueltas.' },
+    dem:  { id: 'dem',  name: 'Demolición', short: 'DEM', teams: true, defLimit: 3, limits: [2, 3, 4, 5],
+            desc: 'Un equipo ataca y el otro defiende los puntos A y B. Quédate en un punto para plantar la bomba; si explotan los dos, ganan los atacantes. Si se acaba el tiempo, ganan los defensores. Los bandos se cambian cada ronda.' },
+    conf: { id: 'conf', name: 'Yema Confirmada', short: 'YC', teams: true, defLimit: 25, limits: [15, 20, 25, 40, 60],
+            desc: 'Cada huevo que cae suelta su yema. Recoge las del equipo rival para sumar un punto, y las de tu equipo para negárselo.' },
   };
 
   const TIME_LIMITS = [0, 5, 8, 10, 15, 20]; // minutos (0 = sin límite)
@@ -147,6 +151,14 @@
     KOTC_MOVE_DELAY_MS: 3500,
     CTS_RETURN_MS: 15000,
     CTS_PICK_RADIUS: 1.5,
+    DEM_PLANT_S: 4,            // segundos dentro del punto (sin defensores) para plantar
+    DEM_DEFUSE_S: 5,           // segundos sobre la bomba (sin atacantes) para desactivarla
+    DEM_FUSE_MS: 25000,        // cuenta atrás de la bomba
+    DEM_ROUND_MS: 150000,      // duración de cada ronda de Demolición
+    DEM_BREAK_MS: 4000,        // pausa entre rondas (cambio de bando)
+    DEM_BLAST_R: 7,            // radio de la explosión
+    CONF_TAG_MS: 30000,        // las yemas desaparecen a los 30 s
+    CONF_PICK_R: 1.4,
     HEAL_AMOUNT: 30,           // vida que da un botiquín (nunca por encima de MAX_HP)
     HEAL_RESPAWN_MS: 20000,
     MAX_SPEED: 26,             // m/s máximos aceptados por el servidor (incluye jump pads y caídas)

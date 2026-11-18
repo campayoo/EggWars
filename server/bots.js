@@ -270,7 +270,7 @@ class BotManager {
 
     // ---- Objetivo de movimiento ----
     let goal = null, prefer = 0;
-    const objMode = (room.config.mode === 'kotc' || room.config.mode === 'cts') && b.role === 'obj';
+    const objMode = (room.config.mode === 'kotc' || room.config.mode === 'cts' || room.config.mode === 'dem' || room.config.mode === 'conf') && b.role === 'obj';
     if (tgt && tgt.alive) {
       const dist = Math.hypot(tgt.x - st.x, tgt.z - st.z);
       prefer = Math.max(2.5, Math.min(wep.range * 0.45, 18));
@@ -360,6 +360,21 @@ class BotManager {
       if (s.carrier === p.id) { const base = md.bases[p.team]; return { x: base.x, z: base.z }; }
       if (s.carrier) { const c = room.players[s.carrier]; if (c && c.team !== p.team) return { x: c.x, z: c.z }; const base = md.bases[p.team === 'red' ? 'blue' : 'red']; return { x: base.x, z: base.z }; }
       return { x: s.x, z: s.z };
+    }
+    if (m === 'dem' && room.dem && p.team && !room.dem.breakUntil) {
+      const d = room.dem, live = d.sites.filter(x => x.state !== 'destroyed');
+      if (live.length) {
+        const planted = live.find(x => x.state === 'planted');
+        // Atacantes: a plantar (o a proteger la bomba). Defensores: a desactivarla o a vigilar un punto
+        let site = planted;
+        if (!site) site = live[(p.id.length + (b.siteBias || (b.siteBias = Math.random() < 0.5 ? 1 : 2))) % live.length];
+        return { x: site.x + rand(-1, 1), z: site.z + rand(-1, 1) };
+      }
+    }
+    if (m === 'conf' && room.tags && room.tags.length) {
+      let best = null, bd = 28;
+      for (const t of room.tags) { const dd = Math.hypot(t.x - p.x, t.z - p.z); if (dd < bd) { bd = dd; best = t; } }
+      if (best) return { x: best.x, z: best.z };
     }
     return this.wanderGoal(b, p, now);
   }

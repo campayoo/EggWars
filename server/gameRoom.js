@@ -174,6 +174,8 @@ class GameRoom {
     this.coop = { idx: Math.floor(Math.random() * this.mapData.coops.length), progress: 0, team: null, contested: false, activeAt: now };
     const sp = this.mapData.spatula;
     this.spatula = { state: 'home', x: sp.x, y: sp.y, z: sp.z, carrier: null, droppedAt: 0 };
+    this.tags = []; this.tagSeq = 0;
+    this.dem = this.config.mode === 'dem' ? this.newDem('red', 1, now) : null;
     for (const gid in this.grenades) delete this.grenades[gid];
     this.packs = (this.mapData.healthPacks || []).map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, active: true, respawnAt: 0 }));
     this.gpacks = (this.mapData.grenadePacks || []).map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, active: true, respawnAt: 0 }));
@@ -273,6 +275,8 @@ class GameRoom {
     for (const gp of this.gpacks) if (!gp.active) gp.respawnAt += d;
     if (this.spatula.droppedAt) this.spatula.droppedAt += d;
     if (this.coop) this.coop.activeAt += d;
+    if (this.dem) { this.dem.endsAt += d; if (this.dem.breakUntil) this.dem.breakUntil += d; this.dem.sites.forEach(st => { if (st.explodeAt) st.explodeAt += d; }); }
+    if (this.tags) this.tags.forEach(t => { t.at += d; });
     this.state = 'playing';
     this.pausedAt = 0;
     if (!silent) this.io.to(this.id).emit('room:paused', { paused: false, by: byName || null });
@@ -433,6 +437,14 @@ class GameRoom {
       const s = this.spatula;
       return { spatula: { state: s.state, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), carrier: s.carrier } };
     }
+    if (m === 'dem' && this.dem) {
+      const d = this.dem, now = Date.now();
+      return { dem: {
+        attack: d.attack, round: d.round, endsIn: Math.max(0, Math.ceil((d.endsAt - now) / 1000)), brk: d.breakUntil > now,
+        sites: d.sites.map(st => ({ id: st.id, x: st.x, y: st.y, z: st.z, r: st.r, state: st.state, plant: Math.round(st.plant), defuse: Math.round(st.defuse), contested: st.contested, boomIn: st.explodeAt ? Math.max(0, Math.ceil((st.explodeAt - now) / 1000)) : 0 })),
+      } };
+    }
+    if (m === 'conf') return { tags: this.tags.map(t => ({ id: t.id, x: +t.x.toFixed(2), y: +t.y.toFixed(2), z: +t.z.toFixed(2), team: t.team })) };
     return {};
   }
 
@@ -633,6 +645,11 @@ class GameRoom {
     }
     // Soltar la espátula
     if (this.config.mode === 'cts' && this.spatula.carrier === target.id) this.dropSpatula(target);
+    // Yema Confirmada: el huevo que cae suelta su yema
+    if (this.config.mode === 'conf' && target.team && weapon !== 'void') {
+      const y = Phys.supportBelow(this.world, target.x, target.z, target.y + 0.5);
+      if (isFinite(y)) this.tags.push({ id: ++this.tagSeq, x: target.x, y, z: target.z, team: target.team, at: Date.now() });
+    }
 
     this.io.to(this.id).emit('player:killed', {
       targetId: target.id, targetNickname: target.nickname,
@@ -801,6 +818,123 @@ class GameRoom {
   }
 
   // ---------------------------------------------------------------------------
+  // Demolición: puntos A y B, plantar, desactivar y explotar
+  // ---------------------------------------------------------------------------
+  demSites() {
+    const md = this.mapData;
+    if (md.def.bombSites) return md.def.bombSites.map((s, i) => ({ id: s.id || 'AB'[i], x: s.x, y: s.y || 0, z: s.z, r: s.r || 2.6 }));
+    // Sin puntos declarados: los dos gallineros más separados
+    const c = md.coops;
+    let best = [c[0], c[1] || c[0]], bd = -1;
+    for (let i = 0; i < c.length; i++) for (let j = i + 1; j < c.length; j++) {
+      const d = Math.hypot(c[i].x - c[j].x, c[i].z - c[j].z);
+      if (d > bd) { bd = d; best = [c[i], c[j]]; }
+    }
+    return best.map((s, i) => ({ id: 'AB'[i], x: s.x, y: s.y, z: s.z, r: Math.max(2.2, s.r) }));
+  }
+  newDem(attack, round, now) {
+    return {
+      attack, round, endsAt: now + RULES.DEM_ROUND_MS, breakUntil: 0,
+      sites: this.demSites().map(s => Object.assign(s, { state: 'armed', plant: 0, defuse: 0, contested: false, explodeAt: 0, planter: null })),
+    };
+  }
+  tickDem(dt, now) {
+    const d = this.dem;
+    if (!d) return;
+    if (d.breakUntil) {
+      if (now < d.breakUntil) return;
+      // Nueva ronda con los bandos cambiados: todos reaparecen
+      const att = d.attack === 'red' ? 'blue' : 'red';
+      this.dem = this.newDem(att, d.round + 1, now);
+      const positions = {};
+      for (const id in this.players) { const p = this.players[id]; this.respawn(p, false); positions[id] = { x: p.x, y: p.y, z: p.z, rotY: p.rotY, team: p.team }; }
+      this.io.to(this.id).emit('dem:event', { type: 'round', attack: att, round: d.round + 1, players: positions });
+      return;
+    }
+    const def = d.attack === 'red' ? 'blue' : 'red';
+    for (const site of d.sites) {
+      if (site.state === 'destroyed') continue;
+      const n = { red: 0, blue: 0 }; let first = null;
+      for (const id in this.players) {
+        const p = this.players[id];
+        if (!p.alive || !p.team) continue;
+        if (Math.hypot(p.x - site.x, p.z - site.z) <= site.r && p.y >= site.y - 0.8 && p.y <= site.y + 2.5) { n[p.team]++; if (p.team === d.attack && !first) first = p; }
+      }
+      site.contested = n.red > 0 && n.blue > 0;
+      if (site.state === 'armed') {
+        if (n[d.attack] > 0 && !n[def]) {
+          site.plant += 100 / RULES.DEM_PLANT_S * dt;
+          if (site.plant >= 100) {
+            site.state = 'planted'; site.plant = 100; site.defuse = 0; site.explodeAt = now + RULES.DEM_FUSE_MS; site.planter = first ? first.id : null;
+            if (first) first.score += 1;
+            // Con la bomba puesta el reloj de la ronda no puede acabar antes de que explote
+            d.endsAt = Math.max(d.endsAt, site.explodeAt + 1500);
+            this.io.to(this.id).emit('dem:event', { type: 'planted', site: site.id, team: d.attack, nickname: first ? first.nickname : '' });
+          }
+        } else if (!n[d.attack]) site.plant = Math.max(0, site.plant - 25 * dt);
+      } else if (site.state === 'planted') {
+        if (n[def] > 0 && !n[d.attack]) {
+          site.defuse += 100 / RULES.DEM_DEFUSE_S * dt;
+          if (site.defuse >= 100) {
+            let who = null;
+            for (const id in this.players) { const p = this.players[id]; if (p.alive && p.team === def && Math.hypot(p.x - site.x, p.z - site.z) <= site.r) { who = p; break; } }
+            if (who) who.score += 1;
+            Object.assign(site, { state: 'armed', plant: 0, defuse: 0, explodeAt: 0, planter: null });
+            this.io.to(this.id).emit('dem:event', { type: 'defused', site: site.id, team: def, nickname: who ? who.nickname : '' });
+          }
+        } else if (!n[def]) site.defuse = Math.max(0, site.defuse - 20 * dt);
+        if (site.state === 'planted' && now >= site.explodeAt) this.demExplode(site, now);
+      }
+    }
+    if (!this.dem.breakUntil) {
+      if (d.sites.every(s => s.state === 'destroyed')) this.demRoundWon(d.attack, 'destroyed', now);
+      else if (now >= d.endsAt && !d.sites.some(s => s.state === 'planted')) this.demRoundWon(def, 'time', now);
+    }
+  }
+  demExplode(site, now) {
+    site.state = 'destroyed'; site.explodeAt = 0;
+    const planter = this.players[site.planter] || null;
+    this.io.to(this.id).emit('dem:event', { type: 'boom', site: site.id, x: site.x, y: site.y, z: site.z, team: this.dem.attack });
+    for (const id in this.players) {
+      const p = this.players[id];
+      if (!p.alive) continue;
+      const dist = Math.hypot(p.x - site.x, p.y - site.y, p.z - site.z);
+      if (dist > RULES.DEM_BLAST_R) continue;
+      const dmg = Math.round(150 * (1 - dist / RULES.DEM_BLAST_R)) + 20;
+      this.applyDamage(p, dmg, planter && planter.id !== p.id ? planter : null, 'bomb', false);
+    }
+  }
+  demRoundWon(team, why, now) {
+    const d = this.dem;
+    this.teamScores[team]++;
+    d.breakUntil = now + RULES.DEM_BREAK_MS;
+    this.io.to(this.id).emit('dem:event', { type: 'roundWon', team, why, scores: this.teamScores, round: d.round });
+    this.checkWin();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Yema Confirmada
+  // ---------------------------------------------------------------------------
+  tickConf(now) {
+    for (let i = this.tags.length - 1; i >= 0; i--) {
+      const t = this.tags[i];
+      if (now - t.at > RULES.CONF_TAG_MS) { this.tags.splice(i, 1); continue; }
+      for (const id in this.players) {
+        const p = this.players[id];
+        if (!p.alive || !p.team) continue;
+        if (Math.hypot(p.x - t.x, p.z - t.z) <= RULES.CONF_PICK_R && p.y > t.y - 1.2 && p.y < t.y + 1.8) {
+          const confirm = p.team !== t.team;
+          if (confirm) { this.teamScores[p.team]++; p.score += 1; } else p.score += 1;
+          this.tags.splice(i, 1);
+          this.io.to(this.id).emit('conf:event', { type: confirm ? 'confirmed' : 'denied', id: p.id, nickname: p.nickname, team: p.team, x: t.x, y: t.y, z: t.z });
+          if (confirm) this.checkWin();
+          break;
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Bucle del servidor
   // ---------------------------------------------------------------------------
   tick() {
@@ -863,6 +997,8 @@ class GameRoom {
     if (this.state === 'playing') {
       if (this.config.mode === 'kotc') this.tickKotc(dt, now);
       else if (this.config.mode === 'cts') this.tickCts(now);
+      else if (this.config.mode === 'dem') this.tickDem(dt, now);
+      else if (this.config.mode === 'conf') this.tickConf(now);
     }
 
     this.emitState(now);

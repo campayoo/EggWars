@@ -1262,7 +1262,7 @@
       b.decoAt('hoop', -11.2, 0, 1.5, { rotY: Math.PI / 2 }); b.box(-12.1, 0, 1.5, 0.3, 3.2, 0.3, 'invisible');
       b.decoAt('hoop', 11.2, 0, 1.5, { rotY: -Math.PI / 2 }); b.box(12.1, 0, 1.5, 0.3, 3.2, 0.3, 'invisible');
       // Gradas bajas, jardineras con árbol, bancos y fuente
-      b.aabb(-8, 0, -11.6, 8, 0.5, -10.4, 'concrete'); b.aabb(-6, 0.5, -12.6, 6, 1.0, -11.6, 'concrete');
+      b.aabb(-7, 0, -11.8, 7, 0.5, -10.6, 'concrete');
       [[-9, 11], [9, 11], [0, 13]].forEach(([x, z]) => { b.box(x, 0, z, 1.4, 0.6, 1.4, 'invisible'); b.box(x, 0, z, 0.3, 2.2, 0.3, 'invisible'); b.decoAt('planter', x, 0, z, { color: 0xa9aaa4 }); });
       [[-5, 12.5, 0], [5, 12.5, 0]].forEach(([x, z, r]) => { b.decoAt('bench', x, 0, z, { rotY: r }); b.box(x, 0, z, 1.8, 0.55, 0.55, 'invisible'); });
       b.box(-11, 0, 13, 1.2, 1.1, 1.2, 'stone'); b.decoAt('fountain', -11, 1.1, 13, { s: 0.35 });
@@ -1296,6 +1296,91 @@
   };
 
   // =========================================================================
+  // 18. PUEBLO DE PRUEBAS — barrio pequeño de dos casas enfrentadas con un
+  // autobús en medio de la calle (mapa pequeño y rápido, simétrico)
+  // =========================================================================
+  const pruebas = {
+    id: 'pruebas', name: 'Pueblo de Pruebas', size: 'S', players: 12,
+    desc: 'Barrio de pruebas de los años 50: dos casas de dos plantas una frente a otra, garajes, jardines traseros con piscina y un autobús escolar atravesado en mitad de la calle. Pequeño, simétrico y muy rápido.',
+    halfSize: 26, gravity: -22, ground: 'grass', cover: false,
+    theme: Object.assign({}, SKY_DAY, { sky: 0x9fd3f5, sunColor: 0xfff0c8, sun: 1.05 }),
+    bombSites: [{ id: 'A', x: -7, y: 0, z: -11.5, r: 2.4 }, { id: 'B', x: 7, y: 0, z: 11.5, r: 2.4 }],
+    build(b) {
+      // Calle, aceras y línea central (una sola vez: son simétricas)
+      b.decoAt('plane', 0, 0.02, 0, { w: 52, d: 9, color: 0x4a4d52 });
+      b.decoAt('plane', 0, 0.025, -5.4, { w: 52, d: 1.8, color: 0xc9c6bd });
+      b.decoAt('plane', 0, 0.025, 5.4, { w: 52, d: 1.8, color: 0xc9c6bd });
+      for (let x = -24; x <= 24; x += 4) b.decoAt('plane', x, 0.03, 0, { w: 2, d: 0.18, color: 0xf2d24b });
+      b.perimeter(26, 2.2, 'hedge', 0.8);
+
+      // Autobús escolar atravesado en el centro: se puede entrar por las puertas y disparar por las ventanas
+      const BUS = 'yellow';
+      b.aabb(-5.2, 0, -1.35, 5.2, 0.35, 1.35, 'metalDark');                     // chasis (se pisa)
+      b.wallSeg('x', -1.25, -5.2, 5.2, 0.35, 2.3, 0.2, [{ at: -3.4, w: 1.4, h: 2.0 }, { at: -0.6, y: 0.95, w: 2.2, h: 0.8 }, { at: 2.4, y: 0.95, w: 2.2, h: 0.8 }], BUS);
+      b.wallSeg('x', 1.25, -5.2, 5.2, 0.35, 2.3, 0.2, [{ at: 3.4, w: 1.4, h: 2.0 }, { at: 0.6, y: 0.95, w: 2.2, h: 0.8 }, { at: -2.4, y: 0.95, w: 2.2, h: 0.8 }], BUS);
+      b.wallSeg('z', -5.1, -1.15, 1.15, 0.35, 2.3, 0.2, [{ at: 0, y: 1.0, w: 1.6, h: 0.7 }], BUS);
+      b.wallSeg('z', 5.1, -1.15, 1.15, 0.35, 2.3, 0.2, [{ at: 0, y: 1.0, w: 1.6, h: 0.7 }], BUS);
+      b.aabb(-5.3, 2.65, -1.4, 5.3, 2.85, 1.4, BUS);                             // techo
+      b.box(-5.6, 0, 0, 0.6, 1.3, 2.5, BUS);                                     // morro
+      b.box(-1.5, 0.35, 0, 0.5, 0.5, 1.6, 'cBlue'); b.box(1.5, 0.35, 0, 0.5, 0.5, 1.6, 'cBlue');   // asientos
+      b.box(0, 1.35, -1.36, 10.2, 0.12, 0.04, 'metalDark', { solid: false });
+      b.box(0, 1.35, 1.36, 10.2, 0.12, 0.04, 'metalDark', { solid: false });
+
+      const half = () => {
+        // ---- Casa de dos plantas (amarilla) con escalera interior y azotea ----
+        b.house2(-7, -11.5, 12, 9, 'cYellow', { doors: ['s', 'e'], roofMat: 'roofRed', trim: 'white', chimney: true });
+        // Porche y valla baja del jardín delantero (con hueco en la puerta)
+        b.fence(-14, -6.6, -8.6, -6.6, { h: 0.9, mat: 'white' });
+        b.fence(-5.4, -6.6, -0.6, -6.6, { h: 0.9, mat: 'white' });
+        b.box(-12, 0, -6.2, 0.35, 1.1, 0.35, 'blue');                              // buzón
+        b.decoAt('bigegg', -11.5, 0, -7.4, { s: 1.1, color: 0xf7e7cf });           // maniquí de pruebas
+        // ---- Garaje abierto con coche ----
+        b.shed(4.5, -11, 5.4, 7, 2.9, 'roofGrey', { postMat: 'white' });
+        b.decoAt('car', 4.5, 0, -11.5, { color: 0x2f80c8 }); b.box(4.5, 0, -11.5, 2.1, 1.5, 4.3, 'invisible');
+        b.crate(2.6, 0, -14.2, 1.2); b.box(6.6, 0, -14.4, 0.9, 1.2, 0.9, 'barnRed');
+        // ---- Jardín trasero: piscina, cobertizo y vallas ----
+        b.fence(-20, -16.6, -14, -16.6, { h: 1.1, mat: 'wood' });
+        b.fence(-20, -16.6, -20, -25, { h: 1.1, mat: 'wood' });
+        b.fence(9, -16.6, 9, -25, { h: 1.1, mat: 'wood' });
+        // Piscina: borde bajo (se salta) y agua poco profunda
+        b.aabb(-6, 0, -22.4, 2, 0.4, -22.0, 'white'); b.aabb(-6, 0, -19.0, 2, 0.4, -18.6, 'white');
+        b.aabb(-6, 0, -22.0, -5.6, 0.4, -19.0, 'white'); b.aabb(1.6, 0, -22.0, 2, 0.4, -19.0, 'white');
+        b.decoAt('plane', -2, 0.05, -20.5, { w: 7.2, d: 3.0, color: 0x2e86c1 });
+        b.box(-6.6, 0, -20.5, 0.6, 1.1, 0.6, 'metal');
+        b.shed(-15.5, -21.5, 4, 3.6, 2.4, 'roofRed');
+        b.box(-15.5, 0, -22.3, 3.6, 1.0, 1.4, 'woodDark');                         // banco de trabajo
+        b.decoAt('bigegg', 5.5, 0, -21, { s: 0.9, color: 0xf3d2a8 });
+        b.box(5.5, 0, -21, 1.0, 1.9, 1.0, 'invisible');
+        b.tree(-22.5, -11, 1.0); b.tree(13, -22, 1.1);
+        // ---- Esquina este: camión de mudanzas y contenedor ----
+        b.container(17.5, 0, -3.4, true, 'cOrange');
+        b.box(21.3, 0, -3.4, 1.6, 2.2, 2.4, 'white');                             // cabina
+        b.box(15, 0, -10, 1.3, 1.3, 2.4, 'cGreen');                                // contenedor de basura
+        b.crate(18.5, 0, -12, 1.3); b.crate(18.5, 1.3, -12, 1.0); b.crate(20, 0, -13.3, 1.2);
+        b.decoAt('billboard', 19, 0, -19, { rotY: Math.PI / 4, color: 0xd35400 }); b.box(19, 0, -19, 5, 3, 0.6, 'invisible');
+        // ---- Esquina oeste: jardín con setos ----
+        b.box(-17, 0, -3.8, 4, 1.2, 1, 'hedge');
+        b.box(-23, 0, -8, 1, 1.2, 4, 'hedge');
+        b.decoAt('planter', -15, 0, -9.5, { color: 0xb8b2a4 }); b.box(-15, 0, -9.5, 1.4, 0.6, 1.4, 'invisible'); b.box(-15, 0, -9.5, 0.3, 2.2, 0.3, 'invisible');
+        b.decoAt('lamp', -10, 0, -5.8); b.decoAt('lamp', 10, 0, -5.8);
+      };
+      half();
+      b.with({ rot: 2 }, half);
+    },
+    spawns: [
+      { x: -18, z: -12 }, { x: 18, z: 12 }, { x: -2, z: -24 }, { x: 2, z: 24 }, { x: 12, z: -19 }, { x: -12, z: 19 },
+      { x: -22, z: -2 }, { x: 22, z: 2 }, { x: 8, z: -8 }, { x: -8, z: 8 }, { x: -11, z: -13 }, { x: 11, z: 13 },
+    ],
+    teamSpawns: {
+      red: [{ x: -2, z: -24 }, { x: 4, z: -23.5 }, { x: -9, z: -23.5 }, { x: 12, z: -20 }, { x: -12, z: -19 }],
+      blue: [{ x: 2, z: 24 }, { x: -4, z: 23.5 }, { x: 9, z: 23.5 }, { x: -12, z: 20 }, { x: 12, z: 19 }],
+    },
+    coops: [{ x: 0, y: 0.35, z: 0, r: 2 }, { x: -7, y: 0, z: -11.5, r: 2.2 }, { x: 7, y: 0, z: 11.5, r: 2.2 }, { x: 12, y: 0, z: -7.5, r: 2.2 }, { x: -12, y: 0, z: 7.5, r: 2.2 }],
+    spatula: { x: 0, y: 0.35, z: 0 },
+    bases: { red: { x: -2, y: 0, z: -24.2, r: 1.8 }, blue: { x: 2, y: 0, z: 24.2, r: 1.8 } },
+  };
+
+  // =========================================================================
   // 16. ÑEMANAVE — la nave de Huevo Impostor, ahora también para el FPS.
   // La geometría la construye shared/impostor.js (se carga al construir el mapa).
   // =========================================================================
@@ -1321,11 +1406,11 @@
     bases: { red: { x: -16.5, y: 0, z: -11.5, r: 1.8 }, blue: { x: 18.5, y: 0, z: 12, r: 1.8 } },
   };
 
-  const LIST = [castle, dirt, feedlot, moonbase, shipyard, ruins, blue, fortflip, twotowers, medina, alpine, temple, factory, downtown, sawmill, abastos, nemanave];
+  const LIST = [castle, dirt, feedlot, moonbase, shipyard, ruins, blue, fortflip, twotowers, medina, alpine, temple, factory, downtown, sawmill, abastos, pruebas, nemanave];
   const MAPS = {};
   LIST.forEach(m => { MAPS[m.id] = m; });
   // Alias de los ids antiguos
-  const ALIASES = { fort: 'fortflip', instituto: 'abastos', ies: 'abastos' };
+  const ALIASES = { fort: 'fortflip', instituto: 'abastos', ies: 'abastos', nuketown: 'pruebas', pueblo: 'pruebas' };
 
   function resolveId(id) {
     if (MAPS[id]) return id;

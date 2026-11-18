@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versión-6.4-ff8c2a" alt="versión 6.4">
-  <img src="https://img.shields.io/badge/mapas-16-ffb347" alt="16 mapas">
+  <img src="https://img.shields.io/badge/versión-6.5-ff8c2a" alt="versión 6.5">
+  <img src="https://img.shields.io/badge/mapas-18-ffb347" alt="18 mapas">
   <img src="https://img.shields.io/badge/anti--trampas-servidor-2e7d32" alt="anti-trampas en el servidor">
   <img src="https://img.shields.io/badge/armas-8-e8742a" alt="8 armas">
-  <img src="https://img.shields.io/badge/modos-4-c65a1e" alt="4 modos">
+  <img src="https://img.shields.io/badge/modos-6-c65a1e" alt="6 modos">
   <img src="https://img.shields.io/badge/bots-sí-8e44ad" alt="con bots">
   <img src="https://img.shields.io/badge/jugar-en%20el%20navegador-1f6feb" alt="versión web sin servidor">
   <img src="https://img.shields.io/badge/Node.js-18%2B-5fa04e" alt="Node.js 18+">
@@ -42,7 +42,7 @@
 ## 📋 Índice
 - [🎮 Jugar ahora](#-jugar-ahora)
 - [Arrancar en 1 minuto](#-arrancar-en-1-minuto)
-- [Los 16 mapas](#️-los-16-mapas)
+- [Los 18 mapas](#️-los-18-mapas)
 - [Armas y granadas](#-armas-y-granadas)
 - [Modos de juego](#-modos-de-juego)
 - [🔪 Huevo Impostor (modo nuevo)](#-huevo-impostor-modo-nuevo)
@@ -75,9 +75,11 @@ Abre **http://localhost:3000**. Desde otros ordenadores de la misma red, usa la 
 
 ---
 
-## 🗺️ Los 16 mapas
+## 🗺️ Los 18 mapas
 
 Todos los mapas son de diseño propio. Tienen **varios niveles** (edificios de 2 pisos, puentes, torres y terrazas), **coberturas** repartidas por el suelo (cajas, sacos, muretes, barriles y pacas) y un **paisaje alrededor**: colinas, bosque, ciudad, mar o la superficie lunar. Así no se nota dónde acaba el mapa. Las puertas y ventanas tienen marco, y las escaleras tienen peldaños marcados y barandillas en los lados abiertos.
+
+**Novedades de la 6.5:** dos mapas nuevos, **Instituto Abastos** (la planta baja de un instituto: pasillo con cuatro aulas, gimnasio, biblioteca, cafetería, aula de informática, vestíbulo y patio con pista de baloncesto) y **Pueblo de Pruebas** (barrio pequeño y simétrico con dos casas enfrentadas y un autobús en mitad de la calle); dos modos nuevos, **Demolición** y **Yema Confirmada**; **skins de armas** y **hueveras** que se abren con los huevos de los retos.
 
 **Novedades de la 6.2:** **bots** (también en la versión web sin servidor), menú de crear partida rediseñado, calidad **Ultra** y más contenido en los mapas que estaban más vacíos (cabaña de esquí en Nevada, oficinas, vía de tren y depósito en Fábrica, cobertizo de la sierra y pasarelas sobre el arroyo en Aserradero, puerta del ídolo y columnata en Templo, marcas viales, jardineras y quiosco en Centro), chimeneas o máquinas de aire acondicionado en las azoteas, rocas como cobertura natural, sacos en dos hileras y muretes con remate. Las barandillas de los puentes ahora se ven caladas (como funcionan: las balas las atraviesan).
 
@@ -90,6 +92,7 @@ Todos los mapas son de diseño propio. Tienen **varios niveles** (edificios de 2
 | <img src="docs/img/mapa-twotowers.jpg" width="440"><br>**🗼 Two Towers** · mediano · 18 jugadores<br><sub>Dos torres de tres plantas con escaleras interiores, unidas por un puente a 8 m de altura, puestos de guardia de dos pisos y rocas en los flancos.</sub> | <img src="docs/img/mapa-medina.jpg" width="440"><br>**🕌 Medina** · mediano · 18 jugadores<br><sub>Ciudad de arenisca: murallas con paseo y casetas, casas de dos pisos unidas por puentes, minaretes, arcadas y plaza con fuente.</sub> |
 | <img src="docs/img/mapa-alpine.jpg" width="440"><br>**🏔️ Nevada** · mediano · 18 jugadores · *nuevo*<br><sub>Aldea alpina: chalés de dos pisos, estanque helado con caseta de pesca, cabañas de alquiler de esquís con tejado transitable, torres del telesilla, rocas nevadas, muñecos de nieve y bosque de pinos.</sub> | <img src="docs/img/mapa-temple.jpg" width="440"><br>**🛕 Templo** · mediano · 18 jugadores · *nuevo*<br><sub>Pirámide escalonada en la selva con santuario en la cima, puertas de piedra con el ídolo del huevo dorado, columnatas en ruinas, arcos y torres de troncos unidas por puentes.</sub> |
 | <img src="docs/img/mapa-factory.jpg" width="440"><br>**🏭 Fábrica** · mediano · 18 jugadores · *nuevo*<br><sub>Gran nave con pasarelas interiores a 4 m, oficinas de dos plantas con azotea, vía de tren con vagones, depósitos con tubería, chimeneas, contenedores y torre de agua para francotiradores.</sub> | <img src="docs/img/mapa-downtown.jpg" width="440"><br>**🏙️ Centro** · mediano · 18 jugadores · *nuevo*<br><sub>Cuatro edificios con las azoteas unidas por puentes sobre las calles, pasos de cebra y líneas pintadas, coches, jardineras, quioscos, marquesina y torre del reloj en el cruce.</sub> |
+| <img src="docs/img/mapa-abastos.jpg" width="440"><br>**🏫 Instituto Abastos** · mediano · 18 jugadores · *nuevo*<br><sub>Planta baja de un instituto de Valencia: pasillo con cuatro aulas (pupitres y pizarras), gimnasio con espalderas y canastas, biblioteca, cafetería, aula de informática, conserjería y patio con pista de baloncesto y porche.</sub> | <img src="docs/img/mapa-pruebas.jpg" width="440"><br>**🚌 Pueblo de Pruebas** · pequeño · 12 jugadores · *nuevo*<br><sub>Barrio de pruebas de los años 50: dos casas de dos plantas frente a frente, garajes, jardines con piscina, un camión de mudanzas y un autobús escolar en mitad de la calle en el que se puede entrar. Pequeño, simétrico y muy rápido.</sub> |
 | <img src="docs/img/mapa-sawmill.jpg" width="440"><br>**🪓 Aserradero** · mediano · 18 jugadores · *nuevo*<br><sub>Serrería con altillo y tejado a dos aguas transitable, cobertizos con la sierra, arroyo con vados y pasarelas de tablones, pilas de troncos y torres de vigía en el bosque.</sub> | **🥚 ÑEMANAVE** · grande · 12 jugadores · *nuevo*<br><sub>La nave de Huevo Impostor, ahora para los tiros: combate en interiores por La Yema, 4 pasillos y 12 salas (hornos, caldera, granero, nidos…) con toda su decoración. Funciona en los 4 modos.</sub> |
 
 <sub>Las imágenes se generan directamente a partir de la geometría real de cada mapa (vista isométrica).</sub>
@@ -131,6 +134,8 @@ Cuando un huevo cae, se aplasta un instante y **estalla**: cáscaras de su color
 | **Duelo por equipos** | Rojos contra azules. Puedes cambiarte de equipo desde el menú (Esc). |
 | **King of the Coop** | Conquista el gallinero y mantenlo para sumar puntos. El gallinero cambia de sitio. |
 | **Capture the Spatula** | Roba la espátula y llévala a tu base. |
+| **💣 Demolición** *(nuevo)* | Un equipo ataca y el otro defiende los puntos **A** y **B**. Los atacantes plantan la bomba quedándose 4 s en un punto sin defensores; la bomba explota a los 25 s salvo que la desactiven (5 s encima). Si vuelan los dos puntos ganan los atacantes; si se acaba el tiempo de la ronda (2:30), los defensores. Los bandos se cambian cada ronda y gana quien llegue antes a las rondas marcadas. |
+| **🍳 Yema Confirmada** *(nuevo)* | Cada huevo que cae suelta su yema. Recoge las del rival para sumar un punto a tu equipo y las de tu equipo para negárselo. Las yemas desaparecen a los 30 s. |
 | **🔪 Huevo Impostor** | Modo aparte de deducción social en una nave espacial (ver abajo). |
 
 ---
@@ -212,6 +217,8 @@ Puedes cambiar todas las teclas en **Ajustes**.
 - **Admin de la sala**: es quien la crea; si se va, pasa a ser el que más tiempo lleve. Puede pausar, reanudar, reiniciar o terminar la ronda, cambiar mapa, modo, meta, tiempo o bots, mover jugadores de equipo y expulsar (Esc en partida).
 - **Cuentas de usuario**: con contraseña cifrada, amigos, invitaciones a sala y retos diarios.
 - **Taller del huevo**: color, patrón, sombrero, gafas y extras, presets y **pintura directa sobre el huevo 3D** (pincel, spray, goma, simetría y deshacer).
+- **Armería** *(nuevo en la 6.5)*: **17 skins de armas** (de comunes a legendarias: camuflaje, tigre, fibra de carbono, lava, neón, galaxia, oro, cromo, diamante, arcoíris…) que se ven en primera persona y en tu huevo para los demás. Cada arma lleva la suya.
+- **Hueveras** *(nuevo en la 6.5)*: los retos diarios dan huevos y con ellos se abren hueveras (400 huevos la normal, 1.200 la dorada). Te puede tocar cualquiera de los **30 objetos bloqueados**: skins de armas, gorros (birrete, cascos, pirata, Papá Noel, escafandra), gafas, diseños (lava, píxeles, mármol, arcoíris), acabados (cromado, oro) y extras. Si sale uno repetido te devuelve parte de los huevos. Completar los 3 retos del día regala una huevera.
 
 ---
 
@@ -360,7 +367,7 @@ shell/
 │   └── impostorRoom.js  # sala del modo Huevo Impostor (independiente)
 ├── shared/              # código común cliente + servidor
 │   ├── mapbuilder.js    # primitivas (cajas, rampas, casas, puentes, torres…) y materiales
-│   ├── mapdefs.js       # los 16 mapas + cobertura y granadas automáticas
+│   ├── mapdefs.js       # los 18 mapas + cobertura y granadas automáticas
 │   ├── physics.js       # físicas del jugador, escaleras, raycast, granadas
 │   ├── gamedata.js      # armas, modos y reglas
 │   ├── cosmetics.js     # personalización del huevo
@@ -395,7 +402,7 @@ npm test
 | `playtest.js` | Un **jugador simulado** con las físicas reales sube todas las escaleras de mano, escalinatas y rampas, sale andando de cada spawn, salta desde todas partes y busca rincones donde quedarse atrapado. Además, cada movimiento pasa por el **anti-trampas**: un jugador honrado nunca debe ser rechazado. |
 | `fuzz-physics.js` | Movimientos aleatorios por todos los mapas para comprobar que nadie atraviesa paredes ni se sale del mapa. |
 | `server-test.js` | Salas, cuentas, disparos (línea de visión, daño), cohetes, granadas en el suelo, modos, admin y **trampas** (volar, flotar, speedhack, headshot falso, impacto inventado, munición infinita). |
-| `fuzz-server.js` | Lanza miles de mensajes basura (números infinitos, textos, objetos raros) a todas las funciones del servidor en los 16 mapas y 4 modos: el servidor no puede caerse. |
+| `fuzz-server.js` | Lanza miles de mensajes basura (números infinitos, textos, objetos raros) a todas las funciones del servidor en los 18 mapas y 6 modos: el servidor no puede caerse. |
 | `impostor-map.js` | La ÑEMANAVE: todos los puestos de tarea, conductos, placas, cámaras y asientos libres y **alcanzables**, ninguna sala es paso obligatorio y la decoración nunca se mete en la cámara. |
 | `impostor-walk.js` | Un **robot** recorre toda la nave andando con las físicas reales y pasando cada paso por el anti-trampas del servidor: comprueba que se llega a todo el suelo, que no hay sitios de los que no se pueda salir y que un jugador honrado nunca es corregido. |
 | `bots-test.js` | Salas con 7 bots en varios mapas y modos (reloj simulado): se mueven por todo el mapa, disparan, consiguen bajas, el anti-trampas **nunca** tiene que corregirles y ceden su plaza cuando entra un jugador. |

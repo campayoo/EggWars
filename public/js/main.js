@@ -15,6 +15,7 @@
   const HEAD_Y = 1.1;            // por encima de esta altura (local) el impacto es en la cabeza
   const INTERP_DELAY = 110;      // ms de retraso de interpolación de jugadores remotos
   const TEAM_COLORS = { red: 0xe74c3c, blue: 0x3498db };
+  const TEAM_HEX = { red: '#e74c3c', blue: '#3498db' };
   const $ = id => document.getElementById(id);
   // Errores inesperados: se avisa una vez sin romper la partida
   let errorShown = false;
@@ -1439,7 +1440,7 @@
   // ===========================================================================
   // OBJETIVOS (King of the Coop / Capture the Spatula)
   // ===========================================================================
-  let coopVis = null, spatulaVis = null, baseVis = [], packVis = [], gpackVis = [];
+  let coopVis = null, spatulaVis = null, baseVis = [], packVis = [], gpackVis = [], siteVis = [], tagVis = {};
   function buildSpatulaModel() {
     const g = new THREE.Group();
     const gold = new THREE.MeshLambertMaterial({ color: 0xf5c518, emissive: 0x4d3a00 });
@@ -1452,7 +1453,7 @@
   }
   function buildObjectiveVisuals() {
     while (objRoot.children.length) { const c = objRoot.children[0]; objRoot.remove(c); disposeTree(c); }
-    coopVis = null; spatulaVis = null; baseVis = []; packVis = []; gpackVis = [];
+    coopVis = null; spatulaVis = null; baseVis = []; packVis = []; gpackVis = []; siteVis = []; tagVis = {};
     if (!mapData) return;
     // Botiquines (+vida)
     (mapData.healthPacks || []).forEach(p => {
@@ -1499,6 +1500,29 @@
       objRoot.add(g);
       coopVis = { g, wall, ring, beam };
     }
+    if (cfg.mode === 'dem') {
+      // Puntos A y B: anillo en el suelo, letra flotante y la bomba (se ve cuando está plantada)
+      ['A', 'B'].forEach(() => {
+        const g = new THREE.Group();
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false }));
+        disc.rotation.x = -Math.PI / 2; disc.position.y = 0.05; g.add(disc);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 }));
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06; g.add(ring);
+        const fill = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.9, 48, 1, 0, 0.001), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false }));
+        fill.rotation.x = -Math.PI / 2; fill.position.y = 0.07; g.add(fill);
+        const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+        const tex = new THREE.CanvasTexture(cv);
+        const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+        label.scale.set(1.3, 1.3, 1); label.position.y = 3.2; label.renderOrder = 5; g.add(label);
+        const bomb = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.32, 0.45), lam(0x3b3f45)); body.position.y = 0.16; body.castShadow = true; bomb.add(body);
+        [-0.18, 0, 0.18].forEach(x => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.48, 10), lam(0xc0392b)); c.rotation.x = Math.PI / 2; c.position.set(x, 0.38, 0); bomb.add(c); });
+        const led = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.02), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); led.position.set(0, 0.2, -0.235); bomb.add(led);
+        bomb.visible = false; g.add(bomb);
+        g.visible = false; objRoot.add(g);
+        siteVis.push({ g, disc, ring, fill, label, tex, cv, bomb, led, key: '' });
+      });
+    }
     if (cfg.mode === 'cts') {
       const s = buildSpatulaModel();
       objRoot.add(s);
@@ -1544,6 +1568,61 @@
       [coopVis.wall, coopVis.ring, coopVis.beam].forEach(m => m.material.color.setHex(col));
       coopVis.wall.material.opacity = 0.12 + (c.progress / 100) * 0.25;
       coopVis.wall.rotation.y = t * 0.5;
+    }
+    if (siteVis.length && ms && ms.dem) {
+      const d = ms.dem;
+      d.sites.forEach((site, i) => {
+        const v = siteVis[i]; if (!v) return;
+        v.g.visible = true;
+        v.g.position.set(site.x, site.y, site.z);
+        [v.disc, v.ring, v.fill].forEach(m => m.scale.set(site.r, site.r, 1));
+        let col = 0xffffff;
+        if (site.state === 'destroyed') col = 0x555555;
+        else if (site.state === 'planted') col = Math.sin(t * (site.boomIn < 8 ? 18 : 8)) > 0 ? 0xff3b2f : 0xffb020;
+        else if (site.contested) col = Math.sin(t * 12) > 0 ? 0xff9800 : 0xffffff;
+        else if (site.plant > 0) col = TEAM_COLORS[d.attack];
+        [v.ring, v.disc].forEach(m => m.material.color.setHex(col));
+        const prog = site.state === 'planted' ? site.defuse : site.plant;
+        v.fill.visible = prog > 0 && site.state !== 'destroyed';
+        if (v.fill.visible) {
+          v.fill.geometry.dispose();
+          v.fill.geometry = new THREE.RingGeometry(0.2, 0.9, 48, 1, Math.PI / 2, Math.PI * 2 * prog / 100);
+          v.fill.material.color.setHex(site.state === 'planted' ? TEAM_COLORS[d.attack === 'red' ? 'blue' : 'red'] : TEAM_COLORS[d.attack]);
+        }
+        v.bomb.visible = site.state === 'planted';
+        if (v.bomb.visible) v.led.material.color.setHex(Math.sin(t * (site.boomIn < 8 ? 20 : 7)) > 0 ? 0xff2a2a : 0x330000);
+        const key = site.id + site.state;
+        if (v.key !== key) {
+          v.key = key;
+          const g2 = v.cv.getContext('2d'); g2.clearRect(0, 0, 128, 128);
+          g2.fillStyle = site.state === 'destroyed' ? 'rgba(60,60,60,0.85)' : site.state === 'planted' ? 'rgba(200,40,30,0.92)' : 'rgba(20,24,30,0.85)';
+          g2.beginPath(); g2.arc(64, 64, 56, 0, 7); g2.fill();
+          g2.strokeStyle = '#fff'; g2.lineWidth = 6; g2.stroke();
+          g2.fillStyle = '#fff'; g2.font = '900 72px Arial'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+          g2.fillText(site.state === 'destroyed' ? '✕' : site.id, 64, 68);
+          v.tex.needsUpdate = true;
+        }
+        v.label.position.y = 3.2 + Math.sin(t * 2 + i) * 0.12;
+      });
+    }
+    if (ms && ms.tags) {
+      const seen = {};
+      ms.tags.forEach(tg => {
+        seen[tg.id] = 1;
+        let v = tagVis[tg.id];
+        if (!v) {
+          v = new THREE.Group();
+          const yolk = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 10), new THREE.MeshLambertMaterial({ color: 0xffb21f, emissive: 0x5a3500 }));
+          yolk.scale.y = 0.75; v.add(yolk);
+          const white = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.07, 8, 20), new THREE.MeshLambertMaterial({ color: 0xfff6e8 })); white.rotation.x = Math.PI / 2; white.position.y = -0.08; v.add(white);
+          const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 28), new THREE.MeshBasicMaterial({ color: TEAM_COLORS[tg.team], side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false }));
+          ring.rotation.x = -Math.PI / 2; ring.position.y = -0.35; v.add(ring);
+          objRoot.add(v); tagVis[tg.id] = v;
+        }
+        v.position.set(tg.x, tg.y + 0.45 + Math.sin(t * 3 + tg.id) * 0.08, tg.z);
+        v.rotation.y = t * 1.5;
+      });
+      for (const id in tagVis) if (!seen[id]) { objRoot.remove(tagVis[id]); tagVis[id].traverse(o => { if (o.geometry) o.geometry.dispose(); }); delete tagVis[id]; }
     }
     if (spatulaVis && ms && ms.spatula) {
       const s = ms.spatula;
@@ -1602,6 +1681,12 @@
         setWaypoint('spatula', pos, '🍳', '#f5c518');
       }
     } else { setWaypoint('spatula', null); setWaypoint('base', null); }
+    if (ms.dem) {
+      ms.dem.sites.forEach(site => {
+        const col = site.state === 'planted' ? '#ff3b2f' : site.state === 'destroyed' ? '#777' : '#ffffff';
+        setWaypoint('site' + site.id, site.state === 'destroyed' || ms.dem.brk ? null : new THREE.Vector3(site.x, site.y + 2.4, site.z), site.state === 'planted' ? `💣 ${site.id}` : site.id, col);
+      });
+    } else { setWaypoint('siteA', null); setWaypoint('siteB', null); }
   }
 
   // ===========================================================================
@@ -1751,7 +1836,7 @@
     while (chatLogEl.children.length > 7) chatLogEl.firstChild.remove();
     setTimeout(() => el.classList.add('old'), 9000);
   }
-  const weaponLabel = w => (weaponIcons[w] ? `<img class="kf-wep" src="${weaponIcons[w].light}" alt="${escapeHtml(WEAPONS[w].name)}">` : WEAPONS[w] ? WEAPONS[w].icon : w === 'grenade' ? '💣' : w === 'melee' ? '🥄' : w === 'void' ? '🌌' : '💀');
+  const weaponLabel = w => (weaponIcons[w] ? `<img class="kf-wep" src="${weaponIcons[w].light}" alt="${escapeHtml(WEAPONS[w].name)}">` : WEAPONS[w] ? WEAPONS[w].icon : w === 'grenade' ? '💣' : w === 'melee' ? '🥄' : w === 'void' ? '🌌' : w === 'bomb' ? '💥' : '💀');
 
   let lbKey = '';
   function updateHUDFromState(s) {
@@ -1807,6 +1892,27 @@
       }
       setText($('obj-sub'), sub);
       panel.classList.toggle('carrying', sp.carrier === me.id);
+    } else if (ms.dem) {
+      panel.classList.remove('hidden');
+      const d = ms.dem, attacking = me.team === d.attack;
+      const planted = d.sites.find(x => x.state === 'planted');
+      const busy = d.sites.find(x => x.state === 'armed' && x.plant > 0);
+      const fill = $('obj-fill');
+      setText($('obj-title'), `💣 DEMOLICIÓN · ronda ${d.round} · ${attacking ? 'ATACAS' : 'DEFIENDES'}`);
+      let sub;
+      if (d.brk) sub = 'Cambio de bando…';
+      else if (planted) { sub = attacking ? `¡Bomba en ${planted.id}! Protégela ${planted.boomIn} s` : `¡Bomba en ${planted.id}! Desactívala: ${planted.boomIn} s`; fill.style.width = planted.defuse + '%'; fill.style.background = TEAM_HEX[attacking ? (me.team === 'red' ? 'blue' : 'red') : me.team] || '#3498db'; }
+      else if (busy) { sub = `${attacking ? 'Plantando' : '¡Están plantando'} en ${busy.id}… ${busy.plant}%${attacking ? '' : '!'}`; fill.style.width = busy.plant + '%'; fill.style.background = TEAM_HEX[d.attack]; }
+      else { sub = attacking ? `Ve a un punto (${d.sites.filter(x => x.state === 'armed').map(x => x.id).join(' o ')}) y quédate para plantar · ${fmtTime(d.endsIn)}` : `Defiende ${d.sites.filter(x => x.state === 'armed').map(x => x.id).join(' y ')} · quedan ${fmtTime(d.endsIn)}`; fill.style.width = '0%'; }
+      setText($('obj-sub'), sub);
+      panel.classList.toggle('carrying', !!planted);
+    } else if (ms.tags) {
+      panel.classList.remove('hidden');
+      $('obj-fill').style.width = '0%';
+      setText($('obj-title'), '🍳 YEMA CONFIRMADA');
+      const near = ms.tags.length;
+      setText($('obj-sub'), near ? `${near} yema${near > 1 ? 's' : ''} en el suelo: las rivales suman, las tuyas se niegan` : 'Elimina rivales y recoge su yema para puntuar');
+      panel.classList.remove('carrying');
     } else panel.classList.add('hidden');
 
     if (!scoreboardOverlay.classList.contains('hidden')) renderScoreboard(s.players);
@@ -2769,6 +2875,45 @@
       const ours = d.team === me.team;
       playSound(ours ? 'capture' : 'alarm');
       showBanner(`<div class="bb-title ${d.team}">🐔 ¡${d.team === 'red' ? 'ROJO' : 'AZUL'} CAPTURA EL GALLINERO!</div><div class="bb-sub">El gallinero se mueve a otro sitio…</div>`, 'cap', 2500);
+    });
+    socket.on('dem:event', d => {
+      const ours = d.team === me.team, tn = d.team === 'red' ? 'Rojo' : 'Azul';
+      if (d.type === 'planted') {
+        playSound(ours ? 'capture' : 'alarm');
+        addFeed(`💣 <span>${escapeHtml(d.nickname || tn)}</span> plantó la bomba en ${d.site}`, 'notice');
+        showBanner(`<div class="bb-title ${d.team}">💣 ¡BOMBA PLANTADA EN ${d.site}!</div><div class="bb-sub">${ours ? 'Protégela hasta que explote' : '¡Corre a desactivarla!'}</div>`, 'cap', 2400);
+      } else if (d.type === 'defused') {
+        playSound(ours ? 'capture' : 'alarm');
+        addFeed(`🛠️ <span>${escapeHtml(d.nickname || tn)}</span> desactivó la bomba de ${d.site}`, 'notice');
+        showBanner(`<div class="bb-title ${d.team}">🛠️ BOMBA DESACTIVADA EN ${d.site}</div>`, 'cap', 2000);
+      } else if (d.type === 'boom') {
+        explosionFx(d.x, d.y + 0.5, d.z); setTimeout(() => explosionFx(d.x + 1.2, d.y + 1.5, d.z - 0.8), 120); setTimeout(() => explosionFx(d.x - 1, d.y + 1, d.z + 1), 240);
+        playSoundAt('explosion', d.x, d.y, d.z, 1.5); camShake = Math.max(camShake, 0.7);
+        addFeed(`💥 El punto ${d.site} ha volado por los aires`, 'notice');
+      } else if (d.type === 'roundWon') {
+        playSound(ours ? 'capture' : 'alarm');
+        const why = d.why === 'time' ? 'Se acabó el tiempo: los defensores aguantan' : 'Los atacantes destruyen los dos puntos';
+        showBanner(`<div class="bb-title ${d.team}">${ours ? '🏆 ¡RONDA GANADA!' : '¡RONDA PERDIDA!'}</div><div class="bb-sub">${why} · ${d.scores.red} - ${d.scores.blue}</div>`, 'cap', 3500);
+      } else if (d.type === 'round') {
+        const mine = d.players && d.players[me.id];
+        if (mine) {
+          st = Phys.newState(mine.x, mine.y, mine.z); yaw = mine.rotY || 0; pitch = 0;
+          me.alive = true; me.hp = 100; deathCam = null; hideRespawnScreen();
+          Object.keys(ammo).forEach(k => { ammo[k] = WEAPONS[k].maxAmmo; });
+          cancelReload(); spawnedAt = performance.now(); firedSinceSpawn = false;
+          updateAmmoHUD(); updateHealthUI();
+          if (!isPointerLocked && !rsMode) lockPointer();
+        }
+        const att = d.attack === me.team;
+        showBanner(`<div class="bb-title">RONDA ${d.round}</div><div class="bb-sub">${att ? '💣 Atacas: planta la bomba en A o B' : '🛡️ Defiendes los puntos A y B'}</div>`, 'intro', 3000);
+      }
+    });
+    socket.on('conf:event', d => {
+      if (d.id === me.id) {
+        playSound('pickup', 0.8);
+        showToast(d.type === 'confirmed' ? '🍳 ¡Yema confirmada! +1 para tu equipo' : '🛡️ Yema negada');
+      }
+      if (d.type === 'confirmed') addFeed(`🍳 <span>${escapeHtml(d.nickname)}</span> confirmó una baja`, 'notice');
     });
     socket.on('cts:event', d => {
       const tn = d.team === 'red' ? 'Rojo' : 'Azul';

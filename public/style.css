@@ -191,7 +191,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .rooms-empty { text-align: center; color: var(--muted); padding: 14px !important; }
 .room-join-btn { background: linear-gradient(180deg, var(--orange), var(--orange2)); border: none; border-radius: 8px; padding: 4px 10px; font-family: var(--font-title); color: #2a1709; }
 .room-badge-mode { display: inline-block; padding: 1px 7px; border-radius: 6px; font-family: var(--font-title); font-size: 0.72rem; color: #fff; background: #555; }
-.mode-ffa { background: #c4631f !important; } .mode-tdm { background: #7d4bb0 !important; } .mode-kotc { background: #1f8f78 !important; } .mode-cts { background: #b23b33 !important; }
+.mode-ffa { background: #c4631f !important; } .mode-tdm { background: #7d4bb0 !important; } .mode-kotc { background: #1f8f78 !important; } .mode-cts { background: #b23b33 !important; } .mode-dem { background: #8e2b1e !important; } .mode-conf { background: #c9a227 !important; }
 #selected-map-thumb { width: calc(100% - 28px); height: auto; border-radius: 10px; margin-top: 10px; border: 2px solid var(--line); }
 .room-sel { padding: 6px 0 12px; }
 .room-sel strong { display: block; color: var(--orange); }

@@ -22,9 +22,11 @@
     ['factory', '🏭', 'Fábrica', 'M', 18, 'Gran nave con pasarelas a 4 m, oficinas con azotea, vía de tren con vagones, depósitos, chimeneas y torre de agua para francotiradores.', 1],
     ['downtown', '🏙️', 'Centro', 'M', 18, 'Cuatro edificios con las azoteas unidas por puentes, pasos de cebra, coches, jardineras, quioscos y torre del reloj en el cruce.', 1],
     ['sawmill', '🪓', 'Aserradero', 'M', 18, 'Serrería con altillo y tejado transitable, cobertizos con la sierra, arroyo con vados y pasarelas, pilas de troncos y torres de vigía.', 1],
-    ['nemanave', '🥚', 'Ñemanave', 'L', 12, 'La nave de Huevo Impostor, ahora para los tiros: combate en interiores por La Yema, 4 pasillos y 12 salas. Funciona en los 4 modos.', 1],
+    ['abastos', '🏫', 'Instituto Abastos', 'M', 18, 'Planta baja de un instituto de Valencia: pasillo con cuatro aulas, gimnasio, biblioteca, cafetería, aula de informática, conserjería y patio con pista de baloncesto.', 1],
+    ['pruebas', '🚌', 'Pueblo de Pruebas', 'S', 12, 'Barrio pequeño y simétrico: dos casas de dos plantas frente a frente, garajes, jardines con piscina y un autobús escolar en mitad de la calle.', 1],
+    ['nemanave', '🥚', 'Ñemanave', 'L', 12, 'La nave de Huevo Impostor, ahora para los tiros: combate en interiores por La Yema, 4 pasillos y 12 salas. Funciona en todos los modos.', 1],
   ];
-  const SIZE = { L: 'Grande', M: 'Mediano' };
+  const SIZE = { L: 'Grande', M: 'Mediano', S: 'Pequeño' };
 
   // Siluetas propias de cada arma (SVG simple)
   const gun = (body, extra = '') => `<svg viewBox="0 0 420 120" aria-hidden="true"><defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4a33"/><stop offset="1" stop-color="#2a1a0e"/></linearGradient><linearGradient id="wo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb062"/><stop offset="1" stop-color="#e8701e"/></linearGradient></defs><g fill="url(#wg)">${body}</g>${extra}</svg>`;
