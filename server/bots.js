@@ -45,6 +45,15 @@ function navFor(room) {
     const s = Phys.supportBelow(w, x, z, STEP + 0.05);
     if (free(x, z, s)) { walk[k] = 1; y[k] = s; queue.push(k); }
   }
+  // 1b) Mapas cuya planta jugable está en alto (p. ej. la segunda planta del Abastos): también
+  //     se empieza a andar desde cada punto de aparición
+  const seeds = (md.spawns || []).concat((md.teamSpawns && md.teamSpawns.red) || [], (md.teamSpawns && md.teamSpawns.blue) || []);
+  for (const sp of seeds) {
+    const i = Math.round(sp.x) + H, j = Math.round(sp.z) + H, k = j * N + i;
+    if (i < 0 || j < 0 || i >= N || j >= N || walk[k]) continue;
+    const s = Phys.supportBelow(w, i - H, j - H, (sp.y || 0) + 0.6);
+    if (free(i - H, j - H, s)) { walk[k] = 1; y[k] = s; queue.push(k); }
+  }
   // 2) Desde ahí, subir por rampas y escaleras (un escalón cada vez) hasta azoteas, gradas, etc.
   //    Cada celda guarda UNA altura: la planta baja manda; lo que sólo es alcanzable arriba va arriba.
   for (let q = 0; q < queue.length; q++) {
