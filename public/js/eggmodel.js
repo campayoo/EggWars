@@ -651,8 +651,6 @@ window.EggModel = (function () {
           gr.addColorStop(0, sk.a); gr.addColorStop(0.5, sk.b); gr.addColorStop(1, sk.a);
           g.fillStyle = gr; g.fillRect(x, y, c, c);
         }
-        const sh = g.createLinearGradient(0, 0, W, H); sh.addColorStop(0.3, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,0.12)'); sh.addColorStop(0.7, 'rgba(255,255,255,0)');
-        g.fillStyle = sh; g.fillRect(0, 0, W, H);
         break;
       }
       case 'candy': {     // bastón de caramelo con virutas
@@ -731,7 +729,7 @@ window.EggModel = (function () {
         break;
       }
       case 'filigree': {  // oro con volutas grabadas
-        const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, sk.a); gr.addColorStop(0.5, sk.b); gr.addColorStop(1, sk.a);
+        const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, sk.a); gr.addColorStop(0.5, sk.b); gr.addColorStop(1, sk.a);
         g.fillStyle = gr; g.fillRect(0, 0, W, H);
         g.strokeStyle = sk.c; g.lineWidth = 1.1 * u; g.lineCap = 'round';
         for (let i = 0; i < 18; i++) {
@@ -763,7 +761,7 @@ window.EggModel = (function () {
         break;
       }
       case 'holo': {      // holográfico: arcoíris en diagonal con destellos
-        const gr = g.createLinearGradient(0, 0, W, H);
+        const gr = g.createLinearGradient(0, 0, W, 0);
         ['#ff5f6d', '#ffa34d', '#ffe14d', '#5fd36b', '#4fc3f7', '#6c8cff', '#c77dff', '#ff5f6d'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
         g.fillStyle = gr; g.fillRect(0, 0, W, H);
         for (let i = 0; i < 5; i++) { const x = R() * W; const sh = g.createLinearGradient(x - 10 * u, 0, x + 10 * u, 0); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,0.45)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(x - 10 * u, 0, 20 * u, H); }
@@ -772,7 +770,7 @@ window.EggModel = (function () {
         break;
       }
       case 'kotlin': {    // degradado de Kotlin con el logo «K» repetido
-        const gr = g.createLinearGradient(0, H, W, 0); gr.addColorStop(0, sk.a); gr.addColorStop(0.55, sk.b); gr.addColorStop(1, sk.c);
+        const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, sk.a); gr.addColorStop(0.3, sk.b); gr.addColorStop(0.5, sk.c); gr.addColorStop(0.7, sk.b); gr.addColorStop(1, sk.a);
         g.fillStyle = gr; g.fillRect(0, 0, W, H);
         const k = 16 * u;
         for (let y = 0; y < H; y += k * 1.6) for (let x = (y / k) % 2 ? k * 0.8 : 0; x < W; x += k * 1.6) {
@@ -830,6 +828,19 @@ window.EggModel = (function () {
       const m = skinMaterial(sk, lum < 0.18 && sat < 0.12);
       if (o.userData.baseMat.depthTest === false) m.depthTest = false;
       o.material = o.userData.skinMat = m;
+      // Que el dibujo no se estire en piezas largas (cañón): textura repetida según el tamaño
+      if (m.map && o.geometry) {
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        const sz = o.geometry.boundingBox.getSize(new THREE.Vector3());
+        const sc = o.getWorldScale ? o.getWorldScale(new THREE.Vector3()) : { x: 1, y: 1, z: 1 };
+        const n = Math.max(1, Math.min(6, Math.round(Math.max(sz.x * sc.x, sz.y * sc.y, sz.z * sc.z) / 0.16)));
+        if (n > 1) {
+          const key = sk.id + '@' + n;
+          let t = skinTexCache[key];
+          if (!t) { t = skinTexCache[key] = m.map.clone(); t.needsUpdate = true; t.repeat.set(n, Math.max(1, Math.round(n / 2))); }
+          m.map = t; if (m.emissiveMap) m.emissiveMap = t;
+        }
+      }
       o.onBeforeRender = sk.anim ? skinAnim : function () {};
     });
     group.userData.skin = sk.id;

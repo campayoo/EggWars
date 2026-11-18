@@ -85,7 +85,7 @@ h1,h2,h3,h4{font-family:var(--head);font-weight:400;line-height:1.1;margin:0;let
 .shot{position:relative;border-radius:26px;overflow:hidden;box-shadow:var(--sh-lg);border:6px solid #fff;transform:rotateY(-10deg) rotateX(4deg) rotate(1.5deg);transform-style:preserve-3d;transition:transform .6s var(--ease)}
 .shot img{width:100%;height:auto;aspect-ratio:1280/420;object-fit:cover}
 .shot-glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.35),transparent 40%);pointer-events:none}
-.hero-maps .hm{position:absolute;width:46%;border-radius:18px;border:5px solid #fff;box-shadow:var(--sh-lg);aspect-ratio:960/570;object-fit:cover}
+.hero-maps .hm{position:absolute;width:46%;border-radius:18px;border:5px solid #fff;box-shadow:var(--sh-lg);aspect-ratio:16/9;object-fit:cover}
 .hm1{left:-6%;bottom:-2%;transform:rotate(-6deg);animation:bob 7s ease-in-out infinite}
 .hm2{right:-4%;bottom:6%;transform:rotate(5deg);animation:bob 8s ease-in-out -3s infinite}
 .float-egg{position:absolute;width:74px;height:92px;filter:drop-shadow(0 14px 14px rgba(120,60,10,.3));animation:float 6s ease-in-out infinite}
@@ -152,7 +152,7 @@ h1,h2,h3,h4{font-family:var(--head);font-weight:400;line-height:1.1;margin:0;let
 .map{position:relative;border:0;padding:0;text-align:left;background:var(--card);border-radius:20px;overflow:hidden;box-shadow:var(--sh);cursor:zoom-in;font:inherit;color:inherit;transition:transform .45s var(--ease),box-shadow .45s,opacity .4s}
 .map:hover{transform:translateY(-8px) rotate(-.4deg);box-shadow:var(--sh-lg)}
 .map.hide{display:none}
-.map .mi{position:relative;overflow:hidden;aspect-ratio:960/570;background:#f6e2c8}
+.map .mi{position:relative;overflow:hidden;aspect-ratio:16/9;background:#f6e2c8}
 .map img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ease)}
 .map:hover img{transform:scale(1.09)}
 .map .tag{position:absolute;top:12px;left:12px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.92);font-weight:900;font-size:.75rem;color:var(--ink);backdrop-filter:blur(4px)}

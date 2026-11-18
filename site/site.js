@@ -59,7 +59,7 @@
     b.setAttribute('aria-label', `Ver ${name} en grande`);
     const pic = id === 'nemanave'
       ? '<svg viewBox="0 0 40 50" aria-hidden="true"><use href="#egg-cracked"/></svg>'
-      : `<img src="img/mapa-${id}.jpg" alt="Vista del mapa ${name}" loading="lazy" width="960" height="570">`;
+      : `<img src="img/mapa-${id}.jpg" alt="Vista del mapa ${name}" loading="lazy" width="800" height="450">`;
     b.innerHTML = `<div class="mi">${pic}<span class="tag">${SIZE[size]} · ${pl} jug.</span>${isNew ? '<span class="tag new">Nuevo</span>' : ''}</div>
       <div class="mb"><h3>${ico} ${name}</h3><div class="meta">${SIZE[size]} · hasta ${pl} jugadores</div><p>${desc}</p></div>`;
     mapsEl.appendChild(b);

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versión-6.5-ff8c2a" alt="versión 6.5">
+  <img src="https://img.shields.io/badge/versión-6.6-ff8c2a" alt="versión 6.6">
   <img src="https://img.shields.io/badge/mapas-18-ffb347" alt="18 mapas">
   <img src="https://img.shields.io/badge/anti--trampas-servidor-2e7d32" alt="anti-trampas en el servidor">
   <img src="https://img.shields.io/badge/armas-8-e8742a" alt="8 armas">
@@ -79,6 +79,16 @@ Abre **http://localhost:3000**. Desde otros ordenadores de la misma red, usa la 
 
 Todos los mapas son de diseño propio. Tienen **varios niveles** (edificios de 2 pisos, puentes, torres y terrazas), **coberturas** repartidas por el suelo (cajas, sacos, muretes, barriles y pacas) y un **paisaje alrededor**: colinas, bosque, ciudad, mar o la superficie lunar. Así no se nota dónde acaba el mapa. Las puertas y ventanas tienen marco, y las escaleras tienen peldaños marcados y barandillas en los lados abiertos.
 
+**Novedades de la 6.6:**
+- 🏫 **Instituto Abastos rehecho** a partir del plano de evacuación real de la **planta segunda**: aulas 201–212, bloque central de departamentos y Aula 307, dos patios interiores que se ven desde los pasillos acristalados y el **Aula 207 de Ciclo DAM** con sus ordenadores. Alrededor: calles, el polideportivo anexo, las pistas deportivas y el barrio.
+- 🚌 El Pueblo de Pruebas pasa a llamarse **ÑEM4TOWN**.
+- ✨ **Gráficos HD** (calidad alta y ultra): materiales físicos con reflejos del cielo de cada mapa, relieve en las texturas y mejor luz. Las capturas de abajo están hechas con el propio motor del juego.
+- 🎨 **19 camuflajes de armas** nuevos, a 256 px y algunos animados (lava que late, circuito de neón, galaxia, holográfico, Kotlin…).
+- 🕳️ **Conductos del Huevo Impostor** con animación nueva y **vista cenital de la sala** antes de salir, con aviso de si hay alguien a la vista.
+- 🚪 **Todas las puertas libres**: una prueba automática recorre cada puerta de cada mapa en los dos sentidos.
+
+<p align="center"><img src="docs/img/mapa-abastos-207.jpg" width="720" alt="Aula 207 de Ciclo DAM en el mapa del Instituto Abastos"><br><sub>El Aula 207 (Ciclo DAM) en el mapa del Instituto Abastos, con los ordenadores, la pizarra y el proyector.</sub></p>
+
 **Novedades de la 6.5:** dos mapas nuevos, **Instituto Abastos** (la planta segunda del IES Abastos según su plano de evacuación: tres alas de aulas y departamentos, dos patios interiores y el Aula 207 de Ciclo DAM al fondo a la izquierda) y **ÑEM4TOWN** (barrio de pruebas pequeño y simétrico con dos casas enfrentadas y un autobús en mitad de la calle); dos modos nuevos, **Demolición** y **Yema Confirmada**; **skins de armas** y **hueveras** que se abren con los huevos de los retos.
 
 **Novedades de la 6.2:** **bots** (también en la versión web sin servidor), menú de crear partida rediseñado, calidad **Ultra** y más contenido en los mapas que estaban más vacíos (cabaña de esquí en Nevada, oficinas, vía de tren y depósito en Fábrica, cobertizo de la sierra y pasarelas sobre el arroyo en Aserradero, puerta del ídolo y columnata en Templo, marcas viales, jardineras y quiosco en Centro), chimeneas o máquinas de aire acondicionado en las azoteas, rocas como cobertura natural, sacos en dos hileras y muretes con remate. Las barandillas de los puentes ahora se ven caladas (como funcionan: las balas las atraviesan).
@@ -95,7 +105,7 @@ Todos los mapas son de diseño propio. Tienen **varios niveles** (edificios de 2
 | <img src="docs/img/mapa-abastos.jpg" width="440"><br>**🏫 Instituto Abastos** · mediano · 18 jugadores · *nuevo*<br><sub>La planta segunda del IES Abastos (Valencia) hecha a partir de su plano de evacuación: aulas 201–212, el bloque central de departamentos con el Aula 307, pasillos acristalados que dan a dos patios interiores y, al fondo a la izquierda del ala sur, el Aula 207 de Ciclo DAM con sus ordenadores.</sub> | <img src="docs/img/mapa-pruebas.jpg" width="440"><br>**🚌 ÑEM4TOWN** · pequeño · 12 jugadores · *nuevo*<br><sub>Barrio de pruebas de los años 50: dos casas de dos plantas frente a frente, garajes, jardines con piscina, un camión de mudanzas y un autobús escolar en mitad de la calle en el que se puede entrar. Pequeño, simétrico y muy rápido.</sub> |
 | <img src="docs/img/mapa-sawmill.jpg" width="440"><br>**🪓 Aserradero** · mediano · 18 jugadores · *nuevo*<br><sub>Serrería con altillo y tejado a dos aguas transitable, cobertizos con la sierra, arroyo con vados y pasarelas de tablones, pilas de troncos y torres de vigía en el bosque.</sub> | **🥚 ÑEMANAVE** · grande · 12 jugadores · *nuevo*<br><sub>La nave de Huevo Impostor, ahora para los tiros: combate en interiores por La Yema, 4 pasillos y 12 salas (hornos, caldera, granero, nidos…) con toda su decoración. Funciona en los 4 modos.</sub> |
 
-<sub>Las imágenes se generan directamente a partir de la geometría real de cada mapa (vista isométrica).</sub>
+<sub>Capturas hechas con el propio motor del juego en calidad Ultra (gráficos HD). En el Abastos se ha quitado el techo para ver las aulas por dentro.</sub>
 
 ---
 
@@ -149,7 +159,7 @@ Modo **independiente** de deducción social en **primera persona**: todos sois h
 - **4–10 huevos** por nave, cada uno de un color para reconoceros en las reuniones.
 - **Impostores configurables (1–3)**. En automático: 1 con 4–6 jugadores y 2 con 7–10 (se pueden poner hasta 3).
 - **Tripulantes**: completad las tareas (la barra de la nave es común) o expulsad a todos los impostores.
-- **Impostores**: cascad a la tripulación (con espera entre muertes), viajad por los **conductos**, **apagad las luces**, **calentad la caldera** o **cerrad las puertas** de una sala. Sus tareas son falsas: se «falsifican» con un minijuego propio.
+- **Impostores**: cascad a la tripulación (con espera entre muertes), viajad por los **conductos** (desde dentro se ve la sala desde arriba y avisa si hay alguien a la vista antes de salir), **apagad las luces**, **calentad la caldera** o **cerrad las puertas** de una sala. Sus tareas son falsas: se «falsifican» con un minijuego propio.
 - **Cuerpos e informes**: quien encuentra un huevo roto puede informar. Hay **1 reunión de emergencia** por jugador (la sartén con el huevo frito de La Yema: la yema es el botón).
 - **Reuniones**: debate con **chat** y **votación** (o saltar voto). Empate = nadie sale. Opcionalmente se confirma si el expulsado era impostor.
 - **Fantasmas**: los muertos atraviesan paredes, siguen haciendo tareas y sólo hablan con otros fantasmas.
@@ -217,7 +227,10 @@ Puedes cambiar todas las teclas en **Ajustes**.
 - **Admin de la sala**: es quien la crea; si se va, pasa a ser el que más tiempo lleve. Puede pausar, reanudar, reiniciar o terminar la ronda, cambiar mapa, modo, meta, tiempo o bots, mover jugadores de equipo y expulsar (Esc en partida).
 - **Cuentas de usuario**: con contraseña cifrada, amigos, invitaciones a sala y retos diarios.
 - **Taller del huevo**: color, patrón, sombrero, gafas y extras, presets y **pintura directa sobre el huevo 3D** (pincel, spray, goma, simetría y deshacer).
-- **Armería** *(nuevo en la 6.5)*: **17 skins de armas** (de comunes a legendarias: camuflaje, tigre, fibra de carbono, lava, neón, galaxia, oro, cromo, diamante, arcoíris…) que se ven en primera persona y en tu huevo para los demás. Cada arma lleva la suya.
+- **Armería** *(renovada en la 6.6)*: **19 camuflajes** de comunes a legendarios: ártico y desierto digitales, bosque, operaciones nocturnas, píxel, tigre, fibra de carbono, caramelo, **lava** (late), **circuito de neón** y **galaxia** (se mueven), escamas de dragón, Abastos, oro grabado, cromo, diamante, holográfico y **Kotlin**. Se ven en primera persona y en tu huevo para los demás, y cada arma lleva el suyo.
+
+  <img src="docs/img/camuflajes.jpg" width="720" alt="Los 19 camuflajes de armas">
+
 - **Hueveras** *(nuevo en la 6.5)*: los retos diarios dan huevos y con ellos se abren hueveras (400 huevos la normal, 1.200 la dorada). Te puede tocar cualquiera de los **30 objetos bloqueados**: skins de armas, gorros (birrete, cascos, pirata, Papá Noel, escafandra), gafas, diseños (lava, píxeles, mármol, arcoíris), acabados (cromado, oro) y extras. Si sale uno repetido te devuelve parte de los huevos. Completar los 3 retos del día regala una huevera.
 
 ---
@@ -318,6 +331,7 @@ Si alguien insiste, el servidor lo anota en su consola (`⚠️ Posibles trampas
 
 El juego está pensado para ir fluido también en **gráficas integradas** (Intel HD y similares):
 
+- **Gráficos HD** *(6.6, calidad alta y ultra)*: el mapa pasa a materiales físicos (PBR) con un mapa de entorno generado con el cielo de cada mapa; en calidad media y baja se mantienen los materiales sencillos, que van más rápido.
 - **Calidad automática**: detecta tu gráfica al arrancar y, si en partida baja de 42 FPS durante unos segundos, reduce la calidad sola. En calidad baja puede reducir también la resolución interna.
 - **Mapas en pocas llamadas de dibujo**: toda la geometría y la decoración estática se fusionan por material, de unas 400 llamadas a unas 100 en los mapas grandes.
 - **Sólo se dibuja lo que se ve**: las caras tapadas por otras piezas (paredes unidas, cajas apoyadas, la base pegada al suelo) no se dibujan, un 27 % menos de superficie. Las caras que coinciden en el mismo plano se dejan en una sola: se acabó el parpadeo (*z-fighting*) entre piezas, y las juntas entre tramos de una pared ya no salen marcadas.
