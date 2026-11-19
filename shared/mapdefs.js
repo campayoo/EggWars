@@ -1183,11 +1183,12 @@
         opt = opt || {};
         const cx = (x0 + x1) / 2, w = x1 - x0;
         const winSide = boardSide;   // las ventanas dan a la fachada (mismo lado que la pizarra)
-        const wins = w > 6 ? [{ side: winSide, at: -w / 4, w: 2.4 }, { side: winSide, at: w / 4, w: 2.4 }] : [{ side: winSide, at: 0, w: 2.2 }];
+        // ventanas a los lados de la pizarra (que no la tapen)
+        const wins = w > 6 ? [{ side: winSide, at: -(w / 2 - 1.15), w: 1.5 }, { side: winSide, at: w / 2 - 1.15, w: 1.5 }] : [{ side: winSide, at: 0, w: 1.6 }];
         room(x0, z0, x1, z1, Y, [{ side: doorSide, at: doorAt }], opt.noWin ? [] : wins, { floor: opt.floor || 0xd6cfbf, name, bg: opt.bg });
         const bz = boardSide === 'n' ? z0 + T + 0.08 : z1 - T - 0.08, face = boardSide === 'n' ? -1 : 1;
         // pizarra en la pared lateral si la fachada tiene ventanas grandes
-        b.decoAt('board', cx, Y + 1.6, bz + (face < 0 ? 0 : 0), { rotY: face < 0 ? 0 : Math.PI, w: Math.min(3.4, w - 1.4), text: opt.board || name.split(' · ')[0] });
+        b.decoAt('board', cx, Y + 1.6, bz, { rotY: face < 0 ? 0 : Math.PI, w: Math.min(3.2, w - (w > 6 ? 4.4 : 2.6)), text: opt.board || name.split(' · ')[0] });
         b.box(cx + (doorAt > 0 ? -2.2 : 2.2) * Math.sign(w), Y, bz - face * 1.4, 1.5, 0.78, 0.8, 'wood');
         if (opt.pcs) {
           // Aulas de ciclo: mesas corridas con ordenadores
