@@ -67,6 +67,8 @@
     ice:        { color: 0xbfe4f2, pattern: 'tiles' },
     logs:       { color: 0x7a5432, pattern: 'planksV' },
     marble:     { color: 0xe6e0d4, pattern: 'tiles' },
+    cream:      { color: 0xe8dfc6, pattern: 'noise' },
+    granite:    { color: 0x9a9ea2, pattern: 'blocks' },
     kitchen:    { color: 0xe9e1cf, pattern: 'tiles' },
     counter:    { color: 0x8a5a3a, pattern: 'planks' },
     worktop:    { color: 0xd8d4cc, pattern: 'noise' },

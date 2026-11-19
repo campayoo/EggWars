@@ -1,12 +1,12 @@
 // Pruebas del Instituto Abastos (v6.7): se suben todas las escaleras, nadie sale del
 // edificio y los bots encuentran camino entre las tres plantas.
 const MD = require('../shared/mapdefs.js'), Phys = require('../shared/physics.js'), B = require('../server/bots.js');
-const d = MD.build('abastos'), w = Phys.createWorld(d);
+const d = MD.build('abastos'), w = Phys.createWorld(d), K = d.def.scale || 1;
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 // 1) Escaleras: andando recto desde el pie se llega arriba sin quedarse parado
 const climb = (x, y, z, yaw, expY) => {
-  const st = { x, y, z, vx: 0, vy: 0, vz: 0, onGround: false }; let maxY = -9;
+  const st = { x: x * K, y, z: z * K, vx: 0, vy: 0, vz: 0, onGround: false }; let maxY = -9;
   for (let i = 0; i < 300; i++) { Phys.simulate(w, st, { fwd: 1, side: 0, jump: false, yaw }, 1 / 60); maxY = Math.max(maxY, st.y); }
   return Math.abs(maxY - expY) < 0.1;
 };
@@ -28,7 +28,7 @@ for (let i = 0; i < q.length; i++) {
     for (let l = 0; l < 4; l++) { const m = l * NN + nz * N + nx; if (!walk[m]) break; if (seen[m]) continue; const dy = y[m] - cy; if (dy > STEP + 0.1 || dy < -4.5) continue; seen[m] = 1; q.push(m); }
   }
 }
-const out = q.filter(n => { const c = n % NN, x = c % N - H, z = ((c / N) | 0) - H; return x < -36 || x > 34.5 || z < -27 || z > 27 || (y[n] < 0.5 && x < -34 && Math.abs(z) < 19.5); });
+const out = q.filter(n => { const c = n % NN, x = c % N - H, z = ((c / N) | 0) - H; return x < -36 * K || x > 34.5 * K || z < -27 * K || z > 27 * K || (y[n] < 0.5 && x < -34 * K && Math.abs(z) < 19.5 * K); });
 ok(out.length === 0, `nadie sale del edificio (${q.length} casillas alcanzables, ${out.length} fuera)`);
 const floors = [0, 0, 0]; q.forEach(n => floors[y[n] < 1.5 ? 0 : y[n] < 5.5 ? 1 : 2]++);
 ok(floors.every(f => f > 500), `se llega a las tres plantas (${floors.join(' / ')} casillas)`);

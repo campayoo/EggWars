@@ -1124,12 +1124,41 @@
   // 17. INSTITUTO ABASTOS — el IES Abastos (Valencia) entero según sus planos: planta
   // baja, primera y segunda, unidas por cuatro escaleras
   // =========================================================================
+  // Constructor escalado en planta (X y Z por K, alturas iguales): todo más ancho sin rehacer
+  // las medidas. Las cajas sueltas (muebles, colisiones) sólo mueven su centro.
+  function scaledBuilder(b, K) {
+    const k = v => v * K, ops = o => (o || []).map(q => Object.assign({}, q, q.at !== undefined ? { at: k(q.at) } : {}, q.w !== undefined ? { w: k(q.w) } : {}));
+    const S = {
+      box: (x, y, z, w, h, d, mat, o) => b.box(k(x), y, k(z), w, h, d, mat, o),
+      aabb: (x0, y0, z0, x1, y1, z1, mat, o) => b.aabb(k(x0), y0, k(z0), k(x1), y1, k(z1), mat, o),
+      slab: (cx, cz, top, w, d, t, mat, holes) => b.slab(k(cx), k(cz), top, k(w), k(d), t, mat, (holes || []).map(h => ({ x: k(h.x), z: k(h.z), w: k(h.w), d: k(h.d) }))),
+      stairs: (x, z, y0, w, len, h, dir, mat, o) => b.stairs(k(x), k(z), y0, k(w), k(len), h, dir, mat, o),
+      decoAt: (type, x, y, z, o) => {
+        o = Object.assign({}, o || {});
+        if (['plane', 'court', 'truss', 'skylight'].indexOf(type) >= 0) { if (o.w !== undefined) o.w = k(o.w); if (o.d !== undefined) o.d = k(o.d); }
+        return b.decoAt(type, k(x), y, k(z), o);
+      },
+      wallSeg: (axis, fixed, from, to, y0, H, t, op, mat) => b.wallSeg(axis, k(fixed), k(from), k(to), y0, H, t, ops(op), mat),
+      room: (cx, cz, y0, w, d, h, mat, o) => b.room(k(cx), k(cz), y0, k(w), k(d), h, mat, Object.assign({}, o, { open: ops(o && o.open) })),
+      ring: (cx, cz, y, w, d, h, t, mat, gaps) => b.ring(k(cx), k(cz), y, k(w), k(d), h, t, mat, gaps),
+      pillar: (x, y, z, s, h, mat) => b.pillar(k(x), y, k(z), s, h, mat),
+      tree: (x, z, s, kind) => b.tree(k(x), k(z), s, kind),
+      fence: (x0, z0, x1, z1, o) => b.fence(k(x0), k(z0), k(x1), k(z1), o),
+      perimeter: (half, h, mat, t, o) => b.perimeter(k(half), h, mat, t, o),
+    };
+    Object.defineProperty(S, 'frameMat', { set: v => { b.frameMat = v; }, get: () => b.frameMat });
+    return S;
+  }
+  const scalePts = (K, list) => list.map(p => Object.assign({}, p, { x: +(p.x * K).toFixed(2), z: +(p.z * K).toFixed(2) }));
+
   const abastos = {
     id: 'abastos', name: 'Instituto Abastos', size: 'L', players: 24,
-    desc: 'El IES Abastos entero, a partir de sus planos: planta baja con gimnasio, cafetería, salón de actos y el acceso; primera planta con los patios Cavanilles y Sánchez Ayuso y la biblioteca; y segunda planta con el Aula 207 de Ciclo DAM. Escaleras en los pasillos oeste y este y la escalera principal junto al acceso.',
-    halfSize: 46, gravity: -22, ground: 'concrete', cover: false,
+    desc: 'El IES Abastos entero, a partir de sus planos: planta baja con gimnasio, cafetería, salón de actos y el acceso; primera planta con los patios Cavanilles y Sánchez Ayuso y la biblioteca; y segunda planta con galerías abiertas a los patios y el Aula 207 de Ciclo DAM. Patios bajo el lucernario de cerchas del antiguo mercado y la entrada con su porche de pilares. Escaleras en los pasillos oeste y este y la escalera principal junto al acceso.',
+    halfSize: 61, gravity: -22, ground: 'concrete', cover: false, scale: 1.3,
     theme: Object.assign({}, SKY_DAY, { sky: 0x8fc4ee, sunColor: 0xfff2d6 }),
-    build(b) {
+    build(b0) {
+      // Todo 1,3 veces más ancho que los planos a escala de pasillos (como el edificio real)
+      const b = scaledBuilder(b0, 1.3);
       // Medidas sacadas de los planos (1 m ≈ 20 px). Norte = fachada «E» del plano, sur = «O».
       //   P0 (y 0)    aulas A001…A010, gimnasio, cafetería-comedor, salón de actos, cocina,
       //               departamentos D001…D008 y el ACCÉS (este)
@@ -1313,8 +1342,15 @@
       // Vestíbulo del acceso (este), con la escalera principal y la entrada acristalada (cerrada)
       floor(XC3, ZC0, XE, ZC1, 0xe2ddd2, Y0);
       b.wallSeg('x', ZC0 + T / 2, XC3, XE, Y0, H, T, [], WALL); b.wallSeg('x', ZC1 - T / 2, XC3, XE, Y0, H, T, [], WALL);
-      b.wallSeg('z', XE - T / 2, ZC0, ZC1, Y0, H, T, [{ at: 1.6, y: 0.7, w: 2.4, h: 1.9 }], WALL); glass('z', XE - T / 2, 0.4, 2.8, Y0 + 0.7, 1.9);
-      sign('ACCÉS · IES ABASTOS', XE - 0.2, Y0 + 2.9, 1.6, -Math.PI / 2, 2.2);
+      // Dos puertas de cristal con un pilar en medio (cerradas: no se sale del centro)
+      const DZ = [[0.05, 1.55], [2.05, 3.55]], ZE = 1.8;
+      b.wallSeg('z', XE - T / 2, ZC0, ZC1, Y0, H, T, DZ.map(([u, v]) => ({ at: (u + v) / 2, w: v - u, h: 2.3, closed: true })), WALL);
+      DZ.forEach(([u, v]) => {
+        glass('z', XE - T / 2, u, v, Y0, 2.3);
+        b.aabb(XE - T / 2 - 0.05, Y0, (u + v) / 2 - 0.03, XE - T / 2 + 0.05, Y0 + 2.3, (u + v) / 2 + 0.03, 'metalDark', { solid: false });
+        [-0.25, 0.25].forEach(f => b.aabb(XE - T / 2 - 0.12, Y0 + 0.95, (u + v) / 2 + f - 0.02, XE - T / 2 + 0.12, Y0 + 1.15, (u + v) / 2 + f + 0.02, 'metal', { solid: false }));
+      });
+      sign('ACCÉS', XE - 0.2, Y0 + 2.7, ZE, -Math.PI / 2, 0.9);
       sign('↑ PLANTA 1', MS.x1 - 0.5, Y0 + 2.2, MS.z1 + 0.2, 0, 1.2, '#1d8f4e');
       // Bloque central sur
       classroom(XC1, ZC1, -9, 9.5, Y0, 'n', 5, 's', 'A010-O', { noWin: true });
@@ -1409,9 +1445,29 @@
         b.wallSeg('x', Z1 - T / 2, a0, a1, Y2, H, T, [{ at: 0, y: 1.0, w: 1.6, h: 1.6 }], WALL); glass('x', Z1 - T / 2, (a0 + a1) / 2 - 0.8, (a0 + a1) / 2 + 0.8, Y2 + 1, 1.6);
       });
       // Paredes acristaladas de los pasillos que dan a los huecos de los patios
-      glazed('x', ZN2 - T / 2, XC1, XC2, Y2, 4.5, 3); glazed('x', ZPN + T / 2, XC1, XC2, Y2, 4.5, 3);
-      glazed('x', ZPS - T / 2, XC1, XC2, Y2, 4.5, 3); glazed('x', ZS2 + T / 2, XC1, XC2, Y2, 4.5, 3);
-      [[ZN2, ZPN], [ZPS, ZS2]].forEach(([a, c]) => { glazed('z', XC1 + T / 2, a, c, Y2, 3.5, 2.2); glazed('z', XC2 - T / 2, a, c, Y2, 3.5, 2.2); });
+      // Galerías abiertas a los patios (como en el instituto): antepecho, barandilla y pilares
+      const gallery = (axis, fixed, a0, a1, Y) => {
+        const A = (u0, y0, u1, y1, f0, f1, mat, o) => axis === 'x' ? b.aabb(u0, y0, f0, u1, y1, f1, mat, o) : b.aabb(f0, y0, u0, f1, y1, u1, mat, o);
+        A(a0, Y, a1, Y + 0.85, fixed - 0.12, fixed + 0.12, 'cream');
+        A(a0, Y + 0.85, a1, Y + 0.93, fixed - 0.16, fixed + 0.16, 'concrete');
+        A(a0, Y + 1.08, a1, Y + 1.14, fixed - 0.03, fixed + 0.03, 'metalDark', { solid: false });
+        for (let u = a0 + 0.75; u < a1 - 0.3; u += 1.5) A(u - 0.02, Y + 0.93, u + 0.02, Y + 1.1, fixed - 0.02, fixed + 0.02, 'metalDark', { solid: false });
+        A(a0, Y + 0.93, a1, Y + 2.8, fixed - 0.05, fixed + 0.05, 'invisible', { see: true });
+      };
+      gallery('x', ZN2 - 0.12, XC1, XC2, Y2); gallery('x', ZPN + 0.12, XC1, XC2, Y2);
+      gallery('x', ZPS - 0.12, XC1, XC2, Y2); gallery('x', ZS2 + 0.12, XC1, XC2, Y2);
+      [[ZN2, ZPN], [ZPS, ZS2]].forEach(([a, c]) => { gallery('z', XC1 + 0.12, a, c, Y2); gallery('z', XC2 - 0.12, a, c, Y2); });
+      [XC1, XC2].forEach(x => [ZN2, ZPN, ZPS, ZS2].forEach(z => b.pillar(x, Y2, z, 0.45, H, 'cream')));
+      // Splits del aire acondicionado junto al antepecho (como en la foto de la galería)
+      [-18, -7, 7, 18].forEach(x => [[ZN2 - 0.45, 1], [ZS2 + 0.45, -1]].forEach(([z, f]) => {
+        b.box(x, Y2, z, 0.95, 0.7, 0.42, 'white');
+        b.box(x - 0.12, Y2 + 0.08, z + f * 0.22, 0.55, 0.52, 0.02, 'metalDark', { solid: false });
+      }));
+      // Lucernario del antiguo mercado: cerchas metálicas y cristal a dos aguas sobre los patios
+      [(ZN2 + ZPN) / 2, (ZPS + ZS2) / 2].forEach(cz => {
+        b.decoAt('skylight', 0, P2 + H, cz, { w: ZPN - ZN2 + 0.6, d: XC2 - XC1 + 0.6, r: 2.4, rotY: Math.PI / 2 });
+        for (let x = XC1 + 0.3; x <= XC2 - 0.2; x += 4.8) b.decoAt('truss', x, P2 + H, cz, { w: ZPN - ZN2 + 0.6, r: 2.4, rotY: Math.PI / 2 });
+      });
       // Ala norte: aseos B204-E/B203-E y aulas 206 … 201
       const AW = 44 / 6;
       aseos(XC1, Z0, -20, ZN1, Y2, { side: 's', at: 0.6, w: 1.2 }, 'B204-E');
@@ -1436,7 +1492,7 @@
         const x0 = -20 + i * AW;
         classroom(x0, ZS1, x0 + AW, Z1, Y2, 'n', 2.3, 's', `AULA ${n}`, i < 2 ? { pcs: true, floor: 0xc9d3dc, bg: '#0f6b4f', board: i ? '<html> DAW </html>' : 'fun main() { println("7J") }' } : { desk: i % 2 ? 0x2f6fb5 : 0xc0392b, board: g });
         if (i === 0) {
-          sign(g, x0 + AW / 2 + 2.3 + 1.55, Y2 + 2.0, ZS1 - 0.17, Math.PI, 1.6, '#0f6b4f');
+          sign(g, x0 + AW / 2 + 2.3 + 1.55, Y2 + 1.9, ZS1 - 0.17, Math.PI, 1.6, '#0f6b4f');
           b.decoAt('screen', x0 + AW / 2, Y2 + 2.25, Z1 - 0.42, { rotY: Math.PI, w: 2.4, h: 1.4 });
           b.box(x0 + 0.7, Y2, ZS1 + 1.0, 0.9, 2.0, 0.9, 'metalDark'); b.decoAt('rack', x0 + 0.7, Y2, ZS1 + 1.0, { rotY: Math.PI / 2 });
         }
@@ -1470,7 +1526,27 @@
         b.box(x, 0, z, w, h, d, ['white', 'yellow', 'orange', 'white'][i % 4], { solid: false });
         for (let y = 1.4; y < h - 1; y += 3) for (let xx = x - w / 2 + 1.5; xx < x + w / 2 - 1; xx += 2.6) b.box(xx, y, z + (z < 0 ? d / 2 + 0.05 : -d / 2 - 0.05), 1.3, 1.4, 0.08, 'glass', { solid: false });
       });
-      b.decoAt('textsign', XE + 0.12, 3.0, 1.6, { text: 'IES ABASTOS', w: 3.2, h: 0.6, bg: '#1f3d7a', rotY: Math.PI / 2 });
+      // Fachada del acceso como la real: zócalo de piedra gris, porche con pilares, vuelo,
+      // cuerpo alto color crema con dos grandes ventanales y la cubierta de cerchas detrás
+      const ZE2 = 1.8;
+      [[ZE2 - 6.2, 0.05], [1.55, 2.05], [3.55, ZE2 + 6.2]].forEach(([u, v]) => b.aabb(XE, 0, u, XE + 0.14, 2.95, v, 'granite'));
+      b.aabb(XE + 0.02, 2.3, 0.05, XE + 0.14, 2.95, 3.55, 'granite');
+      b.aabb(XE + 0.02, 2.95, ZE2 - 4.8, XE + 0.1, 4.45, ZE2 + 4.8, 'glass', { solid: false });
+      for (let z = ZE2 - 4.8; z <= ZE2 + 4.85; z += 1.6) b.aabb(XE + 0.08, 2.95, z - 0.04, XE + 0.16, 4.45, z + 0.04, 'metalDark', { solid: false });
+      b.aabb(XE + 0.08, 3.65, ZE2 - 4.8, XE + 0.16, 3.72, ZE2 + 4.8, 'metalDark', { solid: false });
+      [[0.8, 'INSTITUT · ABASTOS'], [2.8, 'INSTITUTO · ABASTOS']].forEach(([z, t]) => b.decoAt('textsign', XE + 0.2, 2.62, z, { text: t, w: 1.4, h: 0.32, bg: '#f4f2ec', fg: '#1f3d7a', rotY: Math.PI / 2 }));
+      [ZE2 - 5.6, ZE2, ZE2 + 5.6].forEach(z => { b.pillar(XE + 3.0, 0, z, 0.7, 4.5, 'cream'); b.box(XE + 3.0, 0, z, 0.85, 0.7, 0.85, 'metalDark'); });
+      b.pillar(XE + 0.45, 0, ZE2, 0.55, 4.5, 'cream');
+      b.aabb(XE, 4.5, ZE2 - 6.6, XE + 3.7, 4.95, ZE2 + 6.6, 'cream');
+      b.aabb(XE + 3.55, 4.95, ZE2 - 6.5, XE + 3.62, 5.85, ZE2 + 6.5, 'rail', { solid: false });
+      b.aabb(XE, 4.95, ZE2 - 5.4, XE + 1.6, 10.7, ZE2 + 5.4, 'cream');
+      [[ZE2 - 4.9, ZE2 - 0.4], [ZE2 + 0.4, ZE2 + 4.9]].forEach(([u, v]) => {
+        b.aabb(XE + 1.6, 5.3, u, XE + 1.68, 8.3, v, 'glass', { solid: false });
+        for (let z = u; z <= v + 0.01; z += (v - u) / 4) b.aabb(XE + 1.66, 5.3, z - 0.04, XE + 1.74, 8.3, z + 0.04, 'metalDark', { solid: false });
+        b.aabb(XE + 1.66, 6.6, u, XE + 1.74, 6.68, v, 'metalDark', { solid: false });
+        b.aabb(XE + 1.6, 8.3, u - 0.25, XE + 1.85, 8.65, v + 0.25, 'cream');
+        b.aabb(XE + 1.62, 9.3, (u + v) / 2 - 0.9, XE + 1.7, 9.9, (u + v) / 2 + 0.9, 'metalDark', { solid: false });
+      });
     },
     spawns: [
       { x: -25.6, y: 7.6, z: -22 }, { x: 25.6, y: 7.6, z: 22 }, { x: -10, y: 7.6, z: -18 }, { x: 10, y: 7.6, z: 18 }, { x: -12, y: 7.6, z: -5.2 }, { x: 14, y: 7.6, z: 5.2 },
@@ -1486,6 +1562,14 @@
     bases: { red: { x: -26, y: 3.8, z: -1, r: 1.6 }, blue: { x: 31, y: 3.8, z: 4, r: 1.6 } },
     bombSites: [{ id: 'A', x: -13.9, y: 7.6, z: 23.4, r: 1.6 }, { id: 'B', x: 10, y: 0, z: -10.25, r: 3 }],
   };
+
+  // Puntos del Abastos escritos en las medidas de los planos → a la escala del mapa
+  (A => {
+    const K = A.scale;
+    A.spawns = scalePts(K, A.spawns); A.coops = scalePts(K, A.coops); A.bombSites = scalePts(K, A.bombSites);
+    A.teamSpawns = { red: scalePts(K, A.teamSpawns.red), blue: scalePts(K, A.teamSpawns.blue) };
+    A.spatula = scalePts(K, [A.spatula])[0]; A.bases = { red: scalePts(K, [A.bases.red])[0], blue: scalePts(K, [A.bases.blue])[0] };
+  })(abastos);
 
   // =========================================================================
   // 18. PUEBLO DE PRUEBAS — barrio pequeño de dos casas enfrentadas con un

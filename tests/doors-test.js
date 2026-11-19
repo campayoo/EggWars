@@ -7,7 +7,7 @@ const orig = MB.Builder.prototype.wallSeg;
 MB.Builder.prototype.wallSeg = function (axis, fixed, from, to, y0, H, t, openings, mat) {
   const mid = (from + to) / 2;
   for (const o of openings || []) {
-    if ((o.y || 0) > 0.6) continue;
+    if ((o.y || 0) > 0.6 || o.closed) continue;   // ventanas y puertas de cristal cerradas a propósito
     const a = mid + (o.at || 0) - (o.w || 2) / 2, b = mid + (o.at || 0) + (o.w || 2) / 2;
     const h = o.h === undefined ? 2.6 : o.h;
     // posición real tras las transformaciones (espejos/rotaciones)

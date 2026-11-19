@@ -827,6 +827,39 @@ window.MapRenderer = (function () {
         });
         break;
       }
+      case 'truss': {
+        // Cercha metálica triangulada (cubierta del antiguo mercado): luz d.w en X local, flecha d.r
+        const w = d.w || 10, r = d.r || 2.2, m = 0.14, M = L(d.color || 0x4b5560);
+        const beam = (x1, y1, x2, y2, t) => {
+          const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+          const bm = mesh(new THREE.BoxGeometry(len, t || m, t || m), M, (x1 + x2) / 2, (y1 + y2) / 2, 0);
+          bm.rotation.z = Math.atan2(dy, dx); g.add(bm);
+        };
+        beam(-w / 2, 0, w / 2, 0, 0.18); beam(-w / 2, 0, 0, r, 0.18); beam(0, r, w / 2, 0, 0.18);
+        const n = Math.max(4, Math.round(w / 1.6)) & ~1;
+        for (let i = 1; i < n; i++) {
+          const x = -w / 2 + w * i / n, top = r * (1 - Math.abs(x) / (w / 2));
+          beam(x, 0, x, top, 0.09);
+          if (i < n / 2) beam(x, 0, x + w / n, r * (1 - Math.abs(x + w / n) / (w / 2)), 0.08);
+          else if (i > n / 2) beam(x, 0, x - w / n, r * (1 - Math.abs(x - w / n) / (w / 2)), 0.08);
+        }
+        break;
+      }
+      case 'skylight': {
+        // Lucernario a dos aguas: luz d.w (X local), largo d.d (Z local), flecha d.r
+        const w = d.w || 10, dd = d.d || 10, r = d.r || 2.2, half = Math.hypot(w / 2, r), ang = Math.atan2(r, w / 2);
+        const gm = new THREE.MeshPhongMaterial({ color: 0xd6ecf7, transparent: true, opacity: 0.28, shininess: 90, specular: 0xffffff, side: THREE.DoubleSide, depthWrite: false });
+        [-1, 1].forEach(sd => {
+          const p = mesh(new THREE.PlaneGeometry(half, dd), gm, sd * w / 4, r / 2, 0, false);
+          p.rotateZ(sd * -ang); p.rotateX(-Math.PI / 2); g.add(p);
+          for (let k = 0; k <= Math.round(dd / 2.4); k++) {   // correas
+            const z = -dd / 2 + k * dd / Math.round(dd / 2.4);
+            const c = mesh(new THREE.BoxGeometry(half, 0.06, 0.06), L(0x3d454e), sd * w / 4, r / 2 + 0.03, z, false); c.rotateZ(sd * -ang); g.add(c);
+          }
+        });
+        g.add(mesh(new THREE.BoxGeometry(0.16, 0.16, dd), L(0x3d454e), 0, r, 0, false));
+        break;
+      }
       case 'lamp': {
         g.add(mesh(new THREE.CylinderGeometry(0.07, 0.1, 3.6, 6), L(0x2c3e50), 0, 1.8, 0));
         g.add(mesh(new THREE.SphereGeometry(0.25, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff3c4 }), 0, 3.7, 0, false));
