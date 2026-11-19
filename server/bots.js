@@ -28,47 +28,54 @@ const DIFF = {
 };
 
 // ---------------------------------------------------------------------------
-// Rejilla de navegación (planta baja + superficies a las que se llega andando).
-// Se calcula una vez por mapa: celdas de 1 m donde cabe el huevo de pie.
+// Rejilla de navegación por PLANTAS (v6.7): celdas de 1 m donde cabe el huevo de
+// pie y, en cada celda, hasta LAYERS alturas distintas (planta baja, primera,
+// segunda, azoteas…). Así los bots saben moverse por edificios de varias plantas
+// como el Instituto Abastos, subiendo y bajando por las escaleras.
 // ---------------------------------------------------------------------------
 const NAV_CACHE = {};
+const LAYERS = 4;
 function navFor(room) {
   const md = room.mapData, key = md.id;
   if (NAV_CACHE[key] && NAV_CACHE[key].world === room.world) return NAV_CACHE[key];
-  const w = room.world, H = Math.floor(md.halfSize - 1), N = H * 2 + 1, STEP = Phys.P.STEP;
-  const walk = new Uint8Array(N * N), y = new Float32Array(N * N);
+  const w = room.world, H = Math.floor(md.halfSize - 1), N = H * 2 + 1, NN = N * N, STEP = Phys.P.STEP;
+  const walk = new Uint8Array(NN * LAYERS), y = new Float32Array(NN * LAYERS);
   const free = (x, z, s) => isFinite(s) && s > -5 && !Phys.blockedAt(w, x, s + 0.02, z);
-  // 1) Planta baja: celdas a las que se llega andando desde el suelo
   const queue = [];
+  // Añade una planta a la celda si no tiene ya una a esa altura. Devuelve el nodo nuevo o -1.
+  const add = (c, s) => {
+    for (let l = 0; l < LAYERS; l++) {
+      const n = l * NN + c;
+      if (!walk[n]) { walk[n] = 1; y[n] = s; queue.push(n); return n; }
+      if (Math.abs(y[n] - s) < 0.25) return -1;
+    }
+    return -1;
+  };
+  // 1) Suelo: celdas a las que se llega andando desde el suelo
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-    const x = i - H, z = j - H, k = j * N + i;
-    const s = Phys.supportBelow(w, x, z, STEP + 0.05);
-    if (free(x, z, s)) { walk[k] = 1; y[k] = s; queue.push(k); }
+    const x = i - H, z = j - H, s = Phys.supportBelow(w, x, z, STEP + 0.05);
+    if (free(x, z, s)) add(j * N + i, s);
   }
-  // 1b) Mapas cuya planta jugable está en alto (p. ej. la segunda planta del Abastos): también
-  //     se empieza a andar desde cada punto de aparición
+  // 2) Plantas en alto: también se empieza a andar desde cada punto de aparición
   const seeds = (md.spawns || []).concat((md.teamSpawns && md.teamSpawns.red) || [], (md.teamSpawns && md.teamSpawns.blue) || []);
   for (const sp of seeds) {
-    const i = Math.round(sp.x) + H, j = Math.round(sp.z) + H, k = j * N + i;
-    if (i < 0 || j < 0 || i >= N || j >= N || walk[k]) continue;
+    const i = Math.round(sp.x) + H, j = Math.round(sp.z) + H;
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
     const s = Phys.supportBelow(w, i - H, j - H, (sp.y || 0) + 0.6);
-    if (free(i - H, j - H, s)) { walk[k] = 1; y[k] = s; queue.push(k); }
+    if (free(i - H, j - H, s)) add(j * N + i, s);
   }
-  // 2) Desde ahí, subir por rampas y escaleras (un escalón cada vez) hasta azoteas, gradas, etc.
-  //    Cada celda guarda UNA altura: la planta baja manda; lo que sólo es alcanzable arriba va arriba.
+  // 3) Expandir: subir un escalón o bajar (escaleras, saltos cortos) a las celdas vecinas
   for (let q = 0; q < queue.length; q++) {
-    const c = queue[q], cx = c % N, cz = (c / N) | 0, cy = y[c];
+    const n = queue[q], c = n % NN, cx = c % N, cz = (c / N) | 0, cy = y[n];
     for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
       const nx = cx + dx, nz = cz + dz;
       if ((!dx && !dz) || nx < 0 || nz < 0 || nx >= N || nz >= N) continue;
-      const nk = nz * N + nx;
-      if (walk[nk]) continue;
       const s = Phys.supportBelow(w, nx - H, nz - H, cy + STEP + 0.05);
-      if (s < cy - 0.3 || !free(nx - H, nz - H, s)) continue;   // sólo hacia arriba o al mismo nivel
-      walk[nk] = 1; y[nk] = s; queue.push(nk);
+      if (s < cy - 2.6 || !free(nx - H, nz - H, s)) continue;
+      add(nz * N + nx, s);
     }
   }
-  const nav = { world: w, H, N, walk, y };
+  const nav = { world: w, H, N, NN, walk, y };
   NAV_CACHE[key] = nav;
   return nav;
 }
@@ -77,54 +84,86 @@ function cellOf(nav, x, z) {
   if (i < 0 || j < 0 || i >= nav.N || j >= nav.N) return -1;
   return j * nav.N + i;
 }
-// Celda transitable más cercana (búsqueda en espiral pequeña)
-function nearestWalk(nav, x, z) {
+// Nodo (celda + planta) de un punto: la planta más alta que queda por debajo de los pies.
+// Sin altura (yy indefinida) se usa la planta más baja.
+function nodeAt(nav, c, yy) {
+  if (c < 0) return -1;
+  let best = -1, bestY = -Infinity;
+  for (let l = 0; l < LAYERS; l++) {
+    const n = l * nav.NN + c;
+    if (!nav.walk[n]) break;
+    const ny = nav.y[n];
+    if (yy == null) { if (best < 0 || ny < bestY) { best = n; bestY = ny; } continue; }
+    if (ny <= yy + 0.6 && ny > bestY) { best = n; bestY = ny; }
+  }
+  if (best < 0 && yy != null) {   // por debajo de todas: la más cercana
+    let bd = Infinity;
+    for (let l = 0; l < LAYERS; l++) { const n = l * nav.NN + c; if (!nav.walk[n]) break; const d = Math.abs(nav.y[n] - yy); if (d < bd) { bd = d; best = n; } }
+  }
+  return best;
+}
+// ¿Hay una planta transitable en la celda c cerca de la altura yy?
+function nearNode(nav, c, yy, tol) {
+  if (c < 0) return -1;
+  for (let l = 0; l < LAYERS; l++) { const n = l * nav.NN + c; if (!nav.walk[n]) break; if (Math.abs(nav.y[n] - yy) <= tol) return n; }
+  return -1;
+}
+// Nodo transitable más cercano (búsqueda en espiral pequeña, misma planta si se puede)
+function nearestWalk(nav, x, yy, z) {
   for (let r = 0; r <= 6; r++) {
+    let any = -1;
     for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
       if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
       const c = cellOf(nav, x + dx, z + dz);
-      if (c >= 0 && nav.walk[c]) return c;
+      if (c < 0) continue;
+      if (yy != null) { const n = nearNode(nav, c, yy, 1.2); if (n >= 0) return n; }
+      const n = nodeAt(nav, c, yy);
+      if (n >= 0 && any < 0) any = n;
     }
+    if (any >= 0 && (yy == null || r >= 3)) return any;
   }
   return -1;
 }
-// A* en 8 direcciones (sin cortar esquinas). Devuelve una lista de puntos [x, z].
-function findPath(nav, x0, z0, x1, z1, maxNodes) {
-  const s = nearestWalk(nav, x0, z0), g = nearestWalk(nav, x1, z1);
+// A* en 8 direcciones (sin cortar esquinas) por las plantas. Devuelve una lista de puntos [x, z].
+function findPath(nav, x0, y0, z0, x1, y1, z1, maxNodes) {
+  const s = nearestWalk(nav, x0, y0, z0), g = nearestWalk(nav, x1, y1, z1);
   if (s < 0 || g < 0) return null;
   if (s === g) return [[x1, z1]];
-  const N = nav.N, walk = nav.walk;
+  const N = nav.N, NN = nav.NN, walk = nav.walk, Y = nav.y, STEP = Phys.P.STEP;
   const gScore = new Map([[s, 0]]), came = new Map(), open = [[0, s]], closed = new Set();
-  const gx = g % N, gz = (g / N) | 0;
-  const hfn = c => { const dx = Math.abs(c % N - gx), dz = Math.abs(((c / N) | 0) - gz); return Math.max(dx, dz) + 0.41 * Math.min(dx, dz); };
-  let n = 0;
-  while (open.length && n++ < (maxNodes || 4000)) {
-    // cola de prioridad sencilla (montículo binario)
+  const gc = g % NN, gx = gc % N, gz = (gc / N) | 0, gy = Y[g];
+  const hfn = n => { const c = n % NN, dx = Math.abs(c % N - gx), dz = Math.abs(((c / N) | 0) - gz); return Math.max(dx, dz) + 0.41 * Math.min(dx, dz) + Math.abs(Y[n] - gy) * 0.5; };
+  let k = 0;
+  while (open.length && k++ < (maxNodes || 6000)) {
     const cur = heapPop(open)[1];
     if (cur === g) {
-      const out = []; let c = g;
-      while (c !== undefined) { out.push([c % N - nav.H, ((c / N) | 0) - nav.H]); c = came.get(c); }
+      const out = []; let n = g;
+      while (n !== undefined) { const c = n % NN; out.push([c % N - nav.H, ((c / N) | 0) - nav.H, Y[n]]); n = came.get(n); }
       out.reverse(); out.shift();
-      if (out.length) out[out.length - 1] = [x1, z1];
-      return simplify(nav, out);
+      if (out.length) { out[out.length - 1][0] = x1; out[out.length - 1][1] = z1; }
+      return simplify(nav, out, Y[s]);
     }
     if (closed.has(cur)) continue;
     closed.add(cur);
-    const cx = cur % N, cz = (cur / N) | 0;
+    const cc = cur % NN, cx = cc % N, cz = (cc / N) | 0, cy = Y[cur];
     for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
       if (!dx && !dz) continue;
       const nx = cx + dx, nz = cz + dz;
       if (nx < 0 || nz < 0 || nx >= N || nz >= N) continue;
-      const nc = nz * N + nx;
-      if (!walk[nc] || closed.has(nc)) continue;
-      if (dx && dz && (!walk[cz * N + nx] || !walk[nz * N + cx])) continue;   // no cortar esquinas
-      // subir: como mucho un escalón; bajar: se puede saltar desde poca altura
-      const dy = nav.y[nc] - nav.y[cur];
-      if (dy > Phys.P.STEP + 0.1 || dy < -2.6) continue;
-      const t = gScore.get(cur) + (dx && dz ? 1.414 : 1);
-      if (t < (gScore.has(nc) ? gScore.get(nc) : Infinity)) {
-        gScore.set(nc, t); came.set(nc, cur);
-        heapPush(open, [t + hfn(nc), nc]);
+      const c = nz * N + nx;
+      for (let l = 0; l < LAYERS; l++) {
+        const nn = l * NN + c;
+        if (!walk[nn]) break;
+        if (closed.has(nn)) continue;
+        // subir: como mucho un escalón; bajar: se puede saltar desde poca altura
+        const dy = Y[nn] - cy;
+        if (dy > STEP + 0.1 || dy < -2.6) continue;
+        if (dx && dz && (nearNode(nav, cz * N + nx, cy, STEP + 0.6) < 0 || nearNode(nav, nz * N + cx, cy, STEP + 0.6) < 0)) continue;   // no cortar esquinas
+        const t = gScore.get(cur) + (dx && dz ? 1.414 : 1) + (dy < -0.6 ? 1.5 : 0);
+        if (t < (gScore.has(nn) ? gScore.get(nn) : Infinity)) {
+          gScore.set(nn, t); came.set(nn, cur);
+          heapPush(open, [t + hfn(nn), nn]);
+        }
       }
     }
   }
@@ -139,29 +178,29 @@ function heapPop(h) {
   }
   return top;
 }
-// Quita puntos intermedios si se ve en línea recta (el bot no va en zigzag)
-function simplify(nav, pts) {
-  if (pts.length < 3) return pts;
+// Quita puntos intermedios si se ve en línea recta (el bot no va en zigzag). Puntos [x, z, y].
+function simplify(nav, pts, y0) {
+  const strip = a => a.map(p => [p[0], p[1]]);
+  if (pts.length < 3) return strip(pts);
   const out = [pts[0]];
   for (let i = 1; i < pts.length - 1; i++) {
     const a = out[out.length - 1], b = pts[i + 1];
-    if (!straight(nav, a[0], a[1], b[0], b[1])) out.push(pts[i]);
+    if (!straight(nav, a[0], a[1], a[2], b[0], b[1])) out.push(pts[i]);
   }
   out.push(pts[pts.length - 1]);
-  return out;
+  return strip(out);
 }
-function straight(nav, x0, z0, x1, z1) {
-  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(L / 0.5);
-  let prevY = null;
+function straight(nav, x0, z0, y0, x1, z1) {
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(L / 0.5), STEP = Phys.P.STEP;
+  let prevY = y0;
   for (let k = 0; k <= n; k++) {
     const x = x0 + (x1 - x0) * k / n, z = z0 + (z1 - z0) * k / n;
-    for (const [ox, oz] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]]) {
-      const c = cellOf(nav, x + ox, z + oz);
-      if (c < 0 || !nav.walk[c]) return false;
+    for (const [ox, oz] of [[0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]]) {
+      if (nearNode(nav, cellOf(nav, x + ox, z + oz), prevY, STEP + 0.4) < 0) return false;
     }
-    const c = cellOf(nav, x, z), y = nav.y[c];
-    if (prevY !== null && (y - prevY > Phys.P.STEP + 0.1 || y - prevY < -2.6)) return false;
-    prevY = y;
+    let nd = nearNode(nav, cellOf(nav, x, z), prevY, STEP + 0.1);
+    if (nd < 0) { nd = nodeAt(nav, cellOf(nav, x, z), prevY); if (nd < 0 || nav.y[nd] < prevY - 2.6) return false; }
+    prevY = nav.y[nd];
   }
   return true;
 }
@@ -285,7 +324,7 @@ class BotManager {
       prefer = Math.max(2.5, Math.min(wep.range * 0.45, 18));
       // En los modos con objetivo, si el enemigo no está encima se sigue yendo al objetivo (disparando)
       if (objMode && dist > 9) goal = this.objective(b, p, now);
-      else if (dist > prefer + 3) goal = { x: tgt.x, z: tgt.z };
+      else if (dist > prefer + 3) goal = { x: tgt.x, y: tgt.y, z: tgt.z };
     } else {
       goal = this.objective(b, p, now);
     }
@@ -294,7 +333,7 @@ class BotManager {
     let moveYaw = null, fwd = 0, side = 0, jump = false;
     if (goal) {
       if (!b.path || now - b.pathAt > 1500 || !b.goal || Math.hypot(b.goal.x - goal.x, b.goal.z - goal.z) > 3) {
-        b.path = findPath(navFor(room), st.x, st.z, goal.x, goal.z) || [[goal.x, goal.z]];
+        b.path = findPath(navFor(room), st.x, st.y, st.z, goal.x, goal.y, goal.z) || [[goal.x, goal.z]];
         b.pathAt = now; b.goal = goal;
       }
       while (b.path.length > 1 && Math.hypot(b.path[0][0] - st.x, b.path[0][1] - st.z) < 0.9) b.path.shift();
@@ -363,12 +402,12 @@ class BotManager {
     const room = this.room, md = room.mapData, m = room.config.mode;
     const carrying = room.spatula && room.spatula.carrier === p.id;
     if (b.role === 'hunt' && !carrying) return this.wanderGoal(b, p, now);
-    if (m === 'kotc' && room.coop) { const z = md.coops[room.coop.idx]; return { x: z.x + rand(-1, 1), z: z.z + rand(-1, 1) }; }
+    if (m === 'kotc' && room.coop) { const z = md.coops[room.coop.idx]; return { x: z.x + rand(-1, 1), y: z.y, z: z.z + rand(-1, 1) }; }
     if (m === 'cts' && room.spatula && p.team) {
       const s = room.spatula;
-      if (s.carrier === p.id) { const base = md.bases[p.team]; return { x: base.x, z: base.z }; }
-      if (s.carrier) { const c = room.players[s.carrier]; if (c && c.team !== p.team) return { x: c.x, z: c.z }; const base = md.bases[p.team === 'red' ? 'blue' : 'red']; return { x: base.x, z: base.z }; }
-      return { x: s.x, z: s.z };
+      if (s.carrier === p.id) { const base = md.bases[p.team]; return { x: base.x, y: base.y, z: base.z }; }
+      if (s.carrier) { const c = room.players[s.carrier]; if (c && c.team !== p.team) return { x: c.x, y: c.y, z: c.z }; const base = md.bases[p.team === 'red' ? 'blue' : 'red']; return { x: base.x, y: base.y, z: base.z }; }
+      return { x: s.x, y: s.y, z: s.z };
     }
     if (m === 'dem' && room.dem && p.team && !room.dem.breakUntil) {
       const d = room.dem, live = d.sites.filter(x => x.state !== 'destroyed');
@@ -377,13 +416,13 @@ class BotManager {
         // Atacantes: a plantar (o a proteger la bomba). Defensores: a desactivarla o a vigilar un punto
         let site = planted;
         if (!site) site = live[(p.id.length + (b.siteBias || (b.siteBias = Math.random() < 0.5 ? 1 : 2))) % live.length];
-        return { x: site.x + rand(-1, 1), z: site.z + rand(-1, 1) };
+        return { x: site.x + rand(-1, 1), y: site.y, z: site.z + rand(-1, 1) };
       }
     }
     if (m === 'conf' && room.tags && room.tags.length) {
       let best = null, bd = 28;
       for (const t of room.tags) { const dd = Math.hypot(t.x - p.x, t.z - p.z); if (dd < bd) { bd = dd; best = t; } }
-      if (best) return { x: best.x, z: best.z };
+      if (best) return { x: best.x, y: best.y, z: best.z };
     }
     return this.wanderGoal(b, p, now);
   }
@@ -399,11 +438,11 @@ class BotManager {
           const q = room.players[qid];
           if (q.id === p.id || !q.alive || (room.mode.teams && q.team === p.team)) continue;
           const dd = Math.hypot(q.x - p.x, q.z - p.z);
-          if (dd < bestD) { bestD = dd; pt = { x: q.x, z: q.z }; }
+          if (dd < bestD) { bestD = dd; pt = { x: q.x, y: q.y, z: q.z }; }
         }
       }
-      if (!pt) { const list = md.spawns.concat(md.coops); const s = list[Math.floor(Math.random() * list.length)]; pt = { x: s.x, z: s.z }; }
-      b.wander = { x: pt.x, z: pt.z, until: now + rand(6000, 12000) };
+      if (!pt) { const list = md.spawns.concat(md.coops); const s = list[Math.floor(Math.random() * list.length)]; pt = { x: s.x, y: s.y, z: s.z }; }
+      b.wander = { x: pt.x, y: pt.y, z: pt.z, until: now + rand(6000, 12000) };
     }
     return b.wander;
   }
