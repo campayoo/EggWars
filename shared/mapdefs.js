@@ -1126,329 +1126,365 @@
   // =========================================================================
   const abastos = {
     id: 'abastos', name: 'Instituto Abastos', size: 'L', players: 24,
-    desc: 'El IES Abastos entero, a partir de sus planos: planta baja con gimnasio, cafetería y salón de actos; primera planta con los patios Cavanilles y Sánchez Ayuso y la biblioteca; y segunda planta con el Aula 207 de Ciclo DAM al fondo a la izquierda. Cuatro escaleras unen las tres plantas.',
+    desc: 'El IES Abastos entero, a partir de sus planos: planta baja con gimnasio, cafetería, salón de actos y el acceso; primera planta con los patios Cavanilles y Sánchez Ayuso y la biblioteca; y segunda planta con el Aula 207 de Ciclo DAM. Escaleras en los pasillos oeste y este y la escalera principal junto al acceso.',
     halfSize: 46, gravity: -22, ground: 'concrete', cover: false,
     theme: Object.assign({}, SKY_DAY, { sky: 0x8fc4ee, sunColor: 0xfff2d6 }),
     build(b) {
-      // Planos (norte arriba = fachada «E» del plano, sur = fachada «O»). Tres plantas:
-      //   P0 (y 0)   aulas A001…A007, gimnasio, cafetería-comedor, salón de actos, departamentos y acceso
-      //   P1 (y 3,8) aulas A101…A112, patios Cavanilles (norte) y Sánchez Ayuso (sur), biblioteca, terraza
-      //   P2 (y 7,6) aulas 201…212 (Aula 207 · Ciclo DAM), departamentos, huecos sobre los patios
-      // Pasillos oeste y este con dos escaleras cada uno (de P0 a P1 y, encima, de P1 a P2).
+      // Medidas sacadas de los planos (1 m ≈ 20 px). Norte = fachada «E» del plano, sur = «O».
+      //   P0 (y 0)    aulas A001…A010, gimnasio, cafetería-comedor, salón de actos, cocina,
+      //               departamentos D001…D008 y el ACCÉS (este)
+      //   P1 (y 3,8)  aulas A101…A112, patios Cavanilles (N) y Sánchez Ayuso (S) encima del
+      //               gimnasio y del salón de actos, magatzems, recurs, biblioteca y terrazas
+      //   P2 (y 7,6)  aulas 201…212 (Aula 207 · Ciclo DAM), bloque central y huecos sobre los patios
       const P0 = 0, P1 = 3.8, P2 = 7.6, H = 3.5, T = 0.3, WALL = 'white';
-      const XW = -32, XC0 = -27.6, XC1 = -24, XC2 = 24, XC3 = 27.6, XE = 35;   // columnas
-      const Z0 = -28, ZN1 = -20, ZN2 = -17, ZPN = -7, ZC0 = -4, ZC1 = 4, ZPS = 7, ZS2 = 17, ZS1 = 20, Z1 = 28;
-      const FL = [[-15, -6, '+z'], [6, 15, '-z']];                // tramos de escalera (z0, z1, sentido de subida)
-      const STX = { w: [-27.45, -25.45], e: [25.45, 27.45] };          // x de los tramos (pegados a la pared)
+      const XW = -36, XWC = -34, XC0 = -28, XC1 = -24, XC2 = 24, XC3 = 28, XE = 34.5;
+      const Z0 = -27, ZN1 = -19.5, ZN2 = -16.5, ZPN = -6.5, ZC0 = -4, ZC1 = 4, ZPS = 6.5, ZS2 = 16.5, ZS1 = 19.5, Z1 = 27;
+      // Escaleras de los pasillos oeste y este (en el lado del patio): tramo norte y tramo sur
+      const FL = [[-16.5, -8.5, '+z'], [5.5, 13.5, '-z']];
+      const STX = { w: [-25.9, -24.35], e: [24.35, 25.9] };
+      // Escalera principal (vestíbulo del acceso, sube hacia el oeste hasta el pasillo este de P1)
+      const MS = { x0: 26.4, x1: 33.0, z0: -3.6, z1: -1.6 };
       b.frameMat = 'metalDark';
-      const sign = (text, x, y, z, rotY, w, bg) => b.decoAt('textsign', x, y, z, { text, rotY, w: w || 2.4, h: 0.45, bg: bg || '#1f3d7a' });
-      const floor = (x0, z0, x1, z1, color, y) => b.decoAt('plane', (x0 + x1) / 2, y + 0.02, (z0 + z1) / 2, { w: x1 - x0, d: z1 - z0, color });
+      // Rótulos pequeños (como los reales): 1,3 m × 0,3 m salvo los grandes
+      const sign = (text, x, y, z, rotY, w, bg) => b.decoAt('textsign', x, y, z, { text, rotY, w: w || Math.min(1.6, 0.3 + text.length * 0.11), h: 0.3, bg: bg || '#1f3d7a' });
+      const floor = (x0, z0, x1, z1, color, y) => { if (x1 - x0 > 0.05 && z1 - z0 > 0.05) b.decoAt('plane', (x0 + x1) / 2, y + 0.03, (z0 + z1) / 2, { w: x1 - x0, d: z1 - z0, color }); };
+      // Suelo de un pasillo vertical sin tapar los huecos de escalera
+      const corrFloor = (x0, x1, za, zb, Y, side, color) => {
+        let z = za;
+        for (const [a, c] of FL) {
+          floor(x0, z, x1, a, color, Y);
+          if (side) { const sx = STX[side]; floor(x0, a, sx[0], c, color, Y); floor(sx[1], a, x1, c, color, Y); }
+          z = c;
+        }
+        floor(x0, z, x1, zb, color, Y);
+      };
       const glass = (axis, fixed, a0, a1, y, h) => axis === 'x' ? b.aabb(a0, y, fixed - 0.04, a1, y + h, fixed + 0.04, 'glass') : b.aabb(fixed - 0.04, y, a0, fixed + 0.04, y + h, a1, 'glass');
-      // Pared con ventanales cada «step» m y puertas en «doors» (posiciones absolutas)
       const glazed = (axis, fixed, a0, a1, Y, step, ww, doors) => {
         doors = doors || [];
-        const mid = (a0 + a1) / 2, ops = doors.map(a => ({ at: a - mid, w: 2.2, h: 2.5 })), wins = [];
+        const mid = (a0 + a1) / 2, ops = doors.map(a => ({ at: a - mid, w: 2.0, h: 2.5 })), wins = [];
         for (let a = a0 + step / 2; a < a1 - 0.5; a += step) {
-          if (doors.some(d => Math.abs(d - a) < ww / 2 + 1.4)) continue;
+          if (doors.some(d => Math.abs(d - a) < ww / 2 + 1.3)) continue;
+          if (a - ww / 2 < a0 + 0.3 || a + ww / 2 > a1 - 0.3) continue;
           ops.push({ at: a - mid, y: 1.0, w: ww, h: 1.6 }); wins.push(a);
         }
         b.wallSeg(axis, fixed, a0, a1, Y, H, T, ops, WALL);
         wins.forEach(a => glass(axis, fixed, a - ww / 2, a + ww / 2, Y + 1.0, 1.6));
       };
-      // Sala: puertas {side, at, w} y ventanas {side, at, w} con cristal
       const room = (x0, z0, x1, z1, Y, doors, wins, opt) => {
         opt = opt || {};
         const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
-        const open = doors.map(o => ({ side: o.side, at: o.at, w: o.w || 1.8, h: 2.5 }))
-          .concat(wins.map(o => ({ side: o.side, at: o.at, y: 1.0, w: o.w || 3, h: 1.5 })));
+        const open = doors.map(o => ({ side: o.side, at: o.at, w: o.w || 1.6, h: 2.4 }))
+          .concat(wins.map(o => ({ side: o.side, at: o.at, y: 1.0, w: o.w || 2, h: 1.5 })));
         b.room(cx, cz, Y, w, d, H, opt.mat || WALL, { t: T, open });
         wins.forEach(o => {
-          const ww = o.w || 3;
+          const ww = o.w || 2;
           if (o.side === 'n') glass('x', z0 + T / 2, cx + o.at - ww / 2, cx + o.at + ww / 2, Y + 1, 1.5);
           if (o.side === 's') glass('x', z1 - T / 2, cx + o.at - ww / 2, cx + o.at + ww / 2, Y + 1, 1.5);
           if (o.side === 'w') glass('z', x0 + T / 2, cz + o.at - ww / 2, cz + o.at + ww / 2, Y + 1, 1.5);
           if (o.side === 'e') glass('z', x1 - T / 2, cz + o.at - ww / 2, cz + o.at + ww / 2, Y + 1, 1.5);
         });
-        if (opt.floor) floor(x0 + T, z0 + T, x1 - T, z1 - T, opt.floor, Y);
-        if (opt.name) {
-          const s = opt.signSide || doors[0] && doors[0].side || 'n', at = doors[0] ? doors[0].at : 0;
-          const sx = s === 'w' ? x0 - 0.18 : s === 'e' ? x1 + 0.18 : cx + at + (Math.abs(at) < 1.5 ? 0 : (at > 0 ? -2.2 : 2.2));
-          const sz = s === 'n' ? z0 - 0.18 : s === 's' ? z1 + 0.18 : cz + at + (Math.abs(at) < 1.5 ? 0 : (at > 0 ? -2.2 : 2.2));
+        floor(x0 + T, z0 + T, x1 - T, z1 - T, opt.floor || 0xd9cfba, Y);
+        if (opt.name && doors[0]) {
+          // placa junto a la puerta, por fuera, a 2,3 m
+          const o = doors[0], s = o.side, off = (o.w || 1.6) / 2 + 0.75;
+          const px = s === 'n' || s === 's' ? cx + o.at + off : (s === 'w' ? x0 - 0.17 : x1 + 0.17);
+          const pz = s === 'w' || s === 'e' ? cz + o.at + off : (s === 'n' ? z0 - 0.17 : z1 + 0.17);
           const rot = { n: Math.PI, s: 0, w: -Math.PI / 2, e: Math.PI / 2 }[s];
-          sign(opt.name, s === 'n' || s === 's' ? (doors[0] ? cx + at : cx) : sx, Y + 2.85, s === 'w' || s === 'e' ? (doors[0] ? cz + at : cz) : sz, rot, opt.signW || Math.min(w - 0.6, 3.2), opt.bg);
+          sign(opt.name, px, Y + 2.3, pz, rot, null, opt.bg);
         }
       };
-      // Aula con pupitres mirando a la pizarra (lado de la pizarra: 'n' o 's')
+      // Aula con pupitres (o puestos de ordenador) mirando a la pizarra del lado «boardSide»
       const classroom = (x0, z0, x1, z1, Y, doorSide, doorAt, boardSide, name, opt) => {
         opt = opt || {};
-        const cx = (x0 + x1) / 2, w = x1 - x0;
-        const winSide = boardSide;   // las ventanas dan a la fachada (mismo lado que la pizarra)
-        // ventanas a los lados de la pizarra (que no la tapen)
-        const wins = w > 6 ? [{ side: winSide, at: -(w / 2 - 1.15), w: 1.5 }, { side: winSide, at: w / 2 - 1.15, w: 1.5 }] : [{ side: winSide, at: 0, w: 1.6 }];
-        room(x0, z0, x1, z1, Y, [{ side: doorSide, at: doorAt }], opt.noWin ? [] : wins, { floor: opt.floor || 0xd6cfbf, name, bg: opt.bg });
-        const bz = boardSide === 'n' ? z0 + T + 0.08 : z1 - T - 0.08, face = boardSide === 'n' ? -1 : 1;
-        // pizarra en la pared lateral si la fachada tiene ventanas grandes
-        b.decoAt('board', cx, Y + 1.6, bz, { rotY: face < 0 ? 0 : Math.PI, w: Math.min(3.2, w - (w > 6 ? 4.4 : 2.6)), text: opt.board || name.split(' · ')[0] });
-        b.box(cx + (doorAt > 0 ? -2.2 : 2.2) * Math.sign(w), Y, bz - face * 1.4, 1.5, 0.78, 0.8, 'wood');
+        const cx = (x0 + x1) / 2, w = x1 - x0, face = boardSide === 'n' ? -1 : 1;
+        const wins = opt.noWin ? [] : (w > 6 ? [{ side: boardSide, at: -(w / 2 - 1.15), w: 1.5 }, { side: boardSide, at: w / 2 - 1.15, w: 1.5 }] : [{ side: boardSide, at: w / 2 - 1.0, w: 1.2 }]);
+        room(x0, z0, x1, z1, Y, [{ side: doorSide, at: doorAt }], wins, { floor: opt.floor || 0xd6cfbf, name, bg: opt.bg });
+        const bz = boardSide === 'n' ? z0 + T + 0.08 : z1 - T - 0.08;
+        b.decoAt('board', cx, Y + 1.55, bz, { rotY: face < 0 ? 0 : Math.PI, w: Math.min(3.0, w - (w > 6 ? 4.4 : 3)), text: opt.board || name });
+        const deskX = doorSide === boardSide ? cx : cx + (doorAt > 0 ? -2 : 2);
+        b.box(Math.max(x0 + 1, Math.min(x1 - 1, deskX)), Y, bz - face * 1.3, 1.4, 0.76, 0.7, 'wood');
+        const depth = z1 - z0;
         if (opt.pcs) {
-          // Aulas de ciclo: mesas corridas con ordenadores
-          [bz - face * 2.6, bz - face * 4.1, bz - face * 5.6].forEach(z => {
-            if (Math.abs(z - (boardSide === 'n' ? z1 : z0)) < 1.1) return;
+          [bz - face * 2.6, bz - face * 4.2].forEach(z => {
             b.aabb(x0 + 1.0, Y, z - 0.4, x1 - 2.4, Y + 0.76, z + 0.4, 'white');
             for (let x = x0 + 1.8; x < x1 - 2.6; x += 1.6) b.decoAt('pc', x, Y + 0.76, z + face * 0.05, { seat: true, rotY: face < 0 ? 0 : Math.PI });
           });
           return;
         }
-        const rows = [bz - face * 2.4];
-        if (z1 - z0 > 7.2) rows.push(bz - face * 4.2);
-        if (z1 - z0 > 9) rows.push(bz - face * 6.0);
-        for (const z of rows) for (let x = x0 + 1.4; x < x1 - 2.4; x += 2.0) {
+        const rows = [bz - face * 2.5];
+        if (depth > 6.4 && !opt.oneRow) rows.push(bz - face * 4.3);
+        if (depth > 8.6) rows.push(bz - face * 6.1);
+        for (const z of rows) for (let x = x0 + 1.3; x < x1 - 2.3; x += 2.0) {
           b.decoAt('desk', x, Y, z, { color: opt.desk || 0x2f6fb5, rotY: face < 0 ? -Math.PI / 2 : Math.PI / 2 });
           b.box(x, Y, z - face * 0.25, 1.15, 0.76, 1.2, 'invisible');
         }
       };
-      const rail = (x0, z0, x1, z1, Y) => { b.aabb(x0, Y, z0, x1, Y + 1.0, z1, 'rail'); b.aabb(x0, Y + 1.0, z0, x1, Y + 1.08, z1, 'metalDark', { solid: false }); };
+      const rail = (x0, z0, x1, z1, Y) => { b.aabb(x0, Y, z0, x1, Y + 1.0, z1, 'rail'); b.aabb(x0, Y + 1.0, z0, x1, Y + 2.6, z1, 'invisible', { see: true }); };
+      const aseos = (x0, z0, x1, z1, Y, door, name) => {
+        room(x0, z0, x1, z1, Y, [door], [], { floor: 0xb9c4c9, name: name || 'ASEOS' });
+        const along = (x1 - x0) > (z1 - z0);
+        for (let k = 1; k < 3; k++) {
+          if (along) { const x = x0 + (x1 - x0) * k / 3; b.aabb(x - 0.04, Y, (door.side === 'n' ? z0 + (z1 - z0) * 0.45 : z0 + 0.3), x + 0.04, Y + 2, (door.side === 'n' ? z1 - 0.3 : z1 - (z1 - z0) * 0.45), 'blueLight'); }
+          else { const z = z0 + (z1 - z0) * k / 3; b.aabb((door.side === 'w' ? x0 + (x1 - x0) * 0.45 : x0 + 0.3), Y, z - 0.04, (door.side === 'w' ? x1 - 0.3 : x1 - (x1 - x0) * 0.45), Y + 2, z + 0.04, 'blueLight'); }
+        }
+      };
 
-      // =================== ESTRUCTURA ===================
+      // ========================= ESTRUCTURA =========================
       b.perimeter(46, 2.2, 'metalDark', 0.4);
       floor(-45.6, -45.6, 45.6, 45.6, 0x6f6c66, 0);
-      // Nadie sale del edificio: pared invisible alta alrededor
+      // Nadie sale del instituto: muro invisible alto alrededor del edificio
       b.aabb(XW - 0.6, 0, Z0 - 0.6, XE + 0.6, 30, Z0 - 0.15, 'invisible'); b.aabb(XW - 0.6, 0, Z1 + 0.15, XE + 0.6, 30, Z1 + 0.6, 'invisible');
       b.aabb(XW - 0.6, 0, Z0 - 0.6, XW - 0.15, 30, Z1 + 0.6, 'invisible'); b.aabb(XE + 0.15, 0, Z0 - 0.6, XE + 0.6, 30, Z1 + 0.6, 'invisible');
       const holes = side => FL.map(([a, c]) => ({ x: (STX[side][0] + STX[side][1]) / 2, z: (a + c) / 2, w: STX[side][1] - STX[side][0], d: c - a }));
+      const mainHole = { x: (MS.x0 + MS.x1) / 2, z: (MS.z0 + MS.z1) / 2, w: MS.x1 - MS.x0, d: MS.z1 - MS.z0 };
       const stairHoles = holes('w').concat(holes('e'));
-      const patN = { x: 0, z: (ZN2 + ZPN) / 2, w: XC2 - XC1, d: ZPN - ZN2 }, patS = { x: 0, z: (ZPS + ZS2) / 2, w: XC2 - XC1, d: ZS2 - ZPS };
-      // Forjado de la planta 1 (sobre toda la planta baja; los patios están encima del gimnasio y del salón de actos)
-      b.slab((XW + XE) / 2, 0, P1, XE - XW, Z1 - Z0, T, 'concrete', stairHoles);
-      floor(XC1, ZN2, XC2, ZPN, 0xc9c2b4, P1); floor(XC1, ZPS, XC2, ZS2, 0xc9c2b4, P1);
-      // Forjado de la planta 2 (sin la columna oeste ni la terraza este) con los huecos de los patios
-      b.slab(0, 0, P2, XC3 - XC0, Z1 - Z0, T, 'marble', [patN, patS].concat(stairHoles));
-      b.slab((XW + XC0) / 2, 0, P2, XC0 - XW, Z1 - Z0, T, 'concrete');                // azotea sobre la columna oeste
-      // Cubierta
-      b.slab(0, 0, P2 + H, XC3 - XC0, Z1 - Z0, T, 'concrete', [patN, patS]);
+      const voidN = { x: 0, z: (ZN2 + ZPN) / 2, w: XC2 - XC1, d: ZPN - ZN2 }, voidS = { x: 0, z: (ZPS + ZS2) / 2, w: XC2 - XC1, d: ZS2 - ZPS };
+      b.slab((XW + XE) / 2, 0, P1, XE - XW, Z1 - Z0, T, 'concrete', stairHoles.concat([mainHole]));
+      b.slab(0, 0, P2, XC3 - XC0, Z1 - Z0, T, 'marble', [voidN, voidS].concat(stairHoles));
+      b.slab((XW + XC0) / 2, 0, P2, XC0 - XW, Z1 - Z0, T, 'concrete');                 // azotea sobre la columna oeste
+      b.slab((XC3 + XE) / 2, ZN1 - 3.75, P2, XE - XC3, 7.5, T, 'concrete');            // cubiertas de los aseos de la terraza
+      b.slab((XC3 + XE) / 2, ZS1 + 3.75, P2, XE - XC3, 7.5, T, 'concrete');
+      b.slab(0, 0, P2 + H, XC3 - XC0, Z1 - Z0, T, 'concrete', [voidN, voidS]);
       b.ring(0, 0, P2 + H, XC3 - XC0, Z1 - Z0, 0.6, 0.3, 'concrete');
-      [[-12, -24], [12, -24], [-12, 24], [12, 24], [-6, 0], [6, 0]].forEach(([x, z]) => {
+      [[-12, -23], [12, -23], [-12, 23], [12, 23]].forEach(([x, z]) => {
         b.box(x, P2 + H + T, z, 1.6, 0.9, 1.1, 'metal', { solid: false }); b.box(x, P2 + H + T + 0.9, z, 1.0, 0.05, 0.9, 'metalDark', { solid: false });
       });
-      // Escaleras: dos tramos apilados en cada hueco (P0→P1 y P1→P2), con losa por debajo
+      // Escaleras de los pasillos: dos tramos apilados (P0→P1 y P1→P2) con losa por debajo
       ['w', 'e'].forEach(side => FL.forEach(([a, c, dir]) => {
         const x = (STX[side][0] + STX[side][1]) / 2, z = (a + c) / 2, w = STX[side][1] - STX[side][0];
-        b.stairs(x, z, P0, w, c - a, P1, dir, 'marble', { thick: 0.3 });
+        b.stairs(x, z, P0, w, c - a, P1, dir, 'marble');                     // tramo de abajo macizo (no se mete nadie debajo)
         b.stairs(x, z, P1, w, c - a, P2 - P1, dir, 'marble', { thick: 0.3 });
-        // barandilla del lado del pasillo en P2 (en P1 el hueco lo ocupa el tramo de arriba)
-        const rx = side === 'w' ? STX.w[1] : STX.e[0];
-        b.aabb(rx - 0.05, P1, a, rx + 0.05, P2 - T, c, 'invisible', { see: true });   // en P1 el tramo de arriba sólo se coge por su extremo bajo
-        b.aabb(rx - 0.05, P2, a, rx + 0.05, P2 + 1.0, c, 'rail'); b.aabb(rx - 0.05, P2 + 1.0, a, rx + 0.05, P2 + H - 0.1, c, 'invisible', { see: true });
-        // y en el extremo bajo del hueco (donde no se llega por la escalera)
+        const rx = side === 'w' ? STX.w[0] : STX.e[1];
+        // P1: el tramo de arriba sólo se coge por su pie (barrera invisible en el lateral)
+        b.aabb(rx - 0.05, P1, a, rx + 0.05, P2 - T, c, 'invisible', { see: true });
+        b.aabb(rx - 0.03, P1 + 0.9, a, rx + 0.03, P1 + 0.95, c, 'metalDark', { solid: false });   // pasamanos
+        // P2: barandilla alrededor del hueco
+        rail(rx - 0.05, a, rx + 0.05, c, P2);
         const lowZ = dir === '+z' ? a : c;
-        b.aabb(STX[side][0], P2, lowZ - 0.05, STX[side][1], P2 + 1.0, lowZ + 0.05, 'rail'); b.aabb(STX[side][0], P2 + 1.0, lowZ - 0.05, STX[side][1], P2 + H - 0.1, lowZ + 0.05, 'invisible', { see: true });
-        [P0, P1, P2].forEach((Y, k) => sign(k === 2 ? 'ESCALERA ↓' : 'ESCALERA ↑ ' + (k === 0 ? '1ª' : '2ª'), side === 'w' ? XC1 - 0.2 + 0.0 : XC2 + 0.2, Y + 2.85, dir === '+z' ? a - 0.8 : c + 0.8, side === 'w' ? Math.PI / 2 : -Math.PI / 2, 2, '#1d8f4e'));
+        rail(STX[side][0], lowZ - 0.05, STX[side][1], lowZ + 0.05, P2);
       }));
+      // Escalera principal del vestíbulo (P0 → P1, sube hacia el oeste)
+      b.stairs((MS.x0 + MS.x1) / 2, (MS.z0 + MS.z1) / 2, P0, MS.x1 - MS.x0, MS.z1 - MS.z0, P1, '-x', 'marble');
+      rail(MS.x0, MS.z1 - 0.05, MS.x1, MS.z1 + 0.05, P1); rail(MS.x1 - 0.05, MS.z0, MS.x1 + 0.05, MS.z1, P1);
+      rail(MS.x0 + 2, MS.z0 - 0.05, MS.x1, MS.z0 + 0.05, P1);
 
-      // =================== PLANTA BAJA (P0) ===================
+      // ========================= PLANTA BAJA (P0) =========================
       const Y0 = P0;
+      // Cierres de los extremos de los pasillos de la columna oeste (con ventana)
+      [[P0, ZN1, ZN2, ZS2, ZS1], [P1, ZN1, -17.4, 17.6, ZS1]].forEach(([Y, a, c, d, e]) => [[a, c], [d, e]].forEach(([u, v]) => { b.wallSeg('z', XWC + T / 2, u, v, Y, H, T, [{ at: 0, y: 1.0, w: 1.2, h: 1.5 }], WALL); glass('z', XWC + T / 2, (u + v) / 2 - 0.6, (u + v) / 2 + 0.6, Y + 1, 1.5); }));
       // Ala norte: A007-E (esquina), A006-E…A001-E, maquinaria y C.T.
-      classroom(XW, Z0, XC1, ZN1, Y0, 's', 3, 'n', 'A007-E', { noWin: false });
-      ['A006-E', 'A005-E', 'A004-E', 'A003-E', 'A002-E', 'A001-E'].forEach((n, i) => classroom(XC1 + i * 7, Z0, XC1 + (i + 1) * 7, ZN1, Y0, 's', 2.3, 'n', n));
-      room(18, Z0, 22.5, ZN1, Y0, [{ side: 's', at: 0 }], [], { floor: 0x9aa0a6, name: 'MAQUINARIA', signW: 2.6 });
-      b.box(20.2, Y0, -25.5, 2.4, 1.8, 1.6, 'metal');
-      room(22.5, Z0, XC3, ZN1, Y0, [{ side: 's', at: 0.6, w: 1.4 }], [], { floor: 0x9aa0a6, name: 'C.T.', signW: 1.4 });
-      room(XC3, Z0, XE, ZN1, Y0, [], [{ side: 'n', at: 0, w: 2 }]);                // instalaciones (cerrado)
-      // Columna oeste: aseos, departamentos y cocina
-      room(XW, ZN1, XC0, -14, Y0, [{ side: 'e', at: 0 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      room(XW, -14, XC0, ZC0, Y0, [{ side: 'e', at: 0 }], [{ side: 'w', at: 0, w: 2.4 }], { floor: 0xd9cfba, name: 'D008-E', signW: 1.8 });
-      room(XW, ZC0, XC0, ZC1, Y0, [{ side: 'e', at: 0, w: 2.6 }], [{ side: 'w', at: 0, w: 2.4 }], { floor: 0xc9d3dc, name: 'CUINA', signW: 1.8 });
-      b.aabb(XW + 0.3, Y0, -3, XW + 1.1, Y0 + 0.95, 3, 'metal');                     // fogones
-      room(XW, ZC1, XC0, 14, Y0, [{ side: 'e', at: 0 }], [{ side: 'w', at: 0, w: 2.4 }], { floor: 0xd9cfba, name: 'D006-O', signW: 1.8 });
-      room(XW, 14, XC0, ZS1, Y0, [{ side: 'e', at: 0 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      // Bloque central norte: A008-E, A009-E, aseos, GIMNÀS y D007-E
-      classroom(XC1, ZN2, -12, -10.5, Y0, 'n', 2.4, 's', 'A008-E', { noWin: true });
-      classroom(XC1, -10.5, -12, ZC0, Y0, 's', 2.4, 'n', 'A009-E', { noWin: true });
-      room(-12, ZN2, -6, ZC0, Y0, [{ side: 's', at: 0 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      [-14, -11, -8].forEach(z => b.aabb(-8, Y0, z - 0.05, -6.3, Y0 + 2, z + 0.05, 'blueLight'));
-      room(-6, ZN2, 20, ZC0, Y0, [{ side: 's', at: -7, w: 2.6 }, { side: 's', at: 7, w: 2.6 }], [], { floor: 0xc9a46a, name: 'GIMNÀS', signW: 3 });
-      b.decoAt('court', 7, Y0 + 0.03, -10.5, { w: 22, d: 10.6, color: 0xc9a46a });
-      b.decoAt('hoop', -5.6, Y0, -10.5, { rotY: Math.PI / 2 }); b.box(-5.75, Y0, -10.5, 0.3, 3.2, 0.3, 'invisible');
-      b.decoAt('hoop', 19.6, Y0, -10.5, { rotY: -Math.PI / 2 }); b.box(19.75, Y0, -10.5, 0.3, 3.2, 0.3, 'invisible');
-      b.decoAt('wallbars', 7, Y0, ZN2 + 0.45, { n: 8 }); b.box(7, Y0, ZN2 + 0.5, 6.4, 2.6, 0.3, 'invisible');
-      [[2, -6.2], [12, -6.2]].forEach(([x, z]) => b.box(x, Y0, z, 2.2, 0.45, 0.6, 'blue'));   // colchonetas
-      room(20, ZN2, XC2, ZC0, Y0, [{ side: 's', at: 0 }, { side: 'e', at: 3 }], [], { floor: 0xd9cfba, name: 'D007-E', signW: 1.8 });
-      // Banda central: CAFETERIA - MENJADOR y vestíbulo hasta el ACCÉS (este)
-      floor(XC0, ZC0, XE, ZC1, 0xe2ddd2, Y0);
-      sign('CAFETERIA · MENJADOR', -14, Y0 + 2.9, ZC0 + 0.2, 0, 4.4, '#8a4b14');
-      [[-3.8, -1.7], [1.7, 3.8]].forEach(([a, c]) => { b.aabb(-26.8, Y0, a, -25.6, Y0 + 1.05, c, 'wood'); b.aabb(-26.9, Y0 + 1.05, a, -25.5, Y0 + 1.12, c, 'counter'); });   // barra
-      [[-21, -1.6], [-17, 1.6], [-13, -1.6], [-9, 1.6], [-5, -1.6]].forEach(([x, z]) => {
+      classroom(XW, Z0, -29, ZN1, Y0, 's', 1.6, 'n', 'A007-E');
+      const NW = 47.1 / 6;
+      ['A006-E', 'A005-E', 'A004-E', 'A003-E', 'A002-E', 'A001-E'].forEach((n, i) => classroom(-29 + i * NW, Z0, -29 + (i + 1) * NW, ZN1, Y0, 's', 2.3, 'n', n));
+      room(18.1, Z0, 23.6, ZN1, Y0, [{ side: 's', at: 0 }], [], { floor: 0x9aa0a6, name: 'MAQUINÀRIA' });
+      b.box(20.8, Y0, -24.5, 2.6, 1.8, 1.8, 'metal');
+      room(23.6, Z0, XC3, ZN1, Y0, [{ side: 's', at: 0.4, w: 1.4 }], [], { floor: 0x9aa0a6, name: 'C.T.' });
+      room(XC3, Z0, XE, ZN1, Y0, [{ side: 'w', at: 2, w: 1.2 }], [{ side: 'n', at: 0, w: 2 }], { floor: 0xd9cfba, name: 'M002-E' });
+      // Columna oeste: aseos, almacenes, cocina y departamentos (con huecos de paso entre ellos)
+      aseos(XWC, ZN2, XC0, -12, Y0, { side: 'e', at: 0.5, w: 1.2 }, 'B004-E');
+      room(XWC, -8.5, XC0, ZC0 - 0.5, Y0, [{ side: 'e', at: 0, w: 1.4 }], [{ side: 'w', at: 0, w: 1.6 }], { name: 'D008-E' });
+      room(XWC, ZC0 + 0.5, XC0, ZC1 - 0.5, Y0, [{ side: 'e', at: 0, w: 2.2 }], [{ side: 'w', at: 0, w: 2 }], { floor: 0xc9d3dc, name: 'CUINA' });
+      b.aabb(XWC + 0.3, Y0, -2.5, XWC + 1.1, Y0 + 0.95, 2.5, 'metal');
+      room(XWC, ZC1 + 0.5, XC0, 8.5, Y0, [{ side: 'e', at: 0, w: 1.4 }], [{ side: 'w', at: 0, w: 1.6 }], { name: 'D006-O' });
+      aseos(XWC, 12, XC0, ZS2, Y0, { side: 'e', at: -0.5, w: 1.2 }, 'B005-O');
+      // fachada oeste entre las salas de la columna (que no se pueda salir)
+      [[-12, -8.5], [ZC0 - 0.5, ZC0 + 0.5], [ZC1 - 0.5, ZC1 + 0.5], [8.5, 12]].forEach(([u, v]) => { b.wallSeg('z', XWC + T / 2, u, v, Y0, H, T, v - u > 2.5 ? [{ at: 0, y: 1.0, w: 1.4, h: 1.5 }] : [], WALL); if (v - u > 2.5) glass('z', XWC + T / 2, (u + v) / 2 - 0.7, (u + v) / 2 + 0.7, Y0 + 1, 1.5); });
+      // Bloque central norte
+      classroom(XC1, ZN2, -9, -10, Y0, 'n', 5, 's', 'A008-E', { noWin: true });
+      classroom(XC1, -10, -9, ZC0, Y0, 's', 5, 'n', 'A009-E', { noWin: true });
+      aseos(-9, ZN2, -5, ZC0, Y0, { side: 's', at: 0, w: 1.2 }, 'B003-E');
+      aseos(-5, ZN2, -1, ZC0, Y0, { side: 's', at: 0, w: 1.2 }, 'B002-E');
+      room(-1, ZN2, 21, ZC0, Y0, [{ side: 's', at: -6, w: 2.4 }, { side: 's', at: 6, w: 2.4 }], [], { floor: 0xc9a46a, name: 'GIMNÀS' });
+      b.decoAt('court', 10, Y0 + 0.04, -10.25, { w: 20, d: 11, color: 0xc9a46a });
+      b.decoAt('hoop', -0.6, Y0, -10.25, { rotY: Math.PI / 2 }); b.box(-0.75, Y0, -10.25, 0.3, 3.2, 0.3, 'invisible');
+      b.decoAt('hoop', 20.6, Y0, -10.25, { rotY: -Math.PI / 2 }); b.box(20.75, Y0, -10.25, 0.3, 3.2, 0.3, 'invisible');
+      b.decoAt('wallbars', 10, Y0, ZN2 + 0.45, { n: 8 }); b.box(10, Y0, ZN2 + 0.5, 6.4, 2.6, 0.3, 'invisible');
+      [[5, -6.2], [15, -6.2]].forEach(([x, z]) => b.box(x, Y0, z, 2.2, 0.45, 0.6, 'blue'));
+      room(21, ZN2, XC2, ZC0, Y0, [{ side: 's', at: 0, w: 1.4 }], [], { name: 'D007-E' });
+      // Banda central: CAFETERIA · MENJADOR y vestíbulo hasta el ACCÉS
+      floor(XC0, ZC0, XC3, ZC1, 0xe2ddd2, Y0);
+      sign('CAFETERIA · MENJADOR', -18, Y0 + 2.6, ZC0 + 0.2, 0, 2.6, '#8a4b14');
+      [[-3.8, -1.6], [1.6, 3.8]].forEach(([a, c]) => { b.aabb(-26.6, Y0, a, -25.4, Y0 + 1.05, c, 'wood'); b.aabb(-26.7, Y0 + 1.05, a, -25.3, Y0 + 1.12, c, 'counter'); });
+      [[-22, -1.6], [-18, 1.6], [-14, -1.6], [-10, 1.6], [-6, -1.6]].forEach(([x, z]) => {
         b.box(x, Y0, z, 2.4, 0.76, 1.0, 'wood');
         [-0.75, 0.75].forEach(o => b.box(x + o, Y0, z + (z < 0 ? -0.75 : 0.75), 0.45, 0.45, 0.45, 'red', { solid: false }));
       });
-      sign('ACCÉS · IES ABASTOS', XE - 0.2, Y0 + 2.9, 0, -Math.PI / 2, 4, '#1f3d7a');
-      b.wallSeg('z', XE - T / 2, ZC0, ZC1, Y0, H, T, [{ at: 0, y: 0.7, w: 2.4, h: 1.9 }], WALL); glass('z', XE - T / 2, -1.2, 1.2, Y0 + 0.7, 1.9);   // puerta de entrada acristalada (cerrada)
+      for (let x = 1.5; x <= 22; x += 3.5) b.pillar(x, Y0, 0, 0.35, H, 'concrete');   // fila de pilares del vestíbulo
+      // Vestíbulo del acceso (este), con la escalera principal y la entrada acristalada (cerrada)
+      floor(XC3, ZC0, XE, ZC1, 0xe2ddd2, Y0);
       b.wallSeg('x', ZC0 + T / 2, XC3, XE, Y0, H, T, [], WALL); b.wallSeg('x', ZC1 - T / 2, XC3, XE, Y0, H, T, [], WALL);
-      [[31, -2.6], [31, 2.6]].forEach(([x, z]) => { b.box(x, Y0, z, 0.6, 1.0, 0.6, 'invisible'); b.decoAt('planter', x, Y0, z, { color: 0xa9aaa4 }); });
-      // Bloque central sur: A010-O, A009-O, A008-O, aseos, SALA D'ACTES y D006-O
-      classroom(XC1, ZC1, -12, 10.5, Y0, 'n', 2.4, 's', 'A010-O', { noWin: true });
-      classroom(XC1, 10.5, -18, ZS2, Y0, 's', 0, 'n', 'A009-O', { noWin: true });
-      classroom(-18, 10.5, -12, ZS2, Y0, 's', 0, 'n', 'A008-O', { noWin: true });
-      room(-12, ZC1, -6, ZS2, Y0, [{ side: 'n', at: 0 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      [8, 11, 14].forEach(z => b.aabb(-8, Y0, z - 0.05, -6.3, Y0 + 2, z + 0.05, 'blueLight'));
-      room(-6, ZC1, 20, ZS2, Y0, [{ side: 'n', at: -7, w: 2.6 }, { side: 'n', at: 7, w: 2.6 }], [], { floor: 0x7a2f2f, name: "SALA D'ACTES", signW: 3 });
-      b.aabb(-5.7, Y0, 13.5, 19.7, Y0 + 0.9, 16.7, 'woodDark');                     // escenario
-      b.decoAt('screen', 7, Y0 + 2.4, 16.6, { rotY: Math.PI, w: 6, h: 2.6 });
-      for (let z = 6.2; z < 12.5; z += 1.5) for (const [x0, x1] of [[-4.5, 4.5], [9.5, 18.5]]) b.aabb(x0, Y0, z - 0.3, x1, Y0 + 0.5, z + 0.3, 'red');   // butacas
-      room(20, ZC1, XC2, ZS2, Y0, [{ side: 'n', at: 0 }, { side: 'e', at: -3 }], [], { floor: 0xd9cfba, name: 'D006-O', signW: 1.8 });
-      // Ala sur: A007-O (esquina), A006-O…A001-O y conserjería
-      classroom(XW, ZS1, XC1, Z1, Y0, 'n', 3, 's', 'A007-O');
-      ['A006-O', 'A005-O', 'A004-O', 'A003-O', 'A002-O', 'A001-O'].forEach((n, i) => classroom(XC1 + i * 7, ZS1, XC1 + (i + 1) * 7, Z1, Y0, 'n', 2.3, 's', n));
-      room(18, ZS1, XC3, Z1, Y0, [{ side: 'n', at: -2 }], [{ side: 's', at: 1, w: 3 }], { floor: 0xd9cfba, name: 'CONSERJERIA', signW: 2.6 });
-      room(XC3, ZS1, XE, Z1, Y0, [], [{ side: 's', at: 0, w: 2 }]);
-      // Departamentos del este (D001…D008)
-      ['D001-E', 'D002-E', 'D003-E', 'D004-E'].forEach((n, i) => room(XC3, ZN1 + i * 4, XE, ZN1 + (i + 1) * 4, Y0, [{ side: 'w', at: 0, w: 1.4 }], [{ side: 'e', at: 0, w: 1.8 }], { floor: 0xd9cfba, name: n, signW: 1.6 }));
-      ['D005-O', 'D006-O', 'D007-O', 'D008-O'].forEach((n, i) => room(XC3, ZC1 + i * 4, XE, ZC1 + (i + 1) * 4, Y0, [{ side: 'w', at: 0, w: 1.4 }], [{ side: 'e', at: 0, w: 1.8 }], { floor: 0xd9cfba, name: n, signW: 1.6 }));
-      [[-20, ZN1], [-16, ZN1], [-12, ZN1], [-8, ZN1]].forEach(([z]) => {});
-      // Pasillos de la planta baja
+      b.wallSeg('z', XE - T / 2, ZC0, ZC1, Y0, H, T, [{ at: 1.6, y: 0.7, w: 2.4, h: 1.9 }], WALL); glass('z', XE - T / 2, 0.4, 2.8, Y0 + 0.7, 1.9);
+      sign('ACCÉS · IES ABASTOS', XE - 0.2, Y0 + 2.9, 1.6, -Math.PI / 2, 2.2);
+      sign('↑ PLANTA 1', MS.x1 - 0.5, Y0 + 2.2, MS.z1 + 0.2, 0, 1.2, '#1d8f4e');
+      // Bloque central sur
+      classroom(XC1, ZC1, -9, 9.5, Y0, 'n', 5, 's', 'A010-O', { noWin: true });
+      classroom(XC1, 9.5, -14, ZS2, Y0, 's', 2, 'n', 'A008-O', { noWin: true, oneRow: true });
+      classroom(-14, 9.5, -9, ZS2, Y0, 's', 0, 'n', 'A009-O', { noWin: true, oneRow: true });
+      aseos(-9, ZC1, -5, ZS2, Y0, { side: 'n', at: 0, w: 1.2 }, 'B004-O');
+      aseos(-5, ZC1, -1, ZS2, Y0, { side: 'n', at: 0, w: 1.2 }, 'B003-O');
+      room(-1, ZC1, 18, ZS2, Y0, [{ side: 'n', at: -5, w: 2.4 }, { side: 'n', at: 5, w: 2.4 }], [], { floor: 0x7a2f2f, name: "SALA D'ACTES" });
+      b.aabb(-0.7, Y0, 13.4, 17.7, Y0 + 0.9, 16.2, 'woodDark');
+      b.decoAt('screen', 8.5, Y0 + 2.3, 16.1, { rotY: Math.PI, w: 5, h: 2.2 });
+      for (let z = 6.4; z < 12.2; z += 1.5) for (const [x0, x1] of [[0.5, 7.5], [9.5, 16.8]]) b.aabb(x0, Y0, z - 0.3, x1, Y0 + 0.5, z + 0.3, 'red');
+      room(18, ZC1, XC2, ZS2, Y0, [{ side: 'n', at: 0, w: 1.4 }], [], { name: 'D006-O' });
+      // Ala sur: A007-O…A001-O y salas del extremo este
+      classroom(XWC, ZS1, -26.25, Z1, Y0, 'n', 2.1, 's', 'A007-O');
+      [['A006-O', -26.25, -18], ['A005-O', -18, -10.5], ['A004-O', -10.5, -5.25], ['A003-O', -5.25, 1.5], ['A002-O', 1.5, 8], ['A001-O', 8, 14.5]].forEach(([n, a, c]) => classroom(a, ZS1, c, Z1, Y0, 'n', c - a > 6 ? 2.3 : 1.3, 's', n));
+      room(14.5, ZS1, 20, Z1, Y0, [{ side: 'n', at: -1.5 }], [{ side: 's', at: 0, w: 2.4 }], { name: 'CONSERGERIA' });
+      room(20, ZS1, XC3, Z1, Y0, [{ side: 'n', at: -2 }], [{ side: 's', at: 1, w: 2.4 }], { name: 'SECRETARIA' });
+      b.aabb(21, Y0, 23, 26, Y0 + 1.05, 23.7, 'wood');
+      room(XC3, ZS1, XE, Z1, Y0, [{ side: 'w', at: -2, w: 1.2 }], [{ side: 's', at: 0, w: 2 }], { name: 'D007-O' });
+      // Departamentos del este (bloques D001-E…D008-E y D001-O…D008-O)
+      ['A000-E', 'D008-E', 'D005-E', 'D004-E'].forEach((n, i) => room(XC3, ZN1 + i * 3.875, XE, ZN1 + (i + 1) * 3.875, Y0, [{ side: 'w', at: 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.4 }], { name: n }));
+      ['D001-O', 'D002-O', 'D003-O', 'D004-O'].forEach((n, i) => room(XC3, ZC1 + i * 3.875, XE, ZC1 + (i + 1) * 3.875, Y0, [{ side: 'w', at: 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.4 }], { name: n }));
+      // Pasillos (distribuidores) de la planta baja
       floor(XC0, ZN1, XC3, ZN2, 0xe6e0d4, Y0); floor(XC0, ZS2, XC3, ZS1, 0xe6e0d4, Y0);
-      floor(XC0, ZN1, XC1, ZS1, 0xe6e0d4, Y0); floor(XC2, ZN1, XC3, ZS1, 0xe6e0d4, Y0);
+      floor(XC0, ZN2, XC1, ZC0, 0xe6e0d4, Y0); floor(XC0, ZC1, XC1, ZS2, 0xe6e0d4, Y0);
+      floor(XC2, ZN2, XC3, ZC0, 0xe6e0d4, Y0); floor(XC2, ZC1, XC3, ZS2, 0xe6e0d4, Y0);
 
-      // =================== PRIMERA PLANTA (P1) ===================
+      // ========================= PRIMERA PLANTA (P1) =========================
       const Y1 = P1;
-      // Ala norte: A108-E (esquina), A107-E…A102-E, maquinaria, cuadro eléctrico y A101-E
-      classroom(XW, Z0, XC1, ZN1, Y1, 's', 3, 'n', 'A108-E');
-      ['A107-E', 'A106-E', 'A105-E', 'A104-E', 'A103-E', 'A102-E'].forEach((n, i) => classroom(XC1 + i * 7, Z0, XC1 + (i + 1) * 7, ZN1, Y1, 's', 2.3, 'n', n, { desk: i % 2 ? 0x2f6fb5 : 0xc0392b }));
-      room(18, Z0, 21.5, ZN1, Y1, [{ side: 's', at: 0, w: 1.4 }], [], { floor: 0x9aa0a6, name: 'MAQUINÀRIA', signW: 2.4 });
-      room(21.5, Z0, 23.5, ZN1, Y1, [{ side: 's', at: 0, w: 1.0 }], [], { floor: 0x9aa0a6 });
-      room(23.5, Z0, XC3, ZN1, Y1, [{ side: 's', at: 0, w: 1.4 }], [{ side: 'n', at: 0, w: 2 }], { floor: 0xd6cfbf, name: 'A101-E', signW: 1.8 });
-      // Columna oeste: aseos, A109-E, A110-E, A111-E, A110-O, A109-O, A108-O, aseos
-      room(XW, ZN1, XC0, -15.5, Y1, [{ side: 'e', at: 0, w: 1.4 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      [['A109-E', -15.5, -11], ['A110-E', -11, -6.5], ['A111-E', -6.5, 0], ['A110-O', 0, 6.5], ['A109-O', 6.5, 11], ['A108-O', 11, 15.5]].forEach(([n, a, c]) => {
-        room(XW, a, XC0, c, Y1, [{ side: 'e', at: 0, w: 1.4 }], [{ side: 'w', at: 0, w: Math.min(3, c - a - 1.4) }], { floor: 0xd6cfbf, name: n, signW: 1.8 });
-        for (let z = a + 1.3; z < c - 1; z += 1.7) { b.decoAt('desk', -30.6, Y1, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(-30.85, Y1, z, 1.2, 0.76, 1.15, 'invisible'); }
+      classroom(XW, Z0, -28.5, ZN1, Y1, 's', 1.6, 'n', 'A108-E');
+      const N1 = 45.5 / 6;
+      ['A107-E', 'A106-E', 'A105-E', 'A104-E', 'A103-E', 'A102-E'].forEach((n, i) => classroom(-28.5 + i * N1, Z0, -28.5 + (i + 1) * N1, ZN1, Y1, 's', 2.3, 'n', n, { desk: i % 2 ? 0x2f6fb5 : 0xc0392b }));
+      room(17, Z0, 21.75, ZN1, Y1, [{ side: 's', at: 0, w: 1.4 }], [], { floor: 0x9aa0a6, name: 'MAQUINÀRIA' });
+      room(21.75, Z0, 24.25, ZN1, Y1, [{ side: 's', at: 0, w: 1.0 }], [], { floor: 0x9aa0a6, name: 'QUADRE ELÈCTRIC', bg: '#7a1f1f' });
+      classroom(24.25, Z0, XC3 + 1.9, ZN1, Y1, 's', 0, 'n', 'A101-E');
+      // Columna oeste
+      aseos(XWC, -17.4, XC0, -13, Y1, { side: 'e', at: 0, w: 1.2 }, 'B103-E');
+      [['A109-E', -13, -8.5], ['A110-E', -8.5, -4], ['A111-E', -4, 0.5], ['A110-O', 0.5, 5], ['A109-O', 5, 9.5], ['A108-O', 9.5, 14]].forEach(([n, a, c]) => {
+        room(XWC, a, XC0, c, Y1, [{ side: 'e', at: 0, w: 1.4 }], [{ side: 'w', at: 0, w: 2 }], { floor: 0xd6cfbf, name: n });
+        for (let z = a + 1.2; z < c - 0.9; z += 1.6) { b.decoAt('desk', -31.9, Y1, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(-32.15, Y1, z, 1.2, 0.76, 1.15, 'invisible'); }
+        b.decoAt('board', XWC + 0.38, Y1 + 1.55, (a + c) / 2, { rotY: Math.PI / 2, w: 1.8, text: n });
       });
-      room(XW, 15.5, XC0, ZS1, Y1, [{ side: 'e', at: 0, w: 1.4 }], [], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      // Patios (al aire libre, encima del gimnasio y del salón de actos)
-      sign('PATI EST · CAVANILLES', 0, Y1 + 2.9, ZN2 + 0.2, 0, 4.4, '#0f6b4f');
-      sign('PATI OEST · SÁNCHEZ AYUSO', 0, Y1 + 2.9, ZS2 - 0.2, Math.PI, 4.8, '#0f6b4f');
-      [[ZN2, ZPN], [ZPS, ZS2]].forEach(([a, c], k) => {
+      aseos(XWC, 14, XC0, 17.6, Y1, { side: 'e', at: 0, w: 1.2 }, 'B104-O');
+      // Patios Cavanilles y Sánchez Ayuso (al aire libre, encima del gimnasio y del salón de actos)
+      [[ZN2, ZC0, 'PATI EST · CAVANILLES', 0x2f6fb5], [ZC1, ZS2, 'PATI OEST · SÁNCHEZ AYUSO', 0x3c7d5c]].forEach(([a, c, n, col]) => {
         const cz = (a + c) / 2;
-        b.decoAt('court', 0, Y1 + 0.03, cz, { w: 16, d: 8.4, color: k ? 0x3c7d5c : 0x2f6fb5 });
-        b.decoAt('hoop', -8.6, Y1, cz, { rotY: Math.PI / 2 }); b.box(-8.75, Y1, cz, 0.3, 3.2, 0.3, 'invisible');
-        b.decoAt('hoop', 8.6, Y1, cz, { rotY: -Math.PI / 2 }); b.box(8.75, Y1, cz, 0.3, 3.2, 0.3, 'invisible');
-        [[-18, cz - 2.6], [-14, cz + 2.6], [18, cz + 2.6], [14, cz - 2.6]].forEach(([x, z]) => { b.box(x, Y1, z, 1.4, 0.6, 1.4, 'invisible'); b.box(x, Y1, z, 0.3, 2.2, 0.3, 'invisible'); b.decoAt('planter', x, Y1, z, { color: 0xa9aaa4 }); });
+        floor(XC1, a, XC2, c, 0xc9c2b4, Y1);
+        b.decoAt('court', 0, Y1 + 0.05, cz, { w: 15, d: 8, color: col });
+        b.decoAt('hoop', -8.1, Y1, cz, { rotY: Math.PI / 2 }); b.box(-8.25, Y1, cz, 0.3, 3.2, 0.3, 'invisible');
+        b.decoAt('hoop', 8.1, Y1, cz, { rotY: -Math.PI / 2 }); b.box(8.25, Y1, cz, 0.3, 3.2, 0.3, 'invisible');
+        [[-17, cz - 2.8], [-13, cz + 2.8], [17, cz + 2.8], [13, cz - 2.8]].forEach(([x, z]) => { b.box(x, Y1, z, 1.2, 0.6, 1.2, 'invisible'); b.box(x, Y1, z, 0.3, 2.2, 0.3, 'invisible'); b.decoAt('planter', x, Y1, z, { color: 0xa9aaa4 }); });
         [[-21, cz], [21, cz]].forEach(([x, z]) => { b.decoAt('bench', x, Y1, z, { rotY: Math.PI / 2 }); b.box(x, Y1, z, 0.55, 0.55, 1.8, 'invisible'); });
-        // pilares del porche alrededor del patio
-        for (let x = -21; x <= 21; x += 6) [a, c].forEach(z => b.pillar(x, Y1, z, 0.35, H, 'concrete'));
+        sign(n, 0, Y1 + 2.4, a < 0 ? ZN2 - 0.17 : ZS2 + 0.17, a < 0 ? Math.PI : 0, 2.6, '#0f6b4f');
       });
-      // Franja central: magatzem, distribuidor, recurs, BIBLIOTECA, A112-E y distribuidor
-      room(XC1, ZC0, -20, ZC1, Y1, [{ side: 'n', at: 0, w: 1.4 }], [], { floor: 0x9aa0a6, name: 'MAGATZEM', signW: 2 });
-      floor(-20, ZC0, -12, ZC1, 0xe6e0d4, Y1); sign('DISTRIBUIDOR', -16, Y1 + 2.9, ZC0 + 0.1, 0, 2.6);
-      room(-12, ZC0, -6, ZC1, Y1, [{ side: 'n', at: 0, w: 1.4 }, { side: 's', at: 0, w: 1.4 }], [], { floor: 0xd9cfba, name: 'RECURS', signW: 2 });
-      room(-6, ZC0, 6, ZC1, Y1, [{ side: 'n', at: -3, w: 1.8 }, { side: 's', at: 3, w: 1.8 }], [{ side: 'n', at: 2.5, w: 3 }, { side: 's', at: -2.5, w: 3 }], { floor: 0xd9cfba, name: 'BIBLIOTECA', signW: 2.6 });
-      [[-1.2, 'bookRed'], [0.6, 'bookBlue']].forEach(([x, m]) => b.aabb(x - 0.3, Y1, -1.7, x + 0.3, Y1 + 2.0, 1.7, m));
-      b.aabb(2.4, Y1, -1, 5.2, Y1 + 0.76, 1, 'wood');
-      room(6, ZC0, 12, ZC1, Y1, [{ side: 'n', at: 0, w: 1.4 }, { side: 's', at: 0, w: 1.4 }], [], { floor: 0xd6cfbf, name: 'A112-E', signW: 1.8 });
-      floor(12, ZC0, XC2, ZC1, 0xe6e0d4, Y1); sign('DISTRIBUIDOR', 18, Y1 + 2.9, ZC0 + 0.1, 0, 2.6);
-      // Ala sur: A107-O (esquina), A106-O…A101-O y sala de profesores
-      classroom(XW, ZS1, XC1, Z1, Y1, 'n', 3, 's', 'A107-O');
-      ['A106-O', 'A105-O', 'A104-O', 'A103-O', 'A102-O', 'A101-O'].forEach((n, i) => classroom(XC1 + i * 7, ZS1, XC1 + (i + 1) * 7, Z1, Y1, 'n', 2.3, 's', n, { desk: i % 2 ? 0xc0392b : 0x2f6fb5 }));
-      room(18, ZS1, XC3, Z1, Y1, [{ side: 'n', at: -2 }], [{ side: 's', at: 1, w: 3 }], { floor: 0xd9cfba, name: 'SALA PROFESSORAT', signW: 3 });
-      b.aabb(20, Y1, 23, 26, Y1 + 0.76, 25, 'wood');
-      // Pasillo este con salida a la TERRASSA y la terraza (al aire libre, con barandilla)
-      glazed('z', XC3 + T / 2, ZN1, ZS1, Y1, 4.5, 2.6, [-2.5, 2.5]);
-      floor(XC3, ZN1, XE, ZS1, 0xbfb8aa, Y1);
-      room(XC3, ZN1, 32, -15.5, Y1, [{ side: 's', at: 0, w: 1.4 }], [], { floor: 0xb9c4c9, name: 'B102-E', signW: 1.6 });
-      room(XC3, 15.5, 32, ZS1, Y1, [{ side: 'n', at: 0, w: 1.4 }], [], { floor: 0xb9c4c9, name: 'B101-O', signW: 1.6 });
-      rail(XE - 0.15, ZN1, XE + 0.05, ZS1, Y1); b.aabb(XE - 0.15, Y1, ZN1, XE + 0.05, P2 + H, ZS1, 'invisible', { see: true });
-      sign('TERRASSA', XC3 - 0.2, Y1 + 2.9, 0, -Math.PI / 2, 2.2, '#0f6b4f');
-      [[31, -7], [31, 7], [33.5, -12], [33.5, 12]].forEach(([x, z]) => { b.box(x, Y1, z, 1.2, 0.6, 1.2, 'invisible'); b.decoAt('planter', x, Y1, z, { color: 0xa9aaa4 }); });
-      [[31.5, -10], [31.5, 10]].forEach(([x, z]) => { b.decoAt('bench', x, Y1, z, { rotY: Math.PI / 2 }); b.box(x, Y1, z, 0.55, 0.55, 1.8, 'invisible'); });
-      // Pasillos (distribuidores)
+      // Franja central: magatzems, distribuidor, recurs, BIBLIOTECA, A112-E y distribuidor
+      room(XC1, ZC0, -21.6, -1.6, Y1, [{ side: 'e', at: 0, w: 1.0 }], [], { floor: 0x9aa0a6, name: 'MAGATZEM' });
+      room(XC1, 1.6, -21.6, ZC1, Y1, [{ side: 'e', at: 0, w: 1.0 }], [], { floor: 0x9aa0a6, name: 'MAGATZEM' });
+      floor(-24, -1.6, -11, 1.6, 0xe6e0d4, Y1); floor(-21.6, ZC0, -11, ZC1, 0xe6e0d4, Y1);
+      sign('DISTRIBUIDOR', -16, Y1 + 2.6, 0, Math.PI / 2, 1.5);
+      room(-11, ZC0, -5.5, 0, Y1, [{ side: 's', at: 0, w: 1.4 }, { side: 'w', at: 0, w: 1.4 }], [], { name: 'RECURS' });
+      room(-5.5, ZC0, 5.5, ZC1, Y1, [{ side: 'w', at: 2, w: 1.6 }, { side: 'e', at: 2, w: 1.6 }], [{ side: 'n', at: 0, w: 3 }, { side: 's', at: 0, w: 3 }], { name: 'BIBLIOTECA' });
+      [[-3, 'bookRed'], [-1.2, 'bookBlue'], [0.6, 'bookGreen']].forEach(([x, m]) => b.aabb(x - 0.3, Y1, -3.4, x + 0.3, Y1 + 2.0, -0.6, m));
+      b.aabb(-3.5, Y1, 1.4, 1.5, Y1 + 0.76, 2.6, 'wood');
+      room(5.5, ZC0, 11, ZC1, Y1, [{ side: 'w', at: -2, w: 1.4 }, { side: 'e', at: -2, w: 1.4 }], [{ side: 'n', at: 0, w: 2 }], { floor: 0xd6cfbf, name: 'A112-E' });
+      floor(11, ZC0, XC2, ZC1, 0xe6e0d4, Y1);
+      sign('DISTRIBUIDOR', 17.5, Y1 + 2.6, 0, -Math.PI / 2, 1.5);
+      // Ala sur
+      classroom(XWC, ZS1, -26.25, Z1, Y1, 'n', 2.1, 's', 'A107-O');
+      [['A106-O', -26.25, -18.75], ['A105-O', -18.75, -11.25], ['A104-O', -11.25, -3.75], ['A103-O', -3.75, 3.75], ['A102-O', 3.75, 11.25], ['A101-O', 11.25, 18.75]].forEach(([n, a, c], i) => classroom(a, ZS1, c, Z1, Y1, 'n', 2.3, 's', n, { desk: i % 2 ? 0xc0392b : 0x2f6fb5 }));
+      room(18.75, ZS1, XC3, Z1, Y1, [{ side: 'n', at: -2 }], [{ side: 's', at: 1, w: 2.4 }], { name: 'SALA PROFESSORAT' });
+      b.aabb(20.5, Y1, 22.5, 26, Y1 + 0.76, 24.5, 'wood');
+      // Este: aseos B101/B102 y terrazas (al aire libre) a los lados del hueco de la escalera principal
+      glazed('z', XC3 + T / 2, ZN1, ZS1, Y1, 4.5, 2.4, [-7.5, 7.5, -2.6]);
+      aseos(XC3, ZN1, XE, -15.5, Y1, { side: 's', at: -2, w: 1.2 }, 'B102-E');
+      aseos(XC3, 15.5, XE, ZS1, Y1, { side: 'n', at: -2, w: 1.2 }, 'B101-O');
+      floor(XC3, -15.5, XE, MS.z0, 0xbfb8aa, Y1); floor(XC3, MS.z1, XE, 15.5, 0xbfb8aa, Y1); floor(XC3, MS.z0, MS.x0, MS.z1, 0xbfb8aa, Y1);
+      sign('TERRASSA', XC3 - 0.17, Y1 + 2.4, -7.5 + 1.8, -Math.PI / 2, 1.3, '#0f6b4f');
+      sign('TERRASSA', XC3 - 0.17, Y1 + 2.4, 7.5 + 1.8, -Math.PI / 2, 1.3, '#0f6b4f');
+      rail(XE - 0.15, -15.5, XE + 0.05, 15.5, Y1);
+      [[31, -10], [31, 10], [33.3, -6], [33.3, 6]].forEach(([x, z]) => { b.box(x, Y1, z, 1.2, 0.6, 1.2, 'invisible'); b.decoAt('planter', x, Y1, z, { color: 0xa9aaa4 }); });
+      [[31.5, -12.5], [31.5, 12.5]].forEach(([x, z]) => { b.decoAt('bench', x, Y1, z, { rotY: Math.PI / 2 }); b.box(x, Y1, z, 0.55, 0.55, 1.8, 'invisible'); });
+      // Pasillos de P1
       floor(XC0, ZN1, XC3, ZN2, 0xe6e0d4, Y1); floor(XC0, ZS2, XC3, ZS1, 0xe6e0d4, Y1);
-      floor(XC0, ZN1, XC1, ZS1, 0xe6e0d4, Y1); floor(XC2, ZN1, XC3, ZS1, 0xe6e0d4, Y1);
+      corrFloor(XC0, XC1, ZN2, ZS2, Y1, 'w', 0xe6e0d4); corrFloor(XC2, XC3, ZN2, ZS2, Y1, 'e', 0xe6e0d4);
 
-      // =================== SEGUNDA PLANTA (P2) ===================
+      // ========================= SEGUNDA PLANTA (P2) =========================
       const Y2 = P2;
-      // Fachadas oeste y este (pasillos con ventanas)
-      glazed('z', XC0 + T / 2, Z0, Z1, Y2, 4.5, 2.6);
-      glazed('z', XC3 - T / 2, Z0, Z1, Y2, 4.5, 2.6);
+      glazed('z', XC0 + T / 2, Z0, Z1, Y2, 4.5, 2.4);
+      glazed('z', XC3 - T / 2, Z0, Z1, Y2, 4.5, 2.4);
       [[XC0, XC1], [XC2, XC3]].forEach(([a0, a1]) => {
         b.wallSeg('x', Z0 + T / 2, a0, a1, Y2, H, T, [{ at: 0, y: 1.0, w: 1.6, h: 1.6 }], WALL); glass('x', Z0 + T / 2, (a0 + a1) / 2 - 0.8, (a0 + a1) / 2 + 0.8, Y2 + 1, 1.6);
         b.wallSeg('x', Z1 - T / 2, a0, a1, Y2, H, T, [{ at: 0, y: 1.0, w: 1.6, h: 1.6 }], WALL); glass('x', Z1 - T / 2, (a0 + a1) / 2 - 0.8, (a0 + a1) / 2 + 0.8, Y2 + 1, 1.6);
       });
-      // Paredes acristaladas hacia los huecos de los patios
-      glazed('x', ZN2 - T / 2, XC1, XC2, Y2, 4.5, 3.2); glazed('x', ZPN + T / 2, XC1, XC2, Y2, 4.5, 3.2);
-      glazed('x', ZPS - T / 2, XC1, XC2, Y2, 4.5, 3.2); glazed('x', ZS2 + T / 2, XC1, XC2, Y2, 4.5, 3.2);
-      [[ZN2, ZPN], [ZPS, ZS2]].forEach(([a, c]) => { glazed('z', XC1 - T / 2, a, c, Y2, 3.5, 2.4); glazed('z', XC2 + T / 2, a, c, Y2, 3.5, 2.4); });
-      // Ala norte: aseos y aulas 206 … 201
+      // Paredes acristaladas de los pasillos que dan a los huecos de los patios
+      glazed('x', ZN2 - T / 2, XC1, XC2, Y2, 4.5, 3); glazed('x', ZPN + T / 2, XC1, XC2, Y2, 4.5, 3);
+      glazed('x', ZPS - T / 2, XC1, XC2, Y2, 4.5, 3); glazed('x', ZS2 + T / 2, XC1, XC2, Y2, 4.5, 3);
+      [[ZN2, ZPN], [ZPS, ZS2]].forEach(([a, c]) => { glazed('z', XC1 + T / 2, a, c, Y2, 3.5, 2.2); glazed('z', XC2 - T / 2, a, c, Y2, 3.5, 2.2); });
+      // Ala norte: aseos B204-E/B203-E y aulas 206 … 201
       const AW = 44 / 6;
-      room(XC1, Z0, -20, ZN1, Y2, [{ side: 's', at: 0.6, w: 1.4 }], [{ side: 'n', at: 0, w: 2 }], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
+      aseos(XC1, Z0, -20, ZN1, Y2, { side: 's', at: 0.6, w: 1.2 }, 'B204-E');
       [['206', 'Desdobles'], ['205', 'Desdobles'], ['204', 'PMAR'], ['203', 'ESO 2ºI'], ['202', 'ESO 2ºE'], ['201', 'ESO 2ºA']].forEach(([n, g], i) =>
-        classroom(-20 + i * AW, Z0, -20 + (i + 1) * AW, ZN1, Y2, 's', 2.3, 'n', `AULA ${n} · ${g}`, { desk: i % 2 ? 0x2f6fb5 : 0xc0392b, board: ['Desdobles', 'Desdobles', 'PMAR', 'x² + 2x − 3 = 0', 'H₂O + CO₂', 'Present perfect'][i] }));
-      // Bloque central: departamentos y aulas 301 … 308 (dos filas)
+        classroom(-20 + i * AW, Z0, -20 + (i + 1) * AW, ZN1, Y2, 's', 2.3, 'n', `AULA ${n}`, { desk: i % 2 ? 0x2f6fb5 : 0xc0392b, board: g }));
+      // Bloque central (dos filas): aulas 301 … 308 y departamentos, según el plano de evacuación
       const cw = 24 / 7;
-      const topRow = ['Plástica · Economía', '306 · Pedagogía', 'Aula 305', 'Aula 304 · Latín', 'Dpto. Filosofía', 'Dpto. Geografía', 'Aula 303'];
-      const botRow = ['Dpto. FOL · Tecnología', 'Dpto. Castellano', 'Dpto. Informática', 'Dpto. Administración', 'Dpto. Comercio', 'Dpto. Matemáticas', 'Seminario'];
-      const topE = ['Dpto. Francés', 'Aula 302', 'Dpto. Biología', 'Aula 301 · Francés'], botE = ['Dpto. Física y Química', 'Dpto. Valencià', 'Dpto. Inglés', 'Aula 308 · Inglés'];
-      const bgOf = n => n.startsWith('Dpto') ? '#5b3a7a' : '#1f3d7a';
-      topRow.forEach((n, i) => { const x0 = XC1 + i * cw; room(x0, ZC0, x0 + cw, 0, Y2, [{ side: 'n', at: 0, w: 1.4 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n), signW: cw - 0.4 }); if (i % 2) b.aabb(x0 + 0.4, Y2, -1.5, x0 + cw - 0.4, Y2 + 0.76, -0.6, 'wood'); else b.aabb(x0 + cw - 0.9, Y2, -1.6, x0 + cw - 0.4, Y2 + 1.9, -0.4, 'metal'); });
-      botRow.forEach((n, i) => { const x0 = XC1 + i * cw; room(x0, 0, x0 + cw, ZC1, Y2, [{ side: 's', at: 0, w: 1.4 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n), signW: cw - 0.4 }); b.aabb(x0 + 0.4, Y2, 0.6, x0 + cw - 0.4, Y2 + 0.76, 1.5, 'wood'); });
-      room(0, ZC0, 6, ZC1, Y2, [{ side: 'n', at: 0, w: 2 }, { side: 's', at: 0, w: 2 }], [], { floor: 0xd6cfbf });
-      sign('AULA 307', 3, Y2 + 2.85, ZC0 - 0.18, Math.PI, 2); sign('AULA 307', 3, Y2 + 2.85, ZC1 + 0.18, 0, 2);
-      b.decoAt('board', 5.62, Y2 + 1.6, 0, { rotY: -Math.PI / 2, w: 3.4, text: 'Aula 307' });
+      const topRow = ['PLÀSTICA', 'AULA 306', 'AULA 305', 'AULA 304', 'D. FILOSOFIA', 'D. GEOGRAFIA', 'AULA 303'];
+      const botRow = ['D. FOL', 'D. CASTELLÀ', 'D. INFORMÀTICA', 'D. ADMINISTR.', 'D. COMERÇ', 'D. MATEMÀT.', 'SEMINARI'];
+      const topE = ['D. FRANCÉS', 'AULA 302', 'D. BIOLOGIA', 'AULA 301'], botE = ['D. FÍS. I QUÍM.', 'D. VALENCIÀ', 'D. ANGLÉS', 'AULA 308'];
+      const bgOf = n => n.startsWith('D.') ? '#5b3a7a' : '#1f3d7a';
+      topRow.forEach((n, i) => { const x0 = XC1 + i * cw; room(x0, ZC0, x0 + cw, 0, Y2, [{ side: 'n', at: 0, w: 1.2 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n) }); if (i % 2) b.aabb(x0 + 0.4, Y2, -1.5, x0 + cw - 0.4, Y2 + 0.76, -0.6, 'wood'); else b.aabb(x0 + cw - 0.9, Y2, -1.6, x0 + cw - 0.4, Y2 + 1.9, -0.4, 'metal'); });
+      botRow.forEach((n, i) => { const x0 = XC1 + i * cw; room(x0, 0, x0 + cw, ZC1, Y2, [{ side: 's', at: 0, w: 1.2 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n) }); b.aabb(x0 + 0.4, Y2, 0.6, x0 + cw - 0.4, Y2 + 0.76, 1.5, 'wood'); });
+      room(0, ZC0, 6, ZC1, Y2, [{ side: 'n', at: 0, w: 1.8 }, { side: 's', at: 0, w: 1.8 }], [], { floor: 0xd6cfbf, name: 'AULA 307' });
+      b.decoAt('board', 5.62, Y2 + 1.55, 0, { rotY: -Math.PI / 2, w: 3, text: 'AULA 307' });
       [-1.2, 1.2].forEach(z => [1.8, 3.8].forEach(x => { b.decoAt('desk', x, Y2, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(x - 0.25, Y2, z, 1.2, 0.76, 1.15, 'invisible'); }));
-      topE.forEach((n, i) => { const x0 = 6 + i * 4.5; room(x0, ZC0, x0 + 4.5, 0, Y2, [{ side: 'n', at: 0, w: 1.4 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n), signW: 4 }); b.aabb(x0 + 0.5, Y2, -1.5, x0 + 4, Y2 + 0.76, -0.6, 'wood'); });
-      botE.forEach((n, i) => { const x0 = 6 + i * 4.5; room(x0, 0, x0 + 4.5, ZC1, Y2, [{ side: 's', at: 0, w: 1.4 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n), signW: 4 }); b.aabb(x0 + 0.5, Y2, 0.6, x0 + 4, Y2 + 0.76, 1.5, 'wood'); });
-      // Ala sur: aseos, AULA 207 (Ciclo DAM, «al fondo a la izquierda») y aulas 208 … 212
-      room(XC1, ZS1, -20, Z1, Y2, [{ side: 'n', at: 0.6, w: 1.4 }], [{ side: 's', at: 0, w: 2 }], { floor: 0xb9c4c9, name: 'ASEOS', signW: 1.6 });
-      [['207', 'Ciclo DAM · 7J-7N'], ['208', 'Ciclo DAW · 6K-7K'], ['209', 'ESO 3ºA'], ['210', 'ESO 3ºE'], ['211', 'ESO 3ºI'], ['212', 'ESO 3ºV']].forEach(([n, g], i) => {
+      topE.forEach((n, i) => { const x0 = 6 + i * 4.5; room(x0, ZC0, x0 + 4.5, 0, Y2, [{ side: 'n', at: 0, w: 1.2 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n) }); b.aabb(x0 + 0.5, Y2, -1.5, x0 + 4, Y2 + 0.76, -0.6, 'wood'); });
+      botE.forEach((n, i) => { const x0 = 6 + i * 4.5; room(x0, 0, x0 + 4.5, ZC1, Y2, [{ side: 's', at: 0, w: 1.2 }], [], { floor: 0xddd5c6, name: n, bg: bgOf(n) }); b.aabb(x0 + 0.5, Y2, 0.6, x0 + 4, Y2 + 0.76, 1.5, 'wood'); });
+      // Ala sur: aseos B204-O/B203-O, AULA 207 (Ciclo DAM) y aulas 208 … 212
+      aseos(XC1, ZS1, -20, Z1, Y2, { side: 'n', at: 0.6, w: 1.2 }, 'B204-O');
+      [['207', 'CICLO DAM 7J-7N'], ['208', 'CICLO DAW'], ['209', 'ESO 3ºA'], ['210', 'ESO 3ºE'], ['211', 'ESO 3ºI'], ['212', 'ESO 3ºV']].forEach(([n, g], i) => {
         const x0 = -20 + i * AW;
-        classroom(x0, ZS1, x0 + AW, Z1, Y2, 'n', 2.3, 's', `AULA ${n} · ${g}`, i < 2 ? { pcs: true, floor: 0xc9d3dc, bg: '#0f6b4f', board: i ? '<html> DAW </html>' : 'fun main() { println("7J") }' } : { desk: i % 2 ? 0x2f6fb5 : 0xc0392b, board: ['Àlgebra', 'Història', 'Biologia', 'Física'][i - 2] });
+        classroom(x0, ZS1, x0 + AW, Z1, Y2, 'n', 2.3, 's', `AULA ${n}`, i < 2 ? { pcs: true, floor: 0xc9d3dc, bg: '#0f6b4f', board: i ? '<html> DAW </html>' : 'fun main() { println("7J") }' } : { desk: i % 2 ? 0x2f6fb5 : 0xc0392b, board: g });
         if (i === 0) {
-          b.decoAt('screen', x0 + AW / 2, Y2 + 2.25, Z1 - 0.42, { rotY: Math.PI, w: 2.8, h: 1.6 });
+          sign(g, x0 + AW / 2 + 2.3 + 1.55, Y2 + 2.0, ZS1 - 0.17, Math.PI, 1.6, '#0f6b4f');
+          b.decoAt('screen', x0 + AW / 2, Y2 + 2.25, Z1 - 0.42, { rotY: Math.PI, w: 2.4, h: 1.4 });
           b.box(x0 + 0.7, Y2, ZS1 + 1.0, 0.9, 2.0, 0.9, 'metalDark'); b.decoAt('rack', x0 + 0.7, Y2, ZS1 + 1.0, { rotY: Math.PI / 2 });
         }
       });
-      // Pasillos y detalles
-      floor(XC0, ZN1, XC3, ZN2, 0xe6e0d4, Y2); floor(XC0, ZS2, XC3, ZS1, 0xe6e0d4, Y2);
-      floor(XC0, ZPN, XC3, ZC0, 0xe6e0d4, Y2); floor(XC0, ZC1, XC3, ZPS, 0xe6e0d4, Y2);
-      floor(XC0, Z0, XC1, Z1, 0xe6e0d4, Y2); floor(XC2, Z0, XC3, Z1, 0xe6e0d4, Y2);
-      [[-14, ZN1 + 0.18, 0], [10, ZN1 + 0.18, 0], [-6, ZS1 - 0.18, Math.PI], [16, ZS1 - 0.18, Math.PI]].forEach(([x, z, r], k) => b.decoAt('board', x, Y2 + 1.5, z, { rotY: r, w: 2.2, text: ['Excursión 2ºESO', 'Erasmus+ 2027', 'Hackathon DAM', 'Biblioteca: horario'][k] }));
-      [[-27, -22], [27, 22], [-27, 22], [27, -22]].forEach(([x, z]) => [P0, P1, P2].forEach(Y => b.box(x, Y + 0.9, z, 0.22, 0.5, 0.22, 'red', { solid: false })));
+      // Pasillos de P2
+      floor(XC1, ZN1, XC2, ZN2, 0xe6e0d4, Y2); floor(XC1, ZS2, XC2, ZS1, 0xe6e0d4, Y2);
+      floor(XC1, ZPN, XC2, ZC0, 0xe6e0d4, Y2); floor(XC1, ZC1, XC2, ZPS, 0xe6e0d4, Y2);
+      floor(XC0, Z0, XC1, ZN2, 0xe6e0d4, Y2); floor(XC0, ZS2, XC1, Z1, 0xe6e0d4, Y2); corrFloor(XC0, XC1, ZN2, ZS2, Y2, 'w', 0xe6e0d4);
+      floor(XC2, Z0, XC3, ZN2, 0xe6e0d4, Y2); floor(XC2, ZS2, XC3, Z1, 0xe6e0d4, Y2); corrFloor(XC2, XC3, ZN2, ZS2, Y2, 'e', 0xe6e0d4);
+      [[-14, ZN1 + 0.17, 0], [10, ZN1 + 0.17, 0], [-6, ZS1 - 0.17, Math.PI], [16, ZS1 - 0.17, Math.PI]].forEach(([x, z, r], k) => b.decoAt('board', x, Y2 + 1.5, z, { rotY: r, w: 1.8, text: ['Excursió 2n ESO', 'Erasmus+ 2027', 'Hackathon DAM', 'Biblioteca'][k] }));
+      [[-27, -22], [27, 22], [-27, 22], [27, -22]].forEach(([x, z]) => b.box(x, Y2 + 0.9, z, 0.22, 0.5, 0.22, 'red', { solid: false }));
 
-      // =================== ALREDEDORES ===================
+      // ========================= ALREDEDORES (se ven, no se llega) =========================
       floor(-45.6, -45.6, 45.6, -34, 0x4d4e52, 0); floor(-45.6, 34, 45.6, 45.6, 0x4d4e52, 0);
       floor(XW - 2, Z0 - 6, XE + 2, Z0 - 0.4, 0xb9b4aa, 0); floor(XW - 2, Z1 + 0.4, XE + 2, Z1 + 6, 0xb9b4aa, 0);
-      for (let x = -40; x <= 40; x += 6) { b.decoAt('plane', x, 0.03, -39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); b.decoAt('plane', x, 0.03, 39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); }
-      b.decoAt('stripes', 38, 0.02, 0, { w: 6, n: 6, d: 2.2, color: 0xf2f2ee, rotY: Math.PI / 2 });
+      for (let x = -40; x <= 40; x += 6) { b.decoAt('plane', x, 0.04, -39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); b.decoAt('plane', x, 0.04, 39.8, { w: 3, d: 0.25, color: 0xf2f2ee }); }
       [[-28, 37.5, 0xeef2f5], [-10, 42, 0xc0392b], [14, 37.5, 0x2f6fb5], [30, 42, 0xf1c40f], [-22, -37.5, 0x27ae60], [6, -42, 0x8e44ad], [26, -37.5, 0xeef2f5]].forEach(([x, z, color]) => b.decoAt('car', x, 0, z, { rotY: Math.PI / 2, color }));
       for (let x = -40; x <= 40; x += 10) { b.tree(x, -35.5, 1.1); b.tree(x + 5, 35.5, 1.1); }
       [[-30, -35.2], [0, -35.2], [30, -35.2], [-30, 35.2], [0, 35.2], [30, 35.2]].forEach(([x, z]) => b.decoAt('lamp', x, 0, z));
       // Oeste: pistas deportivas
-      b.decoAt('court', -40, 0.03, -12, { w: 9, d: 18, color: 0x2f6fb5 }); b.decoAt('court', -40, 0.03, 12, { w: 9, d: 18, color: 0x3c7d5c });
-      [[-40, -21.5, 0], [-40, -2.5, Math.PI], [-40, 2.5, 0], [-40, 21.5, Math.PI]].forEach(([x, z, r]) => b.decoAt('hoop', x, 0, z, { rotY: r }));
-      b.fence(-45.4, -24, -45.4, 24); b.fence(-34.6, -24, -34.6, -1.5); b.fence(-34.6, 1.5, -34.6, 24);
-      // Este: plaza de entrada y bloques del barrio
-      [[40, -14, 8, 9, 12], [40, 14, 8, 9, 14]].forEach(([x, z, w, d, h]) => b.box(x, 0, z, w, h, d, 'yellow', { solid: false }));
+      b.decoAt('court', -41, 0.04, -12, { w: 8, d: 18, color: 0x2f6fb5 }); b.decoAt('court', -41, 0.04, 12, { w: 8, d: 18, color: 0x3c7d5c });
+      [[-41, -21.5, 0], [-41, -2.5, Math.PI], [-41, 2.5, 0], [-41, 21.5, Math.PI]].forEach(([x, z, r]) => b.decoAt('hoop', x, 0, z, { rotY: r }));
+      b.fence(-45.4, -24, -45.4, 24); b.fence(-37, -24, -37, -1.5); b.fence(-37, 1.5, -37, 24);
+      // Este: plaza del acceso y bloques del barrio
+      floor(XE + 0.4, -10, 45.6, 10, 0xc9c2b4, 0);
+      [[41, -16, 8, 9, 12], [41, 16, 8, 9, 14]].forEach(([x, z, w, d, h]) => {
+        b.box(x, 0, z, w, h, d, 'yellow', { solid: false });
+        for (let y = 1.4; y < h - 1; y += 3) for (let zz = z - d / 2 + 1.4; zz < z + d / 2 - 1; zz += 2.4) b.box(x - w / 2 - 0.05, y, zz, 0.08, 1.4, 1.2, 'glass', { solid: false });
+      });
       [[-30, -43.5, 14, 3, 12], [-8, -43.5, 16, 3, 15], [16, -43.5, 14, 3, 10], [36, -43.5, 10, 3, 13], [-32, 43.5, 12, 3, 14], [-10, 43.5, 14, 3, 11], [12, 43.5, 16, 3, 16], [34, 43.5, 12, 3, 12]].forEach(([x, z, w, d, h], i) => {
         b.box(x, 0, z, w, h, d, ['white', 'yellow', 'orange', 'white'][i % 4], { solid: false });
         for (let y = 1.4; y < h - 1; y += 3) for (let xx = x - w / 2 + 1.5; xx < x + w / 2 - 1; xx += 2.6) b.box(xx, y, z + (z < 0 ? d / 2 + 0.05 : -d / 2 - 0.05), 1.3, 1.4, 0.08, 'glass', { solid: false });
       });
-      b.decoAt('textsign', 0, P2 + H + 0.9, Z1 + 0.1, { text: 'IES ABASTOS', w: 9, h: 1.1, bg: '#1f3d7a' });
+      b.decoAt('textsign', XE + 0.12, 3.0, 1.6, { text: 'IES ABASTOS', w: 3.2, h: 0.6, bg: '#1f3d7a', rotY: Math.PI / 2 });
     },
     spawns: [
-      // P2
-      { x: -25.8, y: 7.6, z: -24 }, { x: 25.8, y: 7.6, z: 24 }, { x: -10, y: 7.6, z: -18.5 }, { x: 10, y: 7.6, z: 18.5 }, { x: -12, y: 7.6, z: -5.5 }, { x: 14, y: 7.6, z: 5.5 },
-      // P1
-      { x: -25, y: 3.8, z: 0 }, { x: 25, y: 3.8, z: 0 }, { x: 0, y: 3.8, z: -12 }, { x: 3, y: 3.8, z: 12 }, { x: -16, y: 3.8, z: 0 }, { x: 18, y: 3.8, z: 0 }, { x: 31, y: 3.8, z: -2 },
-      // P0
-      { x: -18, y: 0, z: 0 }, { x: 12, y: 0, z: 0 }, { x: 0, y: 0, z: -18.5 }, { x: 0, y: 0, z: 18.5 }, { x: 7, y: 0, z: -10.5 }, { x: 7, y: 0, z: 9 },
+      { x: -25.6, y: 7.6, z: -22 }, { x: 25.6, y: 7.6, z: 22 }, { x: -10, y: 7.6, z: -18 }, { x: 10, y: 7.6, z: 18 }, { x: -12, y: 7.6, z: -5.2 }, { x: 14, y: 7.6, z: 5.2 },
+      { x: -26.6, y: 3.8, z: -2 }, { x: 26.6, y: 3.8, z: 2 }, { x: 0, y: 3.8, z: -12 }, { x: 3, y: 3.8, z: 12 }, { x: -16, y: 3.8, z: 0 }, { x: 18, y: 3.8, z: 0 }, { x: 31, y: 3.8, z: -6 },
+      { x: -19, y: 0, z: 0 }, { x: 12, y: 0, z: 1.5 }, { x: 0, y: 0, z: -18 }, { x: 0, y: 0, z: 18 }, { x: 10, y: 0, z: -10.25 }, { x: 31, y: 0, z: 1.5 },
     ],
     teamSpawns: {
-      red: [{ x: -25, y: 0, z: -2 }, { x: -25, y: 3.8, z: 2 }, { x: -25.8, y: 7.6, z: 20 }, { x: -19, y: 0, z: 0 }, { x: -16, y: 3.8, z: 1 }, { x: -20, y: 3.8, z: -18.5 }],
-      blue: [{ x: 25, y: 0, z: 2 }, { x: 25, y: 3.8, z: -2 }, { x: 25.8, y: 7.6, z: -20 }, { x: 18, y: 0, z: -1 }, { x: 18, y: 3.8, z: -1 }, { x: 20, y: 3.8, z: 18.8 }],
+      red: [{ x: -24.3, y: 0, z: 0 }, { x: -26.6, y: 3.8, z: 2 }, { x: -25.6, y: 7.6, z: 20 }, { x: -19, y: 0, z: 0.5 }, { x: -16, y: 3.8, z: 1 }, { x: -20, y: 3.8, z: -18 }],
+      blue: [{ x: 26.6, y: 0, z: 2 }, { x: 25, y: 3.8, z: 1 }, { x: 25.6, y: 7.6, z: -20 }, { x: 18, y: 0, z: -1 }, { x: 18, y: 3.8, z: -1 }, { x: 20, y: 3.8, z: 18 }],
     },
-    coops: [{ x: 7, y: 0, z: -10.5, r: 3 }, { x: 0, y: 3.8, z: -12, r: 2.6 }, { x: 0, y: 3.8, z: 12, r: 2.6 }, { x: 0, y: 7.6, z: 0, r: 1.4 }, { x: -12, y: 0, z: 0, r: 2.4 }],
-    spatula: { x: 0, y: 3.8, z: 0 },
-    bases: { red: { x: -25, y: 3.8, z: -1, r: 1.8 }, blue: { x: 31, y: 3.8, z: 2, r: 1.8 } },
-    bombSites: [{ id: 'A', x: -16.3, y: 7.6, z: 24.6, r: 2.2 }, { id: 'B', x: 7, y: 0, z: -10.5, r: 3 }],
+    coops: [{ x: 10, y: 0, z: -10.25, r: 3 }, { x: 0, y: 3.8, z: -10, r: 2.6 }, { x: 0, y: 3.8, z: 10, r: 2.6 }, { x: 3, y: 7.6, z: 0, r: 1.3 }, { x: -14, y: 0, z: 0, r: 2.4 }],
+    spatula: { x: 0, y: 3.8, z: -10 },
+    bases: { red: { x: -26, y: 3.8, z: -1, r: 1.6 }, blue: { x: 31, y: 3.8, z: 4, r: 1.6 } },
+    bombSites: [{ id: 'A', x: -13.9, y: 7.6, z: 23.4, r: 1.6 }, { id: 'B', x: 10, y: 0, z: -10.25, r: 3 }],
   };
 
   // =========================================================================

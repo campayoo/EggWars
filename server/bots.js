@@ -134,7 +134,7 @@ function findPath(nav, x0, y0, z0, x1, y1, z1, maxNodes) {
   const gc = g % NN, gx = gc % N, gz = (gc / N) | 0, gy = Y[g];
   const hfn = n => { const c = n % NN, dx = Math.abs(c % N - gx), dz = Math.abs(((c / N) | 0) - gz); return Math.max(dx, dz) + 0.41 * Math.min(dx, dz) + Math.abs(Y[n] - gy) * 0.5; };
   let k = 0;
-  while (open.length && k++ < (maxNodes || 6000)) {
+  while (open.length && k++ < (maxNodes || 20000)) {
     const cur = heapPop(open)[1];
     if (cur === g) {
       const out = []; let n = g;
