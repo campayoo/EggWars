@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 // Modo público (servidor en Internet, p. ej. Render): sin "entrar con mi IP",
 // IP real tras el proxy y límites por IP. En Render se activa solo.
 const PUBLIC = process.env.EGG_PUBLIC === '1' || (!!process.env.RENDER && process.env.EGG_PUBLIC !== '0');
-// Otros dominios que pueden conectarse (p. ej. la web de Vercel), separados por comas
+// Otros dominios que pueden conectarse (si se publica el servidor), separados por comas
 const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '').split(',').map(x => x.trim().replace(/\/+$/, '')).filter(Boolean);
 const MAX_CONN_PER_IP = Number(process.env.MAX_CONN_PER_IP) || 8;
 const connPerIp = new Map();
@@ -46,7 +46,7 @@ const io = new Server(server, {
       cb(null, o.host === req.headers.host || ALLOWED_ORIGINS.includes(o.origin));
     } catch (e) { cb(null, false); }
   },
-  // Cabeceras CORS sólo para los dominios permitidos (la web de Vercel)
+  // Cabeceras CORS sólo para los dominios permitidos (si se configuran)
   cors: ALLOWED_ORIGINS.length ? { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'] } : undefined,
   pingInterval: 5000,
   pingTimeout: 8000,

@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EGG WARS · Guía del juego — FPS 3D de huevos</title>
-<meta name="description" content="EGG WARS: shooter 3D multijugador de huevos en el navegador. Juega online, contra bots o en red local. Guía de mapas, armas, modos, Huevo Impostor, controles e instalación.">
+<meta name="description" content="EGG WARS: shooter 3D multijugador de huevos. Descárgalo y juega en tu PC contra bots o con tu clase en red local. Guía de mapas, armas, modos, Huevo Impostor, controles e instalación.">
 <meta name="author" content="Pablo Campayo Viñes">
 <meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados.">
 <meta name="theme-color" content="#ff8c2a">
 <meta property="og:title" content="EGG WARS · Guía del juego">
-<meta property="og:description" content="Online, contra bots o en red local. 18 mapas, 8 armas, 6 modos + Huevo Impostor.">
+<meta property="og:description" content="En tu PC o en red local. 18 mapas, 8 armas, 6 modos + Huevo Impostor.">
 <meta property="og:image" content="img/banner.jpg">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 40%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%2213%22 ry=%2217%22 fill=%22%23ff9a4d%22/%3E%3C/svg%3E">
@@ -39,7 +39,7 @@
     <a href="#instalar">Instalar</a>
     <a href="codigo.html" class="nav-code">🧩 Código</a>
   </nav>
-  <a class="btn btn-sm btn-primary nav-cta" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">🌍 Jugar online</a>
+  <a class="btn btn-sm btn-primary nav-cta" href="#instalar">⬇️ Descargar</a>
   <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
 </header>
 
@@ -50,12 +50,11 @@
   <div class="blob b1" aria-hidden="true"></div><div class="blob b2" aria-hidden="true"></div><div class="blob b3" aria-hidden="true"></div>
   <div class="hero-grid">
     <div class="hero-text">
-      <span class="pill reveal"><i class="dot"></i> Versión 6.4 · ¡ahora online!</span>
+      <span class="pill reveal"><i class="dot"></i> Versión 6.4 · descárgalo y juega</span>
       <h1 class="reveal">La guerra de huevos<br><span class="grad">más crujiente</span> del navegador</h1>
-      <p class="lead reveal">Shooter 3D multijugador hecho desde cero con Three.js y Node.js. Juega <b>online</b> con tus amigos, <b>contra bots</b> sin instalar nada o en la <b>red local</b> de clase.</p>
+      <p class="lead reveal">Shooter 3D multijugador hecho desde cero con Three.js y Node.js. Se descarga y se juega en tu ordenador: <b>contra bots</b> o con toda la clase en la <b>red local</b>.</p>
       <div class="cta reveal">
-        <a class="btn btn-primary btn-lg" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener"><span class="tri"></span>Jugar online</a>
-        <a class="btn btn-ghost btn-lg" href="jugar/">🤖 Contra bots</a>
+        <a class="btn btn-primary btn-lg" href="#instalar"><span class="tri"></span>Descargar y jugar</a>
         <a class="btn btn-link" href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>Código en GitHub</a>
       </div>
       <dl class="stats reveal">
@@ -89,30 +88,21 @@
 <section class="sec" id="jugar">
   <header class="sec-head reveal">
     <span class="kicker">Empieza ya</span>
-    <h2>Tres formas de jugar</h2>
-    <p>Elige la que te venga mejor. La cuenta, tu huevo y tus estadísticas se guardan en cada versión.</p>
+    <h2>Dos formas de jugar</h2>
+    <p>Las dos con el mismo programa: lo descargas una vez y lo arrancas en tu ordenador.</p>
   </header>
   <div class="play-cards">
-    <article class="pcard pc-online reveal">
-      <div class="pc-ico">🌍</div>
-      <h3>Online</h3>
-      <p>Multijugador por Internet con cuenta, amigos, invitaciones y salas privadas con código de 4 letras. Los bots rellenan los huecos.</p>
-      <ul class="ticks"><li>Servidor en Frankfurt</li><li>Cuentas guardadas en base de datos</li><li>Usuario + contraseña</li></ul>
-      <a class="btn btn-primary" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Entrar al servidor</a>
-      <small class="note">Plan gratuito: si nadie ha jugado en 15 min, tarda ~30 s en despertar.</small>
-    </article>
     <article class="pcard pc-bots reveal">
       <div class="pc-ico">🤖</div>
-      <h3>Contra bots</h3>
-      <p>Sin cuenta ni servidor: todo corre en tu navegador. Elige mapa, modo, cuántos bots y su dificultad, y a practicar.</p>
-      <ul class="ticks"><li>Funciona al instante</li><li>Fácil · Normal · Difícil</li><li>Ideal en PCs del aula</li></ul>
-      <a class="btn btn-dark" href="jugar/">Jugar aquí</a>
-      <small class="note">También en <a href="https://eggwars-ten.vercel.app" target="_blank" rel="noopener">eggwars-ten.vercel.app</a></small>
+      <h3>En tu PC</h3>
+      <p>Arranca el juego y entra en <code>localhost:3000</code>. Elige mapa, modo, cuántos bots y su dificultad, y a practicar.</p>
+      <ul class="ticks"><li>Sin Internet</li><li>Fácil · Normal · Difícil</li><li>Tu huevo y tus estadísticas se guardan en tu PC</li></ul>
+      <a class="btn btn-dark" href="#instalar">Cómo descargarlo</a>
     </article>
     <article class="pcard pc-lan reveal">
       <div class="pc-ico">🏠</div>
       <h3>Red local</h3>
-      <p>Arranca el servidor en un ordenador y que el resto de la clase entre por su IP. Sin Internet y sin retraso.</p>
+      <p>Un ordenador hace de servidor y el resto de la clase entra con su IP desde el navegador. Sin retraso, con salas, amigos y Huevo Impostor.</p>
       <div class="code mini"><code>npm install &amp;&amp; npm start</code><button class="copy" data-copy="npm install && npm start" aria-label="Copiar">Copiar</button></div>
       <a class="btn btn-ghost" href="#instalar">Ver la guía</a>
     </article>
@@ -287,7 +277,7 @@
     <details class="cheat reveal"><summary><span>📢</span>Spam</summary><p>Límite de mensajes por segundo y de chat. Los mensajes malformados nunca tumban el servidor.</p></details>
   </div>
   <div class="secure reveal">
-    <h3>🌍 En el servidor online, además…</h3>
+    <h3>🔐 En el servidor, además…</h3>
     <ul class="ticks two">
       <li>Sólo usuario + contraseña (hash <b>scrypt</b> con sal)</li>
       <li>Bloqueo por IP ante intentos de contraseña, aunque reconecten</li>
@@ -302,20 +292,15 @@
 <!-- ===================== INSTALAR ===================== -->
 <section class="sec sec-tint" id="instalar">
   <header class="sec-head reveal">
-    <span class="kicker">Para desarrolladores</span>
-    <h2>Instalar y desplegar</h2>
+    <span class="kicker">En tu ordenador</span>
+    <h2>Descargar y jugar</h2>
     <p>Necesitas <b>Node.js 18</b> o superior.</p>
   </header>
   <ol class="steps">
     <li class="reveal"><h3>Descarga el proyecto</h3><div class="code"><code>git clone https://github.com/campayoo/EggWars.git<br>cd EggWars</code><button class="copy" data-copy="git clone https://github.com/campayoo/EggWars.git&#10;cd EggWars" aria-label="Copiar">Copiar</button></div></li>
     <li class="reveal"><h3>Instala y arranca</h3><div class="code"><code>npm install<br>npm start</code><button class="copy" data-copy="npm install&#10;npm start" aria-label="Copiar">Copiar</button></div><p>Abre <code>http://localhost:3000</code>. Los demás entran con la IP que sale en la consola.</p></li>
-    <li class="reveal"><h3>Comprueba que todo va</h3><div class="code"><code>npm test</code><button class="copy" data-copy="npm test" aria-label="Copiar">Copiar</button></div><p>225 comprobaciones: mapas, física, servidor, anti-trampas, bots, modo online y base de datos.</p></li>
+    <li class="reveal"><h3>Comprueba que todo va</h3><div class="code"><code>npm test</code><button class="copy" data-copy="npm test" aria-label="Copiar">Copiar</button></div><p>Comprobaciones de mapas, física, servidor, anti-trampas y bots.</p></li>
   </ol>
-  <div class="deploys">
-    <article class="dcard reveal"><h3><span class="d-logo d-render">R</span>Render · online</h3><p><b>New → Blueprint</b> → repo EggWars → <b>Apply</b>. <code>render.yaml</code> crea el servidor y la base de datos PostgreSQL. Cada push se publica solo.</p></article>
-    <article class="dcard reveal"><h3><span class="d-logo d-vercel">▲</span>Vercel · contra bots</h3><p>Importa el repo: <code>vercel.json</code> compila la versión sin servidor y añade cabeceras de seguridad.</p></article>
-    <article class="dcard reveal"><h3><span class="d-logo d-gh">⬢</span>GitHub Pages · esta web</h3><p><code>npm run build:pages</code> genera la guía del juego, la documentación técnica y el juego contra bots en <code>/jugar/</code>, en la rama <code>gh-pages</code>.</p></article>
-  </div>
   <a class="code-banner reveal" href="codigo.html">
     <span class="cb-ico">🧩</span>
     <span><b>Documentación técnica del código</b><small>Arquitectura, protocolo de red, servidor, física, anti-trampas, bots, build y pruebas</small></span>
@@ -330,9 +315,7 @@
 ├── public/              cliente: HTML, CSS y JS del juego (Three.js)
 ├── site/                esta web (guía del juego y documentación técnica)
 ├── tests/               pruebas automáticas (npm test)
-├── tools/               build de producción, GitHub Pages y vistas previas
-├── render.yaml          despliegue online en Render
-└── vercel.json          despliegue contra bots en Vercel</code></pre>
+└── tools/               build de producción, esta web y vistas previas</code></pre>
   </details>
 </section>
 
@@ -343,10 +326,9 @@
     <h2>Preguntas frecuentes</h2>
   </header>
   <div class="faq">
-    <details class="reveal"><summary>¿Necesito instalar algo para jugar?</summary><p>No. La versión online y la de bots se juegan en el navegador (Chrome, Edge o Firefox con WebGL).</p></details>
-    <details class="reveal"><summary>¿Por qué el servidor online tarda en entrar a veces?</summary><p>Usa el plan gratuito de Render: si nadie juega en 15 minutos se duerme y tarda unos 30 segundos en despertar con el primer jugador.</p></details>
-    <details class="reveal"><summary>¿Se guarda mi cuenta?</summary><p>En la versión online, sí: en una base de datos PostgreSQL. En la de bots, en tu navegador. En red local, en el ordenador que hace de servidor.</p></details>
-    <details class="reveal"><summary>¿Por qué no puedo "entrar con mi IP" online?</summary><p>En Internet mucha gente comparte IP (casa, instituto…), así que online sólo se entra con usuario y contraseña. En red local sí está disponible.</p></details>
+    <details class="reveal"><summary>¿Qué necesito para jugar?</summary><p><b>Node.js 18</b> o superior y Git. Descargas el proyecto, <code>npm install</code>, <code>npm start</code> y abres <code>http://localhost:3000</code> en Chrome, Edge o Firefox.</p></details>
+    <details class="reveal"><summary>¿Se puede jugar en una web sin descargar?</summary><p>No. EGG WARS sólo se juega descargándolo y arrancándolo en local; esta página es la guía.</p></details>
+    <details class="reveal"><summary>¿Se guarda mi cuenta?</summary><p>Sí, en el ordenador que hace de servidor (<code>data/</code>).</p></details>
     <details class="reveal"><summary>Me va a tirones, ¿qué hago?</summary><p>En <b>Ajustes → Calidad</b> elige <b>Baja · máxima fluidez</b> y activa <b>Mostrar FPS</b>. El juego también baja la calidad solo si lo necesita.</p></details>
     <details class="reveal"><summary>¿Puedo usar el código para mi proyecto?</summary><p>No sin permiso. El código es visible para consultarlo, pero todos los derechos están reservados. Escribe al autor en GitHub si quieres pedir permiso.</p></details>
   </div>
@@ -358,8 +340,7 @@
   <h2>¿Listo para la batalla?</h2>
   <p>Coge tu EggK-47 y que no te hagan tortilla.</p>
   <div class="cta center">
-    <a class="btn btn-primary btn-lg" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener"><span class="tri"></span>Jugar online</a>
-    <a class="btn btn-ghost btn-lg" href="jugar/">🤖 Contra bots</a>
+    <a class="btn btn-primary btn-lg" href="#instalar"><span class="tri"></span>Descargar y jugar</a>
   </div>
 </section>
 </main>
@@ -367,7 +348,7 @@
 <footer class="footer">
   <div class="f-brand"><svg viewBox="0 0 40 50" aria-hidden="true"><use href="#egg"/></svg><b>EGG WARS</b></div>
   <p>© 2026 <b>Pablo Campayo Viñes</b> · Todos los derechos reservados.<br>Prohibida la copia, modificación o redistribución sin permiso del autor. <a href="https://github.com/campayoo/EggWars/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a></p>
-  <nav class="f-links"><a href="codigo.html">Código</a><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">Online</a><a href="jugar/">Contra bots</a><a href="#inicio">Arriba ↑</a></nav>
+  <nav class="f-links"><a href="codigo.html">Código</a><a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a><a href="#instalar">Descargar</a><a href="#inicio">Arriba ↑</a></nav>
 </footer>
 
 <button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>

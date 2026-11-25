@@ -5,7 +5,7 @@
 <h1 align="center">🥚 EGG WARS</h1>
 
 <p align="center">
-  <b>Shooter 3D multijugador de huevos: online, en red local o contra bots.</b><br>
+  <b>Shooter 3D multijugador de huevos: se descarga y se juega en local, contra bots o en red local.</b><br>
   Inspirado en Shell Shockers · hecho con Three.js, Socket.io y Node.js
 </p>
 
@@ -16,31 +16,36 @@
   <img src="https://img.shields.io/badge/armas-8-e8742a" alt="8 armas">
   <img src="https://img.shields.io/badge/modos-6-c65a1e" alt="6 modos">
   <img src="https://img.shields.io/badge/bots-sí-8e44ad" alt="con bots">
-  <img src="https://img.shields.io/badge/jugar-en%20el%20navegador-1f6feb" alt="versión web sin servidor">
+  <img src="https://img.shields.io/badge/jugar-en%20local-1f6feb" alt="se juega en local">
   <img src="https://img.shields.io/badge/Node.js-18%2B-5fa04e" alt="Node.js 18+">
 </p>
 <p align="center">
-  <a href="https://eggwars-plai.onrender.com"><img src="https://img.shields.io/badge/🌍_JUGAR_ONLINE-eggwars--plai.onrender.com-ff8c2a?style=for-the-badge" alt="Jugar online"></a>
-  <a href="https://eggwars-ten.vercel.app"><img src="https://img.shields.io/badge/🤖_CONTRA_BOTS-eggwars--ten.vercel.app-1f6feb?style=for-the-badge" alt="Jugar contra bots"></a>
   <a href="https://campayoo.github.io/EggWars/"><img src="https://img.shields.io/badge/📖_DOCUMENTACIÓN-campayoo.github.io-3b2412?style=for-the-badge" alt="Documentación"></a>
 </p>
 
-## 🎮 Jugar ahora
+## 🎮 Cómo jugar
 
-| Versión | Enlace | Qué es |
-|---|---|---|
-| 🌍 **Online** | **https://eggwars-plai.onrender.com** | Multijugador por Internet con cuenta (usuario + contraseña), amigos, salas privadas con código y bots que rellenan huecos. Servidor en Frankfurt. |
-| 🤖 **Contra bots** | **https://eggwars-ten.vercel.app** | Sin cuenta ni servidor: todo corre en tu navegador. Ideal para practicar. |
-| 🏠 **Red local** | `npm start` → `http://IP-del-PC:3000` | Para jugar en clase o en casa por la misma Wi‑Fi. |
-| 📖 **Documentación** | **https://campayoo.github.io/EggWars/** | La web con toda la guía: mapas, armas, modos, controles, instalación… (rama `gh-pages`, se genera desde `site/`). |
+EGG WARS **sólo se juega descargándolo y arrancándolo en tu ordenador** (no hay versión online). Necesitas [Node.js 18+](https://nodejs.org) y Git.
 
-> ⏳ La versión online usa el plan gratuito de Render: si nadie ha jugado en 15 min, el primero tarda unos 30 s en entrar mientras el servidor despierta.
+```bash
+git clone https://github.com/campayoo/EggWars.git
+cd EggWars
+npm install
+npm start
+```
 
+Abre **http://localhost:3000** en Chrome, Edge o Firefox.
+
+| Cómo | Qué es |
+|---|---|
+| 🤖 **En tu PC** | Entras en `http://localhost:3000` y juegas contra bots (fácil, normal o difícil) en cualquier mapa y modo. |
+| 🏠 **Red local** | Los demás entran desde su navegador con `http://IP-del-PC:3000` (la IP sale en la consola). Para jugar en clase o en casa por la misma Wi‑Fi, con salas, amigos y Huevo Impostor. |
+| 📖 **Documentación** | **https://campayoo.github.io/EggWars/**: la guía de mapas, armas, modos y controles (sólo información, no se juega ahí). |
 
 ---
 
 ## 📋 Índice
-- [🎮 Jugar ahora](#-jugar-ahora)
+- [🎮 Cómo jugar](#-cómo-jugar)
 - [Arrancar en 1 minuto](#-arrancar-en-1-minuto)
 - [Los 18 mapas](#️-los-18-mapas)
 - [Armas y granadas](#-armas-y-granadas)
@@ -49,9 +54,7 @@
 - [Controles](#️-controles)
 - [Salas, admin y taller del huevo](#-salas-admin-y-taller-del-huevo)
 - [🤖 Bots](#-bots)
-- [🌐 Jugar sin servidor (GitHub Pages)](#-jugar-sin-servidor-github-pages)
-- [🌍 Jugar online (Render)](#-jugar-online-render)
-- [▲ Desplegar en Vercel](#-desplegar-en-vercel)
+- [📖 Web de documentación](#-web-de-documentación)
 - [Anti-trampas](#️-anti-trampas)
 - [Rendimiento y calidad gráfica](#-rendimiento-y-calidad-gráfica)
 - [Modo producción (código protegido)](#-modo-producción-código-protegido)
@@ -261,53 +264,13 @@ Sin jugadores de verdad en la sala, los bots se quedan quietos y no gastan CPU.
 
 ---
 
-## 🌐 Jugar sin servidor (GitHub Pages)
-
-Además de la versión de red local, EGG WARS se puede jugar **en el navegador, sin servidor, contra bots**. Las salas, el anti-trampas y los bots del servidor se ejecutan dentro de la propia página (`public/js/offline.js`), así que sirve cualquier alojamiento estático como **GitHub Pages**.
+## 📖 Web de documentación
 
 ```bash
-npm run build:pages      # crea la carpeta gh-pages/
+npm run build:pages      # crea la carpeta gh-pages/ con la guía y la documentación técnica
 ```
 
-`gh-pages/` sólo contiene `index.html`, el CSS y **un único archivo JavaScript minificado** con el aviso de copyright (el código fuente no se publica). En este repositorio está en la rama **`gh-pages`**: en *Settings → Pages → Deploy from a branch* elige **gh-pages / (root)** y estará en `https://campayoo.github.io/EggWars/`. También se puede desplegar en Vercel (siguiente apartado).
-
-En la versión web: entras sólo con un nombre (tu huevo, retos y estadísticas se guardan en ese navegador), **JUGAR** te mete en una partida rápida con 7 bots y en **Salas** hay salas de bots preparadas o puedes crear la tuya. No están los amigos ni Huevo Impostor, que necesitan el servidor. Para probarla en local: `npm run build:pages`, `npm start` y abre `http://localhost:3000/pages/`.
-
----
-
-## 🌍 Jugar online (Render)
-
-El multijugador por Internet necesita el servidor de partidas encendido siempre. Va en **[Render](https://render.com)** (plan gratuito), con las cuentas en una base de datos **PostgreSQL** para que no se pierdan al reiniciar.
-
-**Versión online:** https://eggwars-plai.onrender.com · **Contra bots (sin servidor):** https://eggwars-ten.vercel.app
-
-1. Entra en Render con tu cuenta de GitHub → **New → Blueprint**.
-2. Elige el repositorio **EggWars** → **Apply**. `render.yaml` crea solo el servidor (Frankfurt) y la base de datos.
-3. Cada `git push` a `main` se publica solo.
-
-| Qué | Cómo queda protegido en modo online |
-|---|---|
-| Cuentas | Sólo usuario + contraseña (hash scrypt con sal). "Entrar con mi IP" se desactiva: en Internet mucha gente comparte IP |
-| Fuerza bruta | Máx. 8 intentos/min por conexión y 30 cada 10 min por IP, aunque reconecten |
-| Abuso | Máx. 8 conexiones a la vez por IP, 160 mensajes/s por conexión, salas limitadas |
-| Origen | Sólo la propia página y los dominios de `ALLOWED_ORIGINS` pueden conectarse |
-| Cabeceras | CSP estricta, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Permissions-Policy` |
-| Código | Se sirve sólo el paquete minificado de `dist/`; `server/`, `data/` y `tests/` dan 404 |
-
-Variables (ya puestas en `render.yaml`): `EGG_PUBLIC=1`, `DATABASE_URL` (la base de datos), `ALLOWED_ORIGINS`, `MAX_CONN_PER_IP`.
-En el plan gratuito el servidor **se duerme tras 15 min sin jugadores** y tarda unos 30 s en despertar; la base de datos gratuita de Render caduca a los 30 días (se puede renovar o pasar a un plan de pago).
-
----
-
-## ▲ Desplegar en Vercel
-
-El proyecto ya trae `vercel.json`. Vercel publica la **versión web contra bots** (la misma que GitHub Pages): Vercel no puede tener encendido el servidor de partidas (socket.io), así que el multijugador en red local sigue siendo con `npm start`.
-
-1. Entra en [vercel.com](https://vercel.com) con tu cuenta de GitHub → **Add New… → Project**.
-2. Importa el repositorio **EggWars**. No hay que tocar nada: `vercel.json` ya dice cómo compilar (`npm run build:pages`) y qué publicar (`gh-pages/`).
-3. **Deploy**. Cada `git push` a `main` vuelve a desplegar solo.
-
-Seguridad que añade `vercel.json` a todas las páginas: **Content-Security-Policy** estricta (sólo scripts propios y Three.js de unpkg, sin iframes ajenos ni plugins), **HSTS**, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` (sin cámara, micrófono ni ubicación). Three.js se carga con **Subresource Integrity**: si alguien manipulara el archivo en la CDN, el navegador no lo ejecutaría. El código publicado va minificado y con el aviso de copyright.
+La rama **`gh-pages`** sólo tiene la web informativa (`site/`): la guía del juego y la documentación del código, con el CSS y el JS minificados. **El juego no se publica en ninguna web**: se juega descargándolo (ver [Cómo jugar](#-cómo-jugar)).
 
 ---
 
@@ -397,7 +360,6 @@ shell/
 │   ├── impostor.html · impostor.css   # página del modo Huevo Impostor
 │   └── js/
 │       ├── main.js      # cliente del juego (render, HUD, red, armas)
-│       ├── offline.js   # modo sin servidor: salas y bots dentro del navegador
 │       ├── maps.js      # render de mapas, paisaje, cielo, vistas previas 3D
 │       ├── eggmodel.js  # modelo 3D del huevo y accesorios
 │       └── impostor.js  # cliente de Huevo Impostor (HUD, minijuegos, reuniones)
