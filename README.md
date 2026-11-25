@@ -1,7 +1,5 @@
-# 🥚 EGG WARS — versión web
+# 🥚 EGG WARS — guía y documentación
 
-Shooter 3D de huevos que se juega en el navegador **contra bots** (sin servidor).
-
-Generado con `npm run build:pages`. Para jugar con amigos en la red local se usa el servidor del proyecto (`npm start`).
+Web informativa del juego. EGG WARS se juega descargándolo y arrancándolo en local (`git clone`, `npm install`, `npm start`): ver https://github.com/campayoo/EggWars
 
 © 2026 Pablo Campayo Viñes. Todos los derechos reservados. Ver LICENSE.

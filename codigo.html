@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EGG WARS · Documentación técnica del código</title>
-<meta name="description" content="Documentación técnica de EGG WARS: arquitectura, protocolo de red socket.io, servidor, física compartida, anti-trampas, bots, mapas, renderizado, cuentas, build, despliegue y pruebas.">
+<meta name="description" content="Documentación técnica de EGG WARS: arquitectura, protocolo de red socket.io, servidor, física compartida, anti-trampas, bots, mapas, renderizado, cuentas, build y pruebas.">
 <meta name="author" content="Pablo Campayo Viñes">
 <meta name="copyright" content="© 2026 Pablo Campayo Viñes. Todos los derechos reservados.">
 <meta name="theme-color" content="#ff8c2a">
@@ -28,7 +28,7 @@
     <a href="codigo.html" class="active" aria-current="page">🧩 Código</a>
     <a href="https://github.com/campayoo/EggWars" target="_blank" rel="noopener">GitHub</a>
   </nav>
-  <a class="btn btn-sm btn-primary nav-cta" href="https://eggwars-plai.onrender.com" target="_blank" rel="noopener">🌍 Jugar online</a>
+  <a class="btn btn-sm btn-primary nav-cta" href="index.html#instalar">⬇️ Descargar</a>
   <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
 </header>
 
@@ -56,10 +56,9 @@
       <a href="#mapas">Mapas</a>
       <p class="toc-g">Cliente</p>
       <a href="#cliente">Render y juego</a>
-      <a href="#offline">Modo sin servidor</a>
       <a href="#impostor">Huevo Impostor</a>
       <p class="toc-g">Proyecto</p>
-      <a href="#build">Build y despliegue</a>
+      <a href="#build">Build</a>
       <a href="#config">Variables de entorno</a>
       <a href="#seguridad">Seguridad</a>
       <a href="#pruebas">Pruebas</a>
@@ -89,7 +88,7 @@
         <div><b>Three.js r160</b><span>Render 3D en el navegador (WebGL)</span></div>
         <div><b>Node.js + Express</b><span>Servidor HTTP y archivos estáticos</span></div>
         <div><b>Socket.io 4</b><span>Comunicación en tiempo real (WebSocket)</span></div>
-        <div><b>PostgreSQL</b><span>Cuentas en el servidor online (opcional)</span></div>
+        <div><b>PostgreSQL</b><span>Cuentas en modo servidor público (opcional)</span></div>
       </div>
       <p>Tres principios guían el código:</p>
       <ol class="principles">
@@ -102,7 +101,7 @@
     <!-- ===================================================== -->
     <section class="ds" id="arquitectura">
       <h2><a href="#arquitectura">#</a>Arquitectura</h2>
-      <p>El mismo código del servidor se usa de tres formas: en un servidor de red local, en el servidor online (Render) y dentro del navegador en la versión contra bots.</p>
+      <p>El juego se descarga y se arranca en local: un ordenador ejecuta el servidor Node.js y los navegadores (el mismo PC o los de la red local) se conectan a él.</p>
       <div class="arch reveal" aria-label="Diagrama de arquitectura">
         <div class="a-box a-client">
           <h4>🖥️ Navegador</h4>
@@ -116,10 +115,6 @@
         <div class="a-shared">
           <h4>📦 shared/ (UMD: navegador y Node)</h4>
           <span><code>physics.js</code></span><span><code>mapdefs.js</code></span><span><code>mapbuilder.js</code></span><span><code>gamedata.js</code></span><span><code>cosmetics.js</code></span><span><code>impostor.js</code></span>
-        </div>
-        <div class="a-offline">
-          <h4>🤖 Modo sin servidor (<code>offline.js</code>)</h4>
-          <p><code>gameRoom.js</code>, <code>anticheat.js</code> y <code>bots.js</code> se empaquetan y corren en el navegador; un <code>LocalIO</code> imita a socket.io en memoria.</p>
         </div>
       </div>
     </section>
@@ -156,17 +151,15 @@
             <tr><td><code>eggmodel.js</code></td><td>554</td><td>Modelo del huevo, cosméticos y textura pintada.</td></tr>
             <tr><td><code>client.js</code></td><td>1036</td><td>Utilidades de red y estado del cliente.</td></tr>
             <tr><td><code>controls.js</code> · <code>ui.js</code></td><td>466</td><td>Teclado/ratón remapeables, pointer lock, avisos y marcador.</td></tr>
-            <tr><td><code>offline.js</code></td><td>288</td><td>LocalIO, sockets simulados y mini <code>require</code> para el modo sin servidor.</td></tr>
             <tr><td><code>impostor.js</code> · <code>navedecor.js</code></td><td>1625</td><td>Cliente de Huevo Impostor y decoración de la nave.</td></tr>
           </tbody></table>
         </details>
         <details><summary><span>📁 tools/ · tests/ · site/</span><small>Proyecto</small></summary>
           <table><tbody>
             <tr><td><code>tools/build.js</code></td><td>83</td><td>Build de producción: un paquete minificado en <code>dist/</code>.</td></tr>
-            <tr><td><code>tools/build-pages.js</code></td><td>127</td><td>Web de documentación + juego sin servidor en <code>gh-pages/</code>.</td></tr>
+            <tr><td><code>tools/build-pages.js</code></td><td>127</td><td>Esta web de documentación en <code>gh-pages/</code>.</td></tr>
             <tr><td><code>tests/*.js</code></td><td>1188</td><td>11 suites de pruebas (ver <a href="#pruebas">Pruebas</a>).</td></tr>
             <tr><td><code>site/</code></td><td>—</td><td>Esta web (HTML, CSS y JS sin dependencias).</td></tr>
-            <tr><td><code>render.yaml</code> · <code>vercel.json</code></td><td>—</td><td>Despliegue online (Render) y contra bots (Vercel).</td></tr>
           </tbody></table>
         </details>
       </div>
@@ -274,7 +267,7 @@
         <li><b>Sesiones:</b> una cuenta sólo puede estar conectada en un equipo; al entrar desde otro, el anterior recibe <code>auth:kicked</code>.</li>
         <li><b>Estadísticas:</b> las suma el servidor con <code>statHooks</code> (bajas, muertes, headshots, victorias): no se pueden falsear.</li>
         <li><b>Robustez:</b> <code>socket.on</code> envuelto en <code>try/catch</code>, <code>uncaughtException</code> registrado y guardado de cuentas al recibir <code>SIGTERM</code>.</li>
-        <li><b>Salud:</b> <code>GET /healthz</code> → <code>ok</code> (lo usa Render).</li>
+        <li><b>Salud:</b> <code>GET /healthz</code> → <code>ok</code> (comprobación de que el servidor está vivo).</li>
       </ul>
     </section>
 
@@ -392,13 +385,6 @@
     </section>
 
     <!-- ===================================================== -->
-    <section class="ds" id="offline">
-      <h2><a href="#offline">#</a>Modo sin servidor</h2>
-      <p>La versión contra bots no tiene servidor: <code>tools/build-pages.js</code> empaqueta <code>gameRoom.js</code>, <code>anticheat.js</code> y <code>bots.js</code> junto al cliente, envueltos con <code>EggOffline.def(nombre, fn)</code>. Un mini <code>require</code> resuelve los módulos y <code>EggOffline.connect()</code> devuelve un socket que habla con un <code>LocalIO</code> en memoria con la misma API que socket.io (<code>on</code>, <code>emit</code>, <code>to().emit</code>, salas). El perfil se guarda en <code>localStorage</code>.</p>
-      <div class="callout">Resultado: <b>el mismo código del servidor</b> (incluido el anti-trampas) se ejecuta en el navegador, así que el juego contra bots se comporta exactamente igual que el online.</div>
-    </section>
-
-    <!-- ===================================================== -->
     <section class="ds" id="impostor">
       <h2><a href="#impostor">#</a>Huevo Impostor</h2>
       <p>Modo completamente separado: página propia (<code>impostor.html</code>), cliente <code>public/js/impostor.js</code>, sala <code>server/impostorRoom.js</code> y mapa <code>shared/impostor.js</code>. Todas las acciones van por un único evento <code>imp:act</code> con un tipo, validado en el servidor (distancia a la tarea, tiempo mínimo, enfriamiento de muertes, sabotajes).</p>
@@ -407,20 +393,14 @@
 
     <!-- ===================================================== -->
     <section class="ds" id="build">
-      <h2><a href="#build">#</a>Build y despliegue</h2>
+      <h2><a href="#build">#</a>Build</h2>
       <table class="tbl"><thead><tr><th>Comando</th><th>Qué hace</th></tr></thead><tbody>
         <tr><td><code>npm start</code></td><td>Servidor de desarrollo (red local) en el puerto 3000.</td></tr>
         <tr><td><code>npm run build</code></td><td>Crea <code>dist/</code>: el cliente en un paquete minificado con terser.</td></tr>
         <tr><td><code>npm run start:prod</code></td><td>Servidor que sólo sirve <code>dist/</code>.</td></tr>
-        <tr><td><code>npm run build:pages</code></td><td>Esta web en <code>gh-pages/</code> y el juego sin servidor en <code>gh-pages/jugar/</code>.</td></tr>
-        <tr><td><code>npm run build:pages -- --solo-juego</code></td><td>Sólo el juego sin servidor (lo usa Vercel).</td></tr>
+        <tr><td><code>npm run build:pages</code></td><td>Esta web en <code>gh-pages/</code> (rama de GitHub Pages). El juego no se publica: se juega descargándolo.</td></tr>
         <tr><td><code>npm test</code></td><td>Las 11 suites de pruebas.</td></tr>
       </tbody></table>
-      <div class="cards3">
-        <div class="kcard"><b>Render</b><span><code>render.yaml</code> (Blueprint): servicio web Node + PostgreSQL en Frankfurt; despliega en cada push a <code>main</code>.</span></div>
-        <div class="kcard"><b>Vercel</b><span><code>vercel.json</code>: build sin servidor y cabeceras de seguridad para la versión contra bots.</span></div>
-        <div class="kcard"><b>GitHub Pages</b><span>Rama <code>gh-pages</code>: esta documentación y el juego en <code>/jugar/</code>.</span></div>
-      </div>
     </section>
 
     <!-- ===================================================== -->
@@ -429,7 +409,7 @@
       <table class="tbl"><thead><tr><th>Variable</th><th>Por defecto</th><th>Uso</th></tr></thead><tbody>
         <tr><td><code>PORT</code></td><td>3000</td><td>Puerto HTTP.</td></tr>
         <tr><td><code>NODE_ENV</code></td><td>—</td><td><code>production</code> sirve sólo <code>dist/</code>.</td></tr>
-        <tr><td><code>EGG_PUBLIC</code></td><td>auto en Render</td><td>Modo Internet: sin login por IP, IP real tras el proxy, límites por IP, HSTS.</td></tr>
+        <tr><td><code>EGG_PUBLIC</code></td><td>opcional</td><td>Modo Internet: sin login por IP, IP real tras el proxy, límites por IP, HSTS.</td></tr>
         <tr><td><code>DATABASE_URL</code></td><td>—</td><td>Cadena de conexión de PostgreSQL para las cuentas.</td></tr>
         <tr><td><code>PGSSL</code></td><td>auto</td><td><code>1</code> fuerza SSL, <code>0</code> lo desactiva.</td></tr>
         <tr><td><code>ALLOWED_ORIGINS</code></td><td>—</td><td>Otros dominios que pueden conectarse por WebSocket (separados por comas).</td></tr>
