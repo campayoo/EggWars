@@ -183,6 +183,15 @@
         if (axis === 'x' ? Math.abs(st.x - ox) > Math.abs(d) + R + 0.05 : Math.abs(st.z - oz) > Math.abs(d) + R + 0.05) {
           if (axis === 'x') st.x = ox; else st.z = oz;
         }
+        // Rodear esquinas: si sólo se roza el canto de la caja (menos de 30 cm de solape de lado),
+        // se desliza un poco hacia fuera en vez de quedarse clavado (cantos de barandillas, pilares, marcos)
+        const ox2 = axis === 'x' ? Math.min(st.z + R, b.maxZ) - Math.max(st.z - R, b.minZ) : Math.min(st.x + R, b.maxX) - Math.max(st.x - R, b.minX);
+        if (ox2 > 0 && ox2 < 0.3 && b.maxY - st.y > P.STEP) {
+          const c = axis === 'x' ? (b.minZ + b.maxZ) / 2 : (b.minX + b.maxX) / 2, me = axis === 'x' ? st.z : st.x;
+          const sh = Math.min(ox2 + 0.01, Math.abs(d) * 0.8 + 0.01) * (me >= c ? 1 : -1);
+          const nx = axis === 'x' ? st.x : st.x + sh, nz = axis === 'x' ? st.z + sh : st.z;
+          if (!blockedAt(w, nx, st.y + 0.02, nz)) { st.x = nx; st.z = nz; }
+        }
         hit = true;
       }
       for (const r of w.ramps) {

@@ -10,29 +10,11 @@ const run = (x, y, z, inputAt, n) => { const st = { x, y, z, vx: 0, vy: 0, vz: 0
 const climb1 = (x, y, z, yaw, expY, da) => run(x, y, z, i => ({ fwd: 1, yaw: yaw + (i < 30 ? da : 0) }), 400).maxY > expY - 0.1;
 // también algo torcido y desviado del centro, como sube un jugador de verdad
 const climb = (x, y, z, yaw, expY) => [-0.3, 0, 0.3].every(off => [-0.3, 0, 0.3].every(da => climb1(x + (Math.abs(Math.sin(yaw)) > 0.5 ? 0 : off), y, z + (Math.abs(Math.sin(yaw)) > 0.5 ? off : 0), yaw, expY, da)));
-// Sube una escalera en U: tramo A hacia el fondo, paso lateral al tramo B, vuelta hacia la entrada
-function climbU(side, s, y0, yN, lat, ang) {
-  const [x0, x1] = PL.STX[side], xm = (x0 + x1) / 2, xA = side === 'w' ? (x0 + xm) / 2 : (xm + x1) / 2, xB = side === 'w' ? (xm + x1) / 2 : (x0 + xm) / 2;
-  const [a, c] = s < 0 ? PL.FL[0] : PL.FL[1], entry = s < 0 ? a : c;
-  const st = { x: xA + (lat || 0), y: y0, z: entry + s * 0.6, vx: 0, vy: 0, vz: 0, onGround: false };
-  const toFar = s < 0 ? Math.PI : 0, toEntry = s < 0 ? 0 : Math.PI, toB = xB > xA ? -Math.PI / 2 : Math.PI / 2;
-  let maxY = -9, phase = 0;
-  for (let i = 0; i < 900; i++) {
-    let inp;
-    const landZ = s < 0 ? c - 0.75 : a + 0.75;
-    if (phase === 0) { inp = { fwd: 1, yaw: toFar + (i < 20 ? (ang || 0) : 0) }; if ((s < 0 && st.z > landZ) || (s > 0 && st.z < landZ)) phase = 1; }
-    else if (phase === 1) { inp = { fwd: 1, yaw: toB }; if (Math.abs(st.x - xB) < 0.15) phase = 2; }
-    else inp = { fwd: 1, yaw: toEntry };
-    Phys.simulate(w, st, inp, 1 / 60); maxY = Math.max(maxY, st.y);
-  }
-  return [maxY, phase, st];
-}
-for (const side of ['w', 'e']) for (const s of [-1, 1]) for (const [y0, yN] of [[0, PL.P1], [PL.P1, PL.P2]]) {
-  const okAll = [-0.25, 0, 0.25].every(lat => [-0.3, 0, 0.3].every(ang => climbU(side, s, y0, yN, lat, ang)[0] > yN - 0.1));
-  ok(okAll, `escalera en U ${s < 0 ? 'norte' : 'sur'} ${side === 'w' ? 'oeste' : 'este'}: ${y0 ? '1ª → 2ª' : 'planta baja → 1ª'}`);
-}
-ok(climb(PL.MS.x1 + 0.8, 0, PL.MS.z, Math.PI / 2, PL.P1), 'escalera principal del vestíbulo: planta baja → 1ª');
-PL.CST.forEach(([x, z, yaw], i) => ok(climb(x, PL.P1, z, yaw, PL.P2), `escalera del bloque central ${i ? 'este' : 'oeste'}: 1ª → 2ª`));
+for (const side of ['w', 'e']) PL.SF.forEach(([a, c, dir, lvl]) => {
+  const x = (PL.STX[side][0] + PL.STX[side][1]) / 2, foot = dir === '+z' ? a : c, y0 = lvl ? PL.P1 : 0, yT = lvl ? PL.P2 : PL.P1;
+  ok(climb(x, y0, foot + (dir === '+z' ? -0.5 : 0.5), dir === '+z' ? Math.PI : 0, yT), `escalera ${side === 'w' ? 'oeste' : 'este'} z ${a}…${c}: ${lvl ? '1ª → 2ª' : 'planta baja → 1ª'}`);
+});
+[PL.MS.z, -PL.MS.z].forEach((z, i) => ok(climb(PL.MS.x1 + 0.8, 0, z, Math.PI / 2, PL.P1), `escalera principal del vestíbulo (${i ? 'sur' : 'norte'}): planta baja → 1ª`));
 // 2) Desde las galerías de la 2ª planta se salta al patio
 for (const [x, z, yaw, nm] of [[5, -26, Math.PI, 'patio Cavanilles desde la galería norte'], [6, 26, 0, 'patio Sánchez Ayuso desde la galería sur'], [-35, -13, -Math.PI / 2, 'patio Cavanilles desde el pasillo oeste']]) {
   const st = run(x, PL.P2, z, i => ({ fwd: i < 90 ? 1 : 0, yaw, jump: i < 60 && i % 20 === 0 }));
