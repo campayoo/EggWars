@@ -93,6 +93,8 @@ Todos los mapas son de diseño propio. Tienen **varios niveles** (edificios de 2
 
 <p align="center"><img src="docs/img/mapa-abastos-207.jpg" width="720" alt="Aula 207 de Ciclo DAM en el mapa del Instituto Abastos"><br><sub>El Aula 207 (Ciclo DAM) en el mapa del Instituto Abastos, con los ordenadores, la pizarra y el proyector.</sub></p>
 
+<p align="center"><img src="docs/img/mapa-abastos-galeria.jpg" width="720" alt="Galería de la segunda planta del Abastos con el patio y el lucernario"><br><sub>La galería de la segunda planta, abierta al patio, con su antepecho, la barandilla y las cerchas del lucernario (como en el instituto de verdad).</sub></p>
+
 **Novedades de la 6.5:** dos mapas nuevos, **Instituto Abastos** (el IES Abastos entero según sus planos: tres plantas con gimnasio, cafetería, salón de actos, patios Cavanilles y Sánchez Ayuso, biblioteca y el Aula 207 de Ciclo DAM) y **ÑEM4TOWN** (barrio de pruebas pequeño y simétrico con dos casas enfrentadas y un autobús en mitad de la calle); dos modos nuevos, **Demolición** y **Yema Confirmada**; **skins de armas** y **hueveras** que se abren con los huevos de los retos.
 
 **Novedades de la 6.2:** **bots** (también en la versión web sin servidor), menú de crear partida rediseñado, calidad **Ultra** y más contenido en los mapas que estaban más vacíos (cabaña de esquí en Nevada, oficinas, vía de tren y depósito en Fábrica, cobertizo de la sierra y pasarelas sobre el arroyo en Aserradero, puerta del ídolo y columnata en Templo, marcas viales, jardineras y quiosco en Centro), chimeneas o máquinas de aire acondicionado en las azoteas, rocas como cobertura natural, sacos en dos hileras y muretes con remate. Las barandillas de los puentes ahora se ven caladas (como funcionan: las balas las atraviesan).
