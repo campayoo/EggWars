@@ -18,6 +18,27 @@ for (const [sx, nm] of [[-25.1, 'oeste'], [25.1, 'este']]) {
 }
 ok(climb(33.7, 0, -2.6, Math.PI / 2, 3.8), 'escalera principal del acceso: planta baja → 1ª');
 // 2) Nadie sale del instituto: recorrido por la rejilla de navegación desde los puntos de aparición
+// Se puede saltar desde la galería de la 2ª planta al patio (y del patio a la planta baja por la escalera)
+for (const [x, z, yaw, nm] of [[0, -17.6, Math.PI, 'patio norte'], [-6, 17.6, 0, 'patio sur'], [-22.6, -11, -Math.PI / 2, 'patio norte por el oeste']]) {
+  const st = { x: x * K, y: 7.6, z: z * K, vx: 0, vy: 0, vz: 0, onGround: false };
+  for (let i = 0; i < 300; i++) Phys.simulate(w, st, { fwd: i < 90 ? 1 : 0, yaw, jump: i < 60 && i % 20 === 0 }, 1 / 60);
+  ok(st.y < 4.5 && st.y > 3, 'salto desde la galería de la 2ª planta al ' + nm + ' (acaba a ' + st.y.toFixed(2) + ' m)');
+}
+// Nadie atraviesa paredes ni aparece fuera andando y saltando al azar (incluido bajo los forjados)
+{
+  let seed = 3, esc = 0; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const starts = d.spawns.concat(d.teamSpawns.red, d.teamSpawns.blue);
+  for (let r = 0; r < 150; r++) {
+    const s = starts[r % starts.length], st = { x: s.x, y: s.y, z: s.z, vx: 0, vy: 0, vz: 0, onGround: false }; let inp = {};
+    for (let t = 0; t < 1500; t++) {
+      if (t % 40 === 0) inp = { yaw: rnd() * 6.28, fwd: rnd() < 0.85 ? 1 : 0, side: rnd() < 0.3 ? (rnd() < 0.5 ? 1 : -1) : 0 };
+      inp.jump = rnd() < 0.08;
+      const px = st.x, pz = st.z; Phys.simulate(w, st, inp, 1 / 60);
+      if (Math.hypot(st.x - px, st.z - pz) > 1 || st.x < -36 * K || st.x > 34.5 * K || Math.abs(st.z) > 27 * K) { esc++; break; }
+    }
+  }
+  ok(esc === 0, 'jugadores al azar: ninguno se teletransporta ni sale del edificio (' + esc + ')');
+}
 const room = { mapData: d, world: w }, nav = B.navFor(room);
 const { N, NN, H, walk, y } = nav, STEP = Phys.P.STEP, seen = new Uint8Array(NN * 4), q = [];
 for (const sp of d.spawns) { const c = Math.round(sp.x) + H + (Math.round(sp.z) + H) * N; for (let l = 0; l < 4; l++) { const n = l * NN + c; if (walk[n] && Math.abs(y[n] - sp.y) < 0.5 && !seen[n]) { seen[n] = 1; q.push(n); } } }
@@ -33,7 +54,7 @@ ok(out.length === 0, `nadie sale del edificio (${q.length} casillas alcanzables,
 const floors = [0, 0, 0]; q.forEach(n => floors[y[n] < 1.5 ? 0 : y[n] < 5.5 ? 1 : 2]++);
 ok(floors.every(f => f > 500), `se llega a las tres plantas (${floors.join(' / ')} casillas)`);
 // 3) Los bots encuentran camino entre todos los puntos importantes
-const pts = d.spawns.map(s => [s.x, s.y, s.z]).concat(d.coops.map(c => [c.x, c.y, c.z]), d.def.bombSites.map(c => [c.x, c.y, c.z]));
+const pts = d.spawns.map(s => [s.x, s.y, s.z]).concat(d.coops.map(c => [c.x, c.y, c.z]), d.def.bombSites.map(c => [c.x, c.y, c.z]), d.grenadePacks.map(c => [c.x, c.y, c.z]));
 let bad = 0; for (const a of pts) for (const b of pts) if (a !== b && !B.findPath(nav, a[0], a[1], a[2], b[0], b[1], b[2], 80000)) bad++;
 ok(bad === 0, `caminos entre ${pts.length} puntos de las tres plantas (${bad} sin camino)`);
 console.log(fails ? `\n✗ ${fails} fallos` : '\n✅ Instituto Abastos sin problemas');

@@ -1248,7 +1248,9 @@
           b.box(x, Y, z - face * 0.25, 1.15, 0.76, 1.2, 'invisible');
         }
       };
-      const rail = (x0, z0, x1, z1, Y) => { b.aabb(x0, Y, z0, x1, Y + 1.0, z1, 'rail'); b.aabb(x0, Y + 1.0, z0, x1, Y + 2.6, z1, 'invisible', { see: true }); };
+      // Barandilla: por dentro se puede saltar por encima (para bajar de un salto); las que dan a la calle
+      // llevan barrera invisible para que nadie salga del centro
+      const rail = (x0, z0, x1, z1, Y, outer) => { b.aabb(x0, Y, z0, x1, Y + 1.0, z1, 'rail'); if (outer) b.aabb(x0, Y + 1.0, z0, x1, Y + 2.6, z1, 'invisible', { see: true }); };
       const aseos = (x0, z0, x1, z1, Y, door, name) => {
         room(x0, z0, x1, z1, Y, [door], [], { floor: 0xb9c4c9, name: name || 'ASEOS' });
         const along = (x1 - x0) > (z1 - z0);
@@ -1293,7 +1295,7 @@
         rail(STX[side][0], lowZ - 0.05, STX[side][1], lowZ + 0.05, P2);
       }));
       // Escalera principal del vestíbulo (P0 → P1, sube hacia el oeste)
-      b.stairs((MS.x0 + MS.x1) / 2, (MS.z0 + MS.z1) / 2, P0, MS.x1 - MS.x0, MS.z1 - MS.z0, P1, '-x', 'marble');
+      b.stairs((MS.x0 + MS.x1) / 2, (MS.z0 + MS.z1) / 2, P0, MS.z1 - MS.z0, MS.x1 - MS.x0, P1, '-x', 'marble');   // ancho en Z, largo en X
       rail(MS.x0, MS.z1 - 0.05, MS.x1, MS.z1 + 0.05, P1); rail(MS.x1 - 0.05, MS.z0, MS.x1 + 0.05, MS.z1, P1);
       rail(MS.x0 + 2, MS.z0 - 0.05, MS.x1, MS.z0 + 0.05, P1);
 
@@ -1429,7 +1431,7 @@
       floor(XC3, -15.5, XE, MS.z0, 0xbfb8aa, Y1); floor(XC3, MS.z1, XE, 15.5, 0xbfb8aa, Y1); floor(XC3, MS.z0, MS.x0, MS.z1, 0xbfb8aa, Y1);
       sign('TERRASSA', XC3 - 0.17, Y1 + 2.4, -7.5 + 1.8, -Math.PI / 2, 1.3, '#0f6b4f');
       sign('TERRASSA', XC3 - 0.17, Y1 + 2.4, 7.5 + 1.8, -Math.PI / 2, 1.3, '#0f6b4f');
-      rail(XE - 0.15, -15.5, XE + 0.05, 15.5, Y1);
+      rail(XE - 0.15, -15.5, XE + 0.05, 15.5, Y1, true);
       [[31, -10], [31, 10], [33.3, -6], [33.3, 6]].forEach(([x, z]) => { b.box(x, Y1, z, 1.2, 0.6, 1.2, 'invisible'); b.decoAt('planter', x, Y1, z, { color: 0xa9aaa4 }); });
       [[31.5, -12.5], [31.5, 12.5]].forEach(([x, z]) => { b.decoAt('bench', x, Y1, z, { rotY: Math.PI / 2 }); b.box(x, Y1, z, 0.55, 0.55, 1.8, 'invisible'); });
       // Pasillos de P1
@@ -1452,7 +1454,6 @@
         A(a0, Y + 0.85, a1, Y + 0.93, fixed - 0.16, fixed + 0.16, 'concrete');
         A(a0, Y + 1.08, a1, Y + 1.14, fixed - 0.03, fixed + 0.03, 'metalDark', { solid: false });
         for (let u = a0 + 0.75; u < a1 - 0.3; u += 1.5) A(u - 0.02, Y + 0.93, u + 0.02, Y + 1.1, fixed - 0.02, fixed + 0.02, 'metalDark', { solid: false });
-        A(a0, Y + 0.93, a1, Y + 2.8, fixed - 0.05, fixed + 0.05, 'invisible', { see: true });
       };
       gallery('x', ZN2 - 0.12, XC1, XC2, Y2); gallery('x', ZPN + 0.12, XC1, XC2, Y2);
       gallery('x', ZPS - 0.12, XC1, XC2, Y2); gallery('x', ZS2 + 0.12, XC1, XC2, Y2);
@@ -1568,6 +1569,9 @@
     const K = A.scale;
     A.spawns = scalePts(K, A.spawns); A.coops = scalePts(K, A.coops); A.bombSites = scalePts(K, A.bombSites);
     A.teamSpawns = { red: scalePts(K, A.teamSpawns.red), blue: scalePts(K, A.teamSpawns.blue) };
+    // Granadas dentro del instituto (las automáticas caerían en la calle, fuera del centro)
+    A.grenadePacks = scalePts(K, [{ x: -10, y: 0, z: -18 }, { x: 10, y: 0, z: 18 }, { x: 10, y: 3.8, z: -18 }, { x: -10, y: 3.8, z: 18 },
+      { x: -16, y: 3.8, z: -11 }, { x: 16, y: 3.8, z: 11 }, { x: 10, y: 7.6, z: -18 }, { x: -10, y: 7.6, z: 18 }]);
     A.spatula = scalePts(K, [A.spatula])[0]; A.bases = { red: scalePts(K, [A.bases.red])[0], blue: scalePts(K, [A.bases.blue])[0] };
   })(abastos);
 

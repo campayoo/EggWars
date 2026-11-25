@@ -130,6 +130,11 @@
         }
         if (axis === 'x') { st.x = d > 0 ? b.minX - R - 0.001 : b.maxX + R + 0.001; st.vx = 0; }
         else { st.z = d > 0 ? b.minZ - R - 0.001 : b.maxZ + R + 0.001; st.vz = 0; }
+        // Si ya estaba metido en la caja (p. ej. la cabeza bajo el borde de un forjado), empujarle
+        // hasta el otro lado lo teletransportaría fuera del mapa: se queda donde estaba.
+        if (axis === 'x' ? Math.abs(st.x - ox) > Math.abs(d) + R + 0.05 : Math.abs(st.z - oz) > Math.abs(d) + R + 0.05) {
+          if (axis === 'x') st.x = ox; else st.z = oz;
+        }
         hit = true;
       }
       for (const r of w.ramps) {

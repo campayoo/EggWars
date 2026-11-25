@@ -265,7 +265,7 @@
       a: mid + (o.at || 0) - (o.w || 2) / 2,
       b: mid + (o.at || 0) + (o.w || 2) / 2,
       y: o.y || 0,
-      h: o.h === undefined ? 2.6 : o.h,
+      h: o.h === undefined ? 2.6 : o.h, closed: !!o.closed,
     })).sort((p, q) => p.a - q.a);
     const seg = (a, b, ya, yb) => {
       if (b - a < 0.01 || yb - ya < 0.01) return;
@@ -274,7 +274,7 @@
     };
     // Huecos de puerta (a ras de suelo): se guardan para dejarlos siempre libres (ver clearDoorways)
     for (const op of ops) {
-      if (op.y > 0.6 || op.b - op.a < 0.9 || op.h < 1.6) continue;
+      if (op.closed || op.y > 0.6 || op.b - op.a < 0.9 || op.h < 1.6) continue;   // puerta cerrada a propósito: no se despeja
       const a = Math.max(from, op.a), b = Math.min(to, op.b), dep = t / 2 + 0.45;
       const p0 = axis === 'x' ? this._tp(a, fixed - dep) : this._tp(fixed - dep, a);
       const p1 = axis === 'x' ? this._tp(b, fixed + dep) : this._tp(fixed + dep, b);
