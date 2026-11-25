@@ -3856,13 +3856,18 @@
     setText($('home-weapon-desc'), `${w.type} · ${w.desc}`);
     // Barras y cifras calculadas con los datos REALES del arma (los mismos que usa el servidor)
     const info = window.GameData.weaponInfo(sel);
+    const MOB = ['muy baja', 'baja', 'media', 'alta', 'muy alta'];
+    const vals = {
+      dmg: w.projectile ? `${w.projectile.direct}` : `${info.body}${w.pellets > 1 ? ' total' : ''}`,
+      rate: `${info.sps} disparos/s`, range: `${info.range} m`, mob: MOB[Math.max(0, Math.min(4, info.bars.mob - 1))],
+    };
     const bars = [['Daño', 'dmg'], ['Cadencia', 'rate'], ['Alcance', 'range'], ['Movilidad', 'mob']].map(([l, k]) =>
-      `<div class="wstat"><span>${l}</span><i>${'<b></b>'.repeat(info.bars[k])}${'<u></u>'.repeat(5 - info.bars[k])}</i></div>`).join('');
+      `<div class="wstat"><span><b>${l}</b><em>${vals[k]}</em></span><i aria-label="${l}: ${info.bars[k]} de 5">${'<b></b>'.repeat(info.bars[k])}${'<u></u>'.repeat(5 - info.bars[k])}</i></div>`).join('');
     const dmgTxt = w.projectile
       ? `💥 ${w.projectile.direct} impacto directo · hasta ${w.projectile.maxDmg} de explosión`
       : `🎯 ${info.body}${w.pellets > 1 ? ' (' + w.pellets + ' perdigones)' : ''} cuerpo · ${info.head} cabeza`;
     const killTxt = w.projectile ? 'Elimina de 1 impacto directo' : `Elimina en ${info.killBody} al cuerpo · ${info.killHead} a la cabeza`;
-    const statHtml = bars + `<div class="wnums"><span>${dmgTxt}</span><span>${killTxt}</span><span>🔄 ${info.mag} balas · ${(info.reload / 1000).toFixed(1)} s recarga · ${info.sps} disparos/s</span></div>`;
+    const statHtml = bars + `<div class="wnums"><span>${dmgTxt}</span><span>☠️ ${killTxt}</span><span>🔄 ${info.mag} balas · ${(info.reload / 1000).toFixed(1)} s de recarga</span></div>`;
     ['home-weapon-stats', 'rs-weapon-stats'].forEach(id => { const el = $(id); if (el) el.innerHTML = statHtml; });
   }
 

@@ -1152,15 +1152,15 @@
       // Escaleras de los pasillos oeste y este, junto al patio: tramo norte (sube hacia el sur)
       // y tramo sur (sube hacia el norte), las dos plantas en el mismo hueco
       const FL = [[-24.5, -15.5, '+z'], [15.5, 24.5, '-z']];
-      const STX = { w: [-34.2, -32.2], e: [32.2, 34.2] };
+      const STX = { w: [-34.6, -32.2], e: [32.2, 34.6] };
       // Escalera principal del vestíbulo: de la entrada (este) sube hacia el oeste hasta el pasillo este de P1
-      const MS = { x0: 35, x1: 43, z0: -VEST, z1: -VEST + 2 };
+      const MS = { x0: 35, x1: 43, z0: -VEST, z1: -VEST + 2.6 };
       b.frameMat = 'metalDark';
       const sign = (text, x, y, z, rotY, w, bg) => b.decoAt('textsign', x, y, z, { text, rotY, w: w || Math.min(1.6, 0.3 + text.length * 0.11), h: 0.3, bg: bg || '#1f3d7a' });
       const floor = (x0, z0, x1, z1, color, y) => { if (x1 - x0 > 0.05 && z1 - z0 > 0.05) b.decoAt('plane', (x0 + x1) / 2, y + 0.03, (z0 + z1) / 2, { w: x1 - x0, d: z1 - z0, color }); };
       // Suelo de un pasillo vertical sin tapar los huecos de las escaleras
       // Escaleras de la 2ª planta junto al bloque central (plano de evacuación): P1 → P2, pegadas a la fachada
-      const CST = { w: [-36.7, -34.7, '+z'], e: [34.7, 36.7, '-z'] }, CZ = [-4, 4];
+      const CST = { w: [-36.7, -34.3, '+z'], e: [34.3, 36.7, '-z'] }, CZ = [-4, 4];
       const corrFloor = (x0, x1, za, zb, Y, side, color) => {
         const segs = FL.map(([a, c]) => [a, c, STX[side]]);
         if (Y === P2) segs.push([CZ[0], CZ[1], CST[side]]);
@@ -1283,7 +1283,7 @@
       b.slab((XW + XE) / 2, 0, P1, XE - XW, Z1 - Z0, T, 'concrete', stairHoles.concat(vestHole.slice(1)));
       b.slab((XE + XA) / 2, 0, P1, XA - XE, 2 * ANX, T, 'concrete', vestHole.slice(0, 1));
       b.slab((XE + XA) / 2, 0, P2, XA - XE, 2 * VEST, T, 'concrete');                    // techo del vestíbulo (doble altura)
-      const cHoles = ['w', 'e'].map(sd => ({ x: (CST[sd][0] + CST[sd][1]) / 2, z: 0, w: 2, d: CZ[1] - CZ[0] }));
+      const cHoles = ['w', 'e'].map(sd => ({ x: (CST[sd][0] + CST[sd][1]) / 2, z: 0, w: CST[sd][1] - CST[sd][0], d: CZ[1] - CZ[0] }));
       b.slab(0, 0, P2, XE - XWC, Z1 - Z0, T, 'marble', voids.concat(stairHoles, cHoles));
       b.slab((XW + XWC) / 2, 0, P2, XWC - XW, Z1 - Z0, T, 'concrete');                  // azotea de la columna oeste
       [-1, 1].forEach(s => { b.slab((XE + XA) / 2, s * (ANX + 22.5) / 2, P2, XA - XE, ANX - 22.5, T, 'concrete'); b.slab((XE + 42) / 2, s * (R1 + G2) / 2, ROOF, 42 - XE, R1 - G2, T, 'concrete'); });   // cubiertas de los aseos del anexo
@@ -1296,30 +1296,33 @@
         b.box(x, ROOF, z, 1.6, 0.9, 1.1, 'metal', { solid: false }); b.box(x, ROOF + 0.9, z, 1.0, 0.05, 0.9, 'metalDark', { solid: false });
       });
       // Escaleras de los pasillos: dos tramos apilados (P0→P1 macizo y P1→P2) en el mismo hueco
+      const stairWalls = (x0, x1, za, zb, y0, y1) => [[x0, x0 + 0.12], [x1 - 0.12, x1]].forEach(([u, v]) => {
+        b.aabb(u, y0, za, v, y1 - 1.0, zb, WALL);
+        b.aabb(u, y1 - 1.0, za, v, y1, zb, 'rail');
+        b.aabb(u - 0.02, y1 - 0.06, za, v + 0.02, y1, zb, 'metalDark', { solid: false });
+      });
       ['w', 'e'].forEach(side => FL.forEach(([a, c, dir]) => {
         const x = (STX[side][0] + STX[side][1]) / 2, z = (a + c) / 2, w = STX[side][1] - STX[side][0];
         b.stairs(x, z, P0, w, c - a, P1, dir, 'marble');
         b.stairs(x, z, P1, w, c - a, P2 - P1, dir, 'marble', { thick: 0.3 });
         const aisle = side === 'w' ? STX.w[0] : STX.e[1], patio = side === 'w' ? STX.w[1] : STX.e[0];
         const lowZ = dir === '+z' ? a : c;
-        // P1: el tramo de arriba sólo se coge por su pie (barrera invisible en el lateral del pasillo)
-        b.aabb(aisle - 0.05, P1, Math.min(a, c), aisle + 0.05, P2 - T, Math.max(a, c), 'invisible', { see: true });
-        b.aabb(aisle - 0.03, P1 + 0.9, a, aisle + 0.03, P1 + 0.95, c, 'metalDark', { solid: false });
-        rail(patio - 0.05, a, patio + 0.05, c, P1);
-        // P2: barandilla alrededor del hueco (menos por donde se llega arriba)
-        rail(aisle - 0.05, a, aisle + 0.05, c, P2); rail(patio - 0.05, a, patio + 0.05, c, P2);
+        // Caja de escalera: dos muros a los lados, dentro del hueco, de la planta baja hasta la barandilla de
+        // la 2ª. Así nadie se sale por el lateral ni se da con la cabeza en el canto de los forjados, y el
+        // tramo de arriba sólo se coge por su pie
+        stairWalls(STX[side][0], STX[side][1], dir === '+z' ? a + 0.4 : a, dir === '+z' ? c : c - 0.4, P0, P2 + 1.0);
         rail(STX[side][0], lowZ - 0.05, STX[side][1], lowZ + 0.05, P2);
         sign(dir === '+z' ? '↓ ↑' : '↑ ↓', x, P1 + 2.4, lowZ + (dir === '+z' ? -0.2 : 0.2), dir === '+z' ? Math.PI : 0, 0.6, '#1d8f4e');
       }));
       ['w', 'e'].forEach(sd => {
         const [x0, x1, dir] = CST[sd], x = (x0 + x1) / 2, inner = sd === 'w' ? x1 : x0, foot = dir === '+z' ? CZ[0] : CZ[1];
-        b.stairs(x, 0, P1, 2, CZ[1] - CZ[0], P2 - P1, dir, 'marble');
-        rail(inner - 0.05, CZ[0], inner + 0.05, CZ[1], P2); rail(x0, foot - 0.05, x1, foot + 0.05, P2);
+        b.stairs(x, 0, P1, x1 - x0, CZ[1] - CZ[0], P2 - P1, dir, 'marble');
+        stairWalls(x0, x1, dir === '+z' ? CZ[0] + 0.4 : CZ[0], dir === '+z' ? CZ[1] : CZ[1] - 0.4, P1, P2 + 1.0); rail(x0, foot - 0.05, x1, foot + 0.05, P2);
         sign('↑ PLANTA 2', x, P1 + 2.3, foot + (dir === '+z' ? -0.2 : 0.2), dir === '+z' ? Math.PI : 0, 1.2, '#1d8f4e');
       });
       // Escalera principal (vestíbulo → pasillo este de P1)
       b.stairs((MS.x0 + MS.x1) / 2, (MS.z0 + MS.z1) / 2, P0, MS.z1 - MS.z0, MS.x1 - MS.x0, P1, '-x', 'marble');
-      b.aabb(MS.x0, P0, MS.z1 - 0.05, MS.x1, P1 + 1.0, MS.z1 + 0.05, 'rail', { solid: false });
+      [[MS.z0, MS.z0 + 0.12], [MS.z1 - 0.12, MS.z1]].forEach(([u, v]) => { b.aabb(MS.x0, P0, u, MS.x1, P1, v, WALL); b.aabb(MS.x0, P1, u, MS.x1, P1 + 1.0, v, 'rail'); });
 
       // ========================= PLANTA BAJA (P0) =========================
       const Y0 = P0;
@@ -1628,7 +1631,7 @@
     bombSites: [{ id: 'A', x: -21.8, y: 8.5, z: 31.4, r: 1.6 }, { id: 'B', x: 10, y: 0, z: -13.5, r: 3 }],
     grenadePacks: [{ x: -10, y: 0, z: -24 }, { x: 10, y: 0, z: 24 }, { x: 10, y: 4.5, z: -28.5 }, { x: -10, y: 4.5, z: 28.5 },
       { x: -20, y: 4.5, z: -16 }, { x: 20, y: 4.5, z: 16 }, { x: 10, y: 8.5, z: -27.5 }, { x: -10, y: 8.5, z: 27.5 }],
-    plan: { P1: 4.5, P2: 8.5, STX: { w: [-34.2, -32.2], e: [32.2, 34.2] }, FL: [[-24.5, -15.5], [15.5, 24.5]], MS: { x0: 35, x1: 43, z: -6 }, CST: [[-35.7, -4.45, Math.PI], [35.7, 4.45, 0]], X: [-47.5, 44.5], Z: 37 },
+    plan: { P1: 4.5, P2: 8.5, STX: { w: [-34.6, -32.2], e: [32.2, 34.6] }, FL: [[-24.5, -15.5], [15.5, 24.5]], MS: { x0: 35, x1: 43, z: -5.7 }, CST: [[-35.5, -4.45, Math.PI], [35.5, 4.45, 0]], X: [-47.5, 44.5], Z: 37 },
   };
 
 

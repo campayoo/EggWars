@@ -7,7 +7,9 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
 const inside = (x, z) => (x > PL.X[0] && x < 37 && Math.abs(z) < PL.Z) || (x >= 37 && x < PL.X[1] && Math.abs(z) < 30.5);
 const run = (x, y, z, inputAt, n) => { const st = { x, y, z, vx: 0, vy: 0, vz: 0, onGround: false }; let maxY = -9; for (let i = 0; i < (n || 300); i++) { Phys.simulate(w, st, inputAt(i), 1 / 60); maxY = Math.max(maxY, st.y); } st.maxY = maxY; return st; };
 // 1) Escaleras: andando recto desde el pie se llega arriba
-const climb = (x, y, z, yaw, expY) => Math.abs(run(x, y, z, () => ({ fwd: 1, yaw })).maxY - expY) < 0.1;
+const climb1 = (x, y, z, yaw, expY, da) => run(x, y, z, i => ({ fwd: 1, yaw: yaw + (i < 30 ? da : 0) }), 400).maxY > expY - 0.1;
+// también algo torcido y desviado del centro, como sube un jugador de verdad
+const climb = (x, y, z, yaw, expY) => [-0.3, 0, 0.3].every(off => [-0.3, 0, 0.3].every(da => climb1(x + (Math.abs(Math.sin(yaw)) > 0.5 ? 0 : off), y, z + (Math.abs(Math.sin(yaw)) > 0.5 ? off : 0), yaw, expY, da)));
 for (const side of ['w', 'e']) {
   const sx = (PL.STX[side][0] + PL.STX[side][1]) / 2, nm = side === 'w' ? 'oeste' : 'este';
   const [[na], [, sb]] = PL.FL;
