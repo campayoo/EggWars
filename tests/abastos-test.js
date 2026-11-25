@@ -4,7 +4,7 @@ const MD = require('../shared/mapdefs.js'), Phys = require('../shared/physics.js
 const d = MD.build('abastos'), w = Phys.createWorld(d), PL = d.def.plan;
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
-const inside = (x, z) => (x > PL.X[0] && x < 37 && Math.abs(z) < PL.Z) || (x >= 37 && x < PL.X[1] && Math.abs(z) < 30.5);
+const inside = (x, z) => (x > PL.X[0] && x < 37 && Math.abs(z) < PL.Z) || (x >= 37 && x < PL.X[1] && Math.abs(z) < 30.5) || (x >= PL.porch[0] && x < PL.porch[1] && Math.abs(z) < PL.porch[2]);   // con el porche de la entrada
 const run = (x, y, z, inputAt, n) => { const st = { x, y, z, vx: 0, vy: 0, vz: 0, onGround: false }; let maxY = -9; for (let i = 0; i < (n || 300); i++) { Phys.simulate(w, st, inputAt(i), 1 / 60); maxY = Math.max(maxY, st.y); } st.maxY = maxY; return st; };
 // 1) Escaleras: andando recto desde el pie se llega arriba
 const climb1 = (x, y, z, yaw, expY, da) => run(x, y, z, i => ({ fwd: 1, yaw: yaw + (i < 30 ? da : 0) }), 400).maxY > expY - 0.1;
