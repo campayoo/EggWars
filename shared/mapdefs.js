@@ -1230,7 +1230,7 @@
         b.box(Math.max(x0 + 1, Math.min(x1 - 1, deskX)), Y, bz - face * 1.3, 1.4, 0.76, 0.7, 'wood');
         const depth = z1 - z0, dX = cx + doorAt, dZ = doorSide === 'n' ? z0 : z1;
         if (opt.pcs) {
-          [bz - face * 2.6, bz - face * 4.2].forEach(z => {
+          [bz - face * 2.6, bz - face * 4.6].forEach(z => {
             const xe = doorSide !== boardSide && Math.abs(z - dZ) < 2.8 ? Math.min(x1 - 2.4, dX - 1.4) : x1 - 2.4;
             b.aabb(x0 + 1.0, Y, z - 0.4, xe, Y + 0.76, z + 0.4, 'white');
             for (let x = x0 + 1.8; x < xe - 0.2; x += 1.6) b.decoAt('pc', x, Y + 0.76, z + face * 0.05, { seat: true, rotY: face < 0 ? 0 : Math.PI });
@@ -1241,10 +1241,10 @@
         if (depth > 6.2 && !opt.oneRow) rows.push(bz - face * 4.3);
         if (depth > 8.6) rows.push(bz - face * 6.1);
         if (depth > 10.4) rows.push(bz - face * 7.9);
-        for (const z of rows) for (let x = x0 + 1.3; x < x1 - 2.3; x += 2.0) {
+        for (const z of rows) for (let x = x0 + 1.4; x < x1 - 2.3; x += 2.4) {   // pasillos de 1,4 m entre pupitres
           if (doorSide !== boardSide && Math.abs(x - dX) < 1.5 && Math.abs(z - dZ) < 2.8) continue;   // paso libre en la puerta
           b.decoAt('desk', x, Y, z, { color: opt.desk || 0x2f6fb5, rotY: face < 0 ? -Math.PI / 2 : Math.PI / 2 });
-          b.box(x, Y, z - face * 0.25, 1.15, 0.76, 1.2, 'invisible');
+          b.box(x, Y, z - face * 0.2, 1.0, 0.76, 0.62, 'invisible');
         }
       };
       // Barandilla: las de dentro se saltan (para bajar de un salto); las que dan a la calle llevan
@@ -1437,7 +1437,7 @@
       [['A109-E', -20.7, -13.7, 1.6], ['A110-E', -13.7, -6.7, 1.6], ['A111-E', -6.7, 0.3, -2.4], ['A110-O', 0.3, 7.3, 2.4], ['A109-O', 7.3, 14.3, 1.6], ['A108-O', 14.3, 21.3, 1.6]].forEach(([n, a, c, da]) => {
         room(XW, a, XWC, c, Y1, [{ side: 'e', at: da, w: 1.4 }], [{ side: 'w', at: -1.6, w: 1.8 }, { side: 'w', at: 1.6, w: 1.8 }], { floor: 0xd6cfbf, name: n });
         b.decoAt('board', XW + 0.38, Y1 + 1.55, (a + c) / 2, { rotY: Math.PI / 2, w: 2.6, text: n });
-        for (const x of [-44.2, -42.2, -40.2]) for (let z = a + 1.3; z < c - 1.0; z += 2.0) { b.decoAt('desk', x, Y1, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(x - 0.25, Y1, z, 1.2, 0.76, 1.15, 'invisible'); }
+        for (const x of [-44.3, -41.4]) for (let z = a + 1.4; z < c - 1.0; z += 2.3) { b.decoAt('desk', x, Y1, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(x - 0.2, Y1, z, 0.62, 0.76, 1.0, 'invisible'); }
       });
       aseos(XW, 21.3, XWC, 23.9, Y1, { side: 'e', at: 0, w: 1.0 }, 'B104-O');
       aseos(XW, 23.9, XWC, G1, Y1, { side: 'e', at: 0, w: 1.2 }, 'B103-O');
@@ -1479,7 +1479,7 @@
       b.aabb(-0.8, Y1, 1.6, 4.5, Y1 + 0.76, 3.0, 'wood');
       room(5.9, -ST1, 13.6, ST1, Y1, [{ side: 'e', at: -2.5, w: 1.4 }], [], { floor: 0xd6cfbf, name: 'A112-E' });
       b.decoAt('board', 9.75, Y1 + 1.55, ST1 - T - 0.08, { rotY: Math.PI, w: 3, text: 'A112-E' });
-      [-1.5, 1].forEach(z => [8, 10.5].forEach(x => { b.decoAt('desk', x, Y1, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y1, z - 0.25, 1.15, 0.76, 1.2, 'invisible'); }));
+      [-1.5, 1].forEach(z => [8, 10.5].forEach(x => { b.decoAt('desk', x, Y1, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y1, z - 0.2, 1.0, 0.76, 0.62, 'invisible'); }));
       floor(13.6, -ST1, XC2, ST1, 0xe6e0d4, Y1);
       sign('DISTRIBUIDOR', 23, Y1 + 2.6, 0, -Math.PI / 2, 1.5);
       // Anexo este: aseos B102-E/B101-E y B101-O/B102-O, terrazas al aire libre y hueco del vestíbulo
@@ -1566,19 +1566,19 @@
       const bot = [['D. FOL', -32, -26.7], ['D. CASTELLÀ', -21.3, -16], ['D. INFORMÀTICA', -16, -11.2], ['D. ADMINISTR.', -11.2, -6.4], ['D. COMERÇ', -6.4, -1.1], ['D. MATEMÀT.', -1.1, 4.3], ['D. FÍS. I QUÍM.', 9.6, 14.4], ['D. VALENCIÀ', 14.4, 19.2], ['D. ANGLÉS', 19.2, 25.1], ['AULA 308', 25.1, 32]];
       top.forEach(([n, x0, x1], i) => {
         room(x0, -CB, x1, 0, Y2, [{ side: 'n', at: 0, w: 1.2 }], x1 - x0 > 4.7 ? [{ side: 'n', at: -(x1 - x0) / 2 + 1.15, w: 1.3, y: 0.9, h: 2.1, big: true }] : [], { floor: 0xddd5c6, name: n, bg: bgOf(n) });
-        if (n.startsWith('AULA')) [-1.6].forEach(z => [x0 + 1.4, x0 + 3.4].forEach(x => { if (x < x1 - 1) { b.decoAt('desk', x, Y2, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y2, z - 0.25, 1.15, 0.76, 1.2, 'invisible'); } }));
+        if (n.startsWith('AULA')) [-1.6].forEach(z => [x0 + 1.3, x0 + 3.7].forEach(x => { if (x < x1 - 1) { b.decoAt('desk', x, Y2, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y2, z - 0.2, 1.0, 0.76, 0.62, 'invisible'); } }));
         else b.aabb(x0 + 0.5, Y2, -2.2, x1 - 0.5, Y2 + 0.76, -1.2, 'wood');
         if (i % 3 === 1) b.aabb(x1 - 0.9, Y2, -4.5, x1 - 0.4, Y2 + 1.9, -3.3, 'metal');
       });
       bot.forEach(([n, x0, x1]) => {
         room(x0, 0, x1, CB, Y2, [{ side: 's', at: 0, w: 1.2 }], x1 - x0 > 4.7 ? [{ side: 's', at: -(x1 - x0) / 2 + 1.15, w: 1.3, y: 0.9, h: 2.1, big: true }] : [], { floor: 0xddd5c6, name: n, bg: bgOf(n) });
-        if (n.startsWith('AULA')) [1.6].forEach(z => [x0 + 1.4, x0 + 3.4].forEach(x => { if (x < x1 - 1) { b.decoAt('desk', x, Y2, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y2, z + 0.25, 1.15, 0.76, 1.2, 'invisible'); } }));
+        if (n.startsWith('AULA')) [1.6].forEach(z => [x0 + 1.3, x0 + 3.7].forEach(x => { if (x < x1 - 1) { b.decoAt('desk', x, Y2, z, { color: 0x2f6fb5, rotY: Math.PI / 2 }); b.box(x, Y2, z + 0.2, 1.0, 0.76, 0.62, 'invisible'); } }));
         else b.aabb(x0 + 0.5, Y2, 1.2, x1 - 0.5, Y2 + 0.76, 2.2, 'wood');
       });
       [['AULA 306', -26.7, -21.3, 'PEDAGOGIA TERAPÈUTICA'], ['AULA 307', 4.3, 9.6, 'AULA 307']].forEach(([n, x0, x1, txt]) => {
         room(x0, -CB, x1, CB, Y2, [{ side: 'n', at: 0, w: 1.4 }, { side: 's', at: 0, w: 1.4 }], [], { floor: 0xd6cfbf, name: n });
         b.decoAt('board', x1 - T - 0.08, Y2 + 1.55, 0, { rotY: -Math.PI / 2, w: 3, text: txt });
-        [-1.6, 1.6].forEach(z => [x0 + 1.3, x0 + 3.1].forEach(x => { b.decoAt('desk', x, Y2, z, { color: 0xc0392b, rotY: Math.PI }); b.box(x - 0.25, Y2, z, 1.2, 0.76, 1.15, 'invisible'); }));
+        [-1.6, 1.6].forEach(z => [x0 + 1.3, x0 + 3.1].forEach(x => { b.decoAt('desk', x, Y2, z, { color: 0xc0392b, rotY: Math.PI }); b.box(x - 0.2, Y2, z, 0.62, 0.76, 1.0, 'invisible'); }));
       });
       // Pasillos de P2
       floor(XC1, -R1, XC2, -G2, 0xe6e0d4, Y2); floor(XC1, G2, XC2, R1, 0xe6e0d4, Y2);

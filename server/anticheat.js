@@ -116,7 +116,7 @@ function checkMove(p, nx, ny, nz, now, world) {
 // un techo al saltar NO es trampa; meterse dentro, sí.
 function coreBlocked(world, x, y, z) {
   const R = Phys.P.RADIUS - 0.06, y0 = y + 0.08, y1 = y + Phys.P.HEIGHT - 0.12;
-  for (const b of world.boxes) {
+  for (const b of Phys.near(world, x - R, z - R, x + R, z + R)) {
     if (y0 < b.maxY && y1 > b.minY && x + R > b.minX && x - R < b.maxX && z + R > b.minZ && z - R < b.maxZ) return true;
   }
   return false;

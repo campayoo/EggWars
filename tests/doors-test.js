@@ -19,7 +19,7 @@ MB.Builder.prototype.wallSeg = function (axis, fixed, from, to, y0, H, t, openin
   return orig.apply(this, arguments);
 };
 const MD = require('../shared/mapdefs.js');
-const Phys = require('../shared/physics.js');
+const Phys = require('../shared/physics.js'); const AC = require('../server/anticheat.js');
 const only = process.argv[2];
 let bad = 0;
 for (const def of MD.LIST) {
@@ -44,9 +44,10 @@ for (const def of MD.LIST) {
       if (Phys.blockedAt(w, sx, sy + 0.01, sz)) { issues.push(`puerta (${d.x.toFixed(1)}, ${d.y0.toFixed(1)}, ${d.z.toFixed(1)}) lado ${s}: el sitio de delante está ocupado (${sx.toFixed(1)}, ${sz.toFixed(1)})`); continue; }
       const st = Phys.newState(sx, sy + 0.02, sz);
       const yaw = Math.atan2(-d.nx * s, -d.nz * s); // forward = (-sin(yaw), -cos(yaw))
-      let ok = false;
+      let ok = false; const ap = { x: st.x, y: st.y, z: st.z }; let T = 1e6; AC.resetPlayer(ap, T); ap.mvAt = T;
       for (let i = 0; i < 120 && !ok; i++) {
-        Phys.simulate(w, st, { fwd: 1, side: 0, yaw, jump: false }, 1 / 60);
+        Phys.simulate(w, st, { fwd: 1, side: 0, yaw, jump: false }, 1 / 60); T += 1000 / 60;
+        if (T - ap.mvAt >= 33) { const why = AC.checkMove(ap, st.x, st.y, st.z, T, w); if (why) { issues.push(`puerta (${d.x.toFixed(1)}, ${d.y0.toFixed(1)}, ${d.z.toFixed(1)}): el anti-trampas corrige (${why})`); AC.resetPlayer(ap, T); } ap.x = st.x; ap.y = st.y; ap.z = st.z; }
         const prog = (st.x - d.x) * d.nx * s + (st.z - d.z) * d.nz * s;
         if (prog > 0.9) ok = true;
       }

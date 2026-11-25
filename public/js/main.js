@@ -3859,7 +3859,7 @@
     const MOB = ['muy baja', 'baja', 'media', 'alta', 'muy alta'];
     const vals = {
       dmg: w.projectile ? `${w.projectile.direct}` : `${info.body}${w.pellets > 1 ? ' total' : ''}`,
-      rate: `${info.sps} disparos/s`, range: `${info.range} m`, mob: MOB[Math.max(0, Math.min(4, info.bars.mob - 1))],
+      rate: `${info.sps}/s`, range: `${info.range} m`, mob: MOB[Math.max(0, Math.min(4, info.bars.mob - 1))],
     };
     const bars = [['Daño', 'dmg'], ['Cadencia', 'rate'], ['Alcance', 'range'], ['Movilidad', 'mob']].map(([l, k]) =>
       `<div class="wstat"><span><b>${l}</b><em>${vals[k]}</em></span><i aria-label="${l}: ${info.bars[k]} de 5">${'<b></b>'.repeat(info.bars[k])}${'<u></u>'.repeat(5 - info.bars[k])}</i></div>`).join('');

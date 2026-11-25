@@ -43,7 +43,7 @@
   function rampTopUnder(r, x, z, R) {
     const x0 = Math.max(r.minX, x - R), x1 = Math.min(r.maxX, x + R);
     const z0 = Math.max(r.minZ, z - R), z1 = Math.min(r.maxZ, z + R);
-    if (x0 > x1 || z0 > z1) return null;
+    if (x0 >= x1 - 0.001 || z0 >= z1 - 0.001) return null;   // rozar el canto no cuenta como pisarla
     let px = x, pz = z;
     if (r.dir === '+x') px = x1; else if (r.dir === '-x') px = x0;
     else if (r.dir === '+z') pz = z1; else pz = z0;
@@ -52,6 +52,54 @@
   function rampBottom(r, s) {
     return r.thick ? s - r.thick : r.y0;
   }
+
+  // Rejilla espacial de cajas (celdas de 4 m): en mapas grandes (el Abastos tiene miles de cajas)
+  // cada consulta mira sólo las cajas de alrededor en vez de todas. Se rehace sola si cambia la lista.
+  const CELL = 4;
+  let qStamp = 1;
+  function grid(w) {
+    if (w._gsrc === w.boxes && w._glen === w.boxes.length) return w._g;
+    const g = new Map();
+    for (const b of w.boxes) {
+      const x0 = Math.floor(b.minX / CELL), x1 = Math.floor(b.maxX / CELL), z0 = Math.floor(b.minZ / CELL), z1 = Math.floor(b.maxZ / CELL);
+      for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) {
+        const k = (ix + 4096) * 8192 + (iz + 4096);
+        let a = g.get(k); if (!a) g.set(k, a = []); a.push(b);
+      }
+    }
+    w._g = g; w._gsrc = w.boxes; w._glen = w.boxes.length;
+    return g;
+  }
+  // Cajas cuyo rectángulo en planta puede tocar [x0,x1]×[z0,z1]
+  function near(w, x0, z0, x1, z1) {
+    const g = grid(w), out = [], st = ++qStamp;
+    const ax = Math.floor(x0 / CELL), bx = Math.floor(x1 / CELL), az = Math.floor(z0 / CELL), bz = Math.floor(z1 / CELL);
+    if ((bx - ax + 1) * (bz - az + 1) > 4000) return w.boxes;
+    for (let ix = ax; ix <= bx; ix++) for (let iz = az; iz <= bz; iz++) {
+      const a = g.get((ix + 4096) * 8192 + (iz + 4096));
+      if (a) for (const b of a) if (b._q !== st) { b._q = st; out.push(b); }
+    }
+    return out;
+  }
+  // Cajas de las celdas que cruza un rayo en planta (recorrido de celdas tipo DDA)
+  function nearRay(w, ox, oz, dx, dz, maxT) {
+    if (!isFinite(maxT) || maxT > 600) maxT = 600;
+    const g = grid(w), out = [], st = ++qStamp;
+    let ix = Math.floor(ox / CELL), iz = Math.floor(oz / CELL);
+    const ex = Math.floor((ox + dx * maxT) / CELL), ez = Math.floor((oz + dz * maxT) / CELL);
+    const sx = dx > 0 ? 1 : -1, sz = dz > 0 ? 1 : -1;
+    const tdx = Math.abs(dx) > 1e-9 ? CELL / Math.abs(dx) : Infinity, tdz = Math.abs(dz) > 1e-9 ? CELL / Math.abs(dz) : Infinity;
+    let tmx = Math.abs(dx) > 1e-9 ? ((dx > 0 ? (ix + 1) * CELL - ox : ox - ix * CELL) / Math.abs(dx)) : Infinity;
+    let tmz = Math.abs(dz) > 1e-9 ? ((dz > 0 ? (iz + 1) * CELL - oz : oz - iz * CELL) / Math.abs(dz)) : Infinity;
+    for (let n = 0; n < 2000; n++) {
+      const a = g.get((ix + 4096) * 8192 + (iz + 4096));
+      if (a) for (const b of a) if (b._q !== st) { b._q = st; out.push(b); }
+      if (ix === ex && iz === ez) break;
+      if (tmx < tmz) { if (tmx > maxT) break; ix += sx; tmx += tdx; } else { if (tmz > maxT) break; iz += sz; tmz += tdz; }
+    }
+    return out;
+  }
+
   function overlapXZ(b, x, z, R) {
     return x + R > b.minX + EPS && x - R < b.maxX - EPS && z + R > b.minZ + EPS && z - R < b.maxZ - EPS;
   }
@@ -59,7 +107,7 @@
   // ¿El volumen del jugador en (x,y,z) se solapa con algo sólido?
   function blockedAt(w, x, y, z) {
     const R = P.RADIUS, top = y + P.HEIGHT;
-    for (const b of w.boxes) {
+    for (const b of near(w, x - R, z - R, x + R, z + R)) {
       if (y < b.maxY - EPS && top > b.minY + EPS && overlapXZ(b, x, z, R)) return true;
     }
     for (const r of w.ramps) {
@@ -89,7 +137,7 @@
   function supportBelow(w, x, z, maxY) {
     const R = P.RADIUS;
     let best = w.ground ? 0 : -Infinity;
-    for (const b of w.boxes) {
+    for (const b of near(w, x - R, z - R, x + R, z + R)) {
       if (b.maxY <= maxY + EPS && b.maxY > best && overlapXZ(b, x, z, R)) best = b.maxY;
     }
     for (const r of w.ramps) {
@@ -121,7 +169,7 @@
     for (let iter = 0; iter < 4; iter++) {
       let hit = false;
       const top = st.y + P.HEIGHT;
-      for (const b of w.boxes) {
+      for (const b of near(w, st.x - R - 0.01, st.z - R - 0.01, st.x + R + 0.01, st.z + R + 0.01)) {
         if (!(st.y < b.maxY - EPS && top > b.minY + EPS && overlapXZ(b, st.x, st.z, R))) continue;
         const rise = b.maxY - st.y;
         if (canStep && rise <= P.STEP && !blockedAt(w, st.x, b.maxY + 0.001, st.z)) {
@@ -271,7 +319,7 @@
     } else {
       // Techo
       const R = P.RADIUS, headOld = oy + P.HEIGHT, headNew = ny + P.HEIGHT;
-      for (const b of w.boxes) {
+      for (const b of near(w, st.x - R, st.z - R, st.x + R, st.z + R)) {
         if (b.minY >= headOld - 0.05 && b.minY < headNew && overlapXZ(b, st.x, st.z, R)) {
           ny = Math.min(ny, b.minY - P.HEIGHT - 0.001);
           st.vy = 0;
@@ -343,7 +391,9 @@
   function raycast(w, ox, oy, oz, dx, dy, dz, maxT, opts) {
     const bullets = !opts || opts.bullets !== false;
     let best = maxT;
-    for (const b of w.boxes) {
+    const hz = Math.hypot(dx, dz);
+    const cand = hz < 1e-6 ? near(w, ox, oz, ox, oz) : nearRay(w, ox, oz, dx, dz, maxT);
+    for (const b of cand) {
       if (bullets && b.see) continue;
       const t = rayBox(ox, oy, oz, dx, dy, dz, b, best);
       if (t < best) best = t;
@@ -381,7 +431,7 @@
   // -------------------------------------------------------------------------
   const GR = 0.18;
   function insideAny(w, x, y, z) {
-    for (const b of w.boxes) {
+    for (const b of near(w, x - GR, z - GR, x + GR, z + GR)) {
       if (x > b.minX - GR && x < b.maxX + GR && y > b.minY - GR && y < b.maxY + GR && z > b.minZ - GR && z < b.maxZ + GR) return b;
     }
     return null;
@@ -417,5 +467,5 @@
     if (g.z > lim || g.z < -lim) { g.z = Math.max(-lim, Math.min(lim, g.z)); g.vz = -g.vz * 0.5; }
   }
 
-  return { P, createWorld, newState, stepPlayer, simulate, blockedAt, supportBelow, raycast, lineOfSight, stepGrenade, findLadder };
+  return { P, createWorld, newState, stepPlayer, simulate, blockedAt, supportBelow, raycast, lineOfSight, stepGrenade, findLadder, near };
 });

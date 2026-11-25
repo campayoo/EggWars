@@ -984,3 +984,14 @@ body.rs-open #hud > *:not(#damage-flash) { visibility: hidden; }
 .weapon-stats.small .wnums { color: #ffe3c7 !important; font-size: 11.5px !important; }
 @media (max-width: 720px) { #menu-overlay #home-weapon-stats { grid-template-columns: 1fr 1fr; } }
 .wp-btn em { font-size: 0.66rem; }
+/* Contraste de la ficha del arma: lleno naranja intenso, vacío gris claro, textos oscuros */
+#menu-overlay #home-weapon-stats { background: #fffaf3; border: 2px solid #f0c9a0; }
+#menu-overlay #home-weapon-stats .wstat > span b { color: #8a4a12; }
+#menu-overlay #home-weapon-stats .wstat > span em { color: #1f1208; font-size: 13px; }
+#menu-overlay #home-weapon-stats i b { background: #e8650f; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18); }
+#menu-overlay #home-weapon-stats i u { background: #e3ddd6; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
+#menu-overlay #home-weapon-stats i b, #menu-overlay #home-weapon-stats i u { height: 10px; }
+#menu-overlay #home-weapon-stats .wnums { color: #3b1f0a !important; opacity: 1 !important; font-size: 12px !important; }
+#menu-overlay #home-weapon-stats .wnums span { background: #fde3c8; border: 1px solid #f3c493; }
+.weapon-stats.small i b { background: #ff8a2a; }
+.weapon-stats.small i u { background: rgba(255, 255, 255, .22); }
