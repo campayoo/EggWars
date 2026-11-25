@@ -1151,8 +1151,8 @@
       const ANX = 30.5, VEST = 7;                                        // anexo este y vestíbulo
       // Escaleras de los pasillos oeste y este, junto al patio: tramo norte (sube hacia el sur)
       // y tramo sur (sube hacia el norte), las dos plantas en el mismo hueco
-      const FL = [[-24.5, -15.5, '+z'], [15.5, 24.5, '-z']];
-      const STX = { w: [-34.6, -32.2], e: [32.2, 34.6] };
+      const FL = [[-23, -16.5, -1], [16.5, 23, 1]];          // huecos de las escaleras en U (norte y sur)
+      const STX = { w: [-35.4, -32], e: [32, 35.4] };
       // Escalera principal del vestíbulo: de la entrada (este) sube hacia el oeste hasta el pasillo este de P1
       const MS = { x0: 35, x1: 43, z0: -VEST, z1: -VEST + 2.6 };
       b.frameMat = 'metalDark';
@@ -1259,8 +1259,14 @@
         }
       };
       // Galería abierta a un patio: antepecho crema, albardilla, pasamanos metálico (se puede saltar)
-      const gallery = (axis, fixed, a0, a1, Y) => {
+      const gallery = (axis, fixed, a0, a1, Y, mesh) => {
         const A = (u0, y0, u1, y1, f0, f1, mat, o) => axis === 'x' ? b.aabb(u0, y0, f0, u1, y1, f1, mat, o) : b.aabb(f0, y0, u0, f1, y1, u1, mat, o);
+        if (mesh) {   // barandilla de paneles de rejilla metálica (como la del pasillo de la foto)
+          A(a0, Y, a1, Y + 1.05, fixed - 0.04, fixed + 0.04, 'rail');
+          A(a0, Y + 1.0, a1, Y + 1.08, fixed - 0.05, fixed + 0.05, 'metal', { solid: false });
+          for (let u = a0; u <= a1 + 0.01; u += 1.6) A(u - 0.035, Y, u + 0.035, Y + 1.08, fixed - 0.05, fixed + 0.05, 'metal', { solid: false });
+          return;
+        }
         A(a0, Y, a1, Y + 0.85, fixed - 0.12, fixed + 0.12, 'cream');
         A(a0, Y + 0.85, a1, Y + 0.93, fixed - 0.16, fixed + 0.16, 'concrete');
         A(a0, Y + 1.08, a1, Y + 1.14, fixed - 0.03, fixed + 0.03, 'metalDark', { solid: false });
@@ -1294,7 +1300,7 @@
       [-1, 1].forEach(s => { b.slab((XE + XA) / 2, s * (ANX + 22.5) / 2, P2, XA - XE, ANX - 22.5, T, 'concrete'); b.slab((XE + 42) / 2, s * (R1 + G2) / 2, ROOF, 42 - XE, R1 - G2, T, 'concrete'); });   // cubiertas de los aseos del anexo
       // Cubierta: sobre las galerías no hay forjado; el patio entero queda bajo el lucernario, encima
       // de un cuerpo alto con ventanas pequeñas (como en la foto del patio)
-      const open = [-1, 1].map(s => ({ x: 0, z: s * (R1 + CB) / 2, w: XC2 - XC1, d: R1 - CB }));
+      const open = [-1, 1].map(s => ({ x: 0, z: s * (R1 + V2) / 2, w: XC2 - XC1, d: R1 - V2 }));
       b.slab(0, 0, ROOF, XE - XWC, Z1 - Z0, T, 'concrete', open);
       b.ring(0, 0, ROOF, XE - XWC, Z1 - Z0, 0.6, 0.3, 'concrete');
       [[-14, -33], [14, -33], [-14, 33], [14, 33]].forEach(([x, z]) => {
@@ -1316,18 +1322,33 @@
           });
         }
       };
-      // Escaleras de los pasillos: dos tramos apilados (P0→P1 macizo y P1→P2) en el mismo hueco. El
-      // peldañeado es 12 cm más estrecho por cada lado para dejar sitio a la barandilla (sin parpadeos)
-      ['w', 'e'].forEach(side => FL.forEach(([a, c, dir]) => {
-        const [x0, x1] = STX[side], x = (x0 + x1) / 2, z = (a + c) / 2, w = x1 - x0 - 0.24;
-        b.stairs(x, z, P0, w, c - a, P1, dir, 'marble');
-        b.stairs(x, z, P1, w, c - a, P2 - P1, dir, 'marble', { thick: 0.3 });
-        const lowZ = dir === '+z' ? a : c;
-        balustrade('z', x0, x1, a, c, lowZ, P0, P1, P2 - P1);
-        // P2: barandilla en el borde del hueco (por fuera) y en el lado del pie
-        rail(x0 - 0.1, a, x0, c, P2); rail(x1, a, x1 + 0.1, c, P2);
-        rail(x0, lowZ - 0.05, x1, lowZ + 0.05, P2);
-        sign(dir === '+z' ? '↓ ↑' : '↑ ↓', x, P1 + 2.4, lowZ + (dir === '+z' ? -0.2 : 0.2), dir === '+z' ? Math.PI : 0, 0.6, '#1d8f4e');
+      // Escaleras en U de los pasillos (como las del instituto): cada planta tiene dos tramos paralelos
+      // separados por un muro, con rellano a media altura al fondo. Se entra por el lado del pasillo.
+      // Caja de escalera con muros a los lados y al fondo; los tramos de una planta quedan justo encima
+      // de los de la de abajo (más de 3,5 m de altura libre en todo el recorrido).
+      ['w', 'e'].forEach(side => FL.forEach(([a, c, s]) => {
+        const [x0, x1] = STX[side], tw = 0.12, cw = 0.1;
+        const xm = (x0 + x1) / 2, inA = side === 'w' ? [x0 + tw, xm - cw / 2] : [xm + cw / 2, x1 - tw];   // tramo A: lado del pasillo
+        const inB = side === 'w' ? [xm + cw / 2, x1 - tw] : [x0 + tw, xm - cw / 2];                       // tramo B: lado del patio
+        const entry = s < 0 ? a : c, far = s < 0 ? c : a;             // borde de la entrada y fondo de la caja
+        const land = s < 0 ? [c - 1.5, c] : [a, a + 1.5];               // rellano al fondo
+        const fl = s < 0 ? [a, c - 1.5] : [a + 1.5, c];                 // tramos
+        const up = s < 0 ? '+z' : '-z', back = s < 0 ? '-z' : '+z', fz = (fl[0] + fl[1]) / 2, L = fl[1] - fl[0];
+        [[P0, P1 - P0, 0], [P1, P2 - P1, 0.3]].forEach(([yF, h, th]) => {
+          const mid = yF + h / 2;
+          b.stairs((inA[0] + inA[1]) / 2, fz, yF, inA[1] - inA[0], L, h / 2, up, 'marble', th ? { thick: th } : undefined);
+          b.stairs((inB[0] + inB[1]) / 2, fz, mid, inB[1] - inB[0], L, h / 2, back, 'marble', th ? { thick: th } : undefined);
+          b.aabb(x0 + tw, th ? mid - th : yF, land[0] + (s > 0 ? tw : 0), x1 - tw, mid, land[1] - (s < 0 ? tw : 0), 'marble');
+          if (!th) b.aabb(inB[0], yF, fl[0], inB[1], mid, fl[1], 'concrete');     // macizo bajo el tramo B de la planta baja
+        });
+        // Muros: laterales, fondo y el del centro (sólo a lo largo de los tramos), hasta la barandilla de la 2ª
+        const top = P2 + 1.0;
+        b.aabb(x0, P0, a, x0 + tw, top, c, WALL); b.aabb(x1 - tw, P0, a, x1, top, c, WALL);
+        b.aabb(x0 + tw, P0, far - (s < 0 ? tw : 0), x1 - tw, top, far + (s > 0 ? tw : 0), WALL);
+        b.aabb(xm - cw / 2, P0, fl[0], xm + cw / 2, top, fl[1], WALL);
+        // En la 2ª, barandilla en la boca del tramo A (allí ya no sube nada)
+        rail(inA[0], entry - (s < 0 ? 0.1 : 0), inA[1], entry + (s > 0 ? 0.1 : 0), P2);
+        [P0, P1].forEach(y => sign('ESCALA ↑', (inA[0] + inA[1]) / 2, y + 2.5, entry + (s < 0 ? -0.05 : 0.05), s < 0 ? Math.PI : 0, 0.9, '#1d8f4e'));
       }));
       ['w', 'e'].forEach(sd => {
         const [x0, x1, dir] = CST[sd], x = (x0 + x1) / 2, foot = dir === '+z' ? CZ[0] : CZ[1];
@@ -1408,8 +1429,8 @@
       corrFloor(XC2, XE, -C0, -CAF, Y0, 'e', 0xe6e0d4); corrFloor(XC2, XE, CAF, C0, Y0, 'e', 0xe6e0d4);
       // Anexo este: aseos y departamentos a los lados del vestíbulo
       aseos(XE, -ANX, XA, -C0, Y0, { side: 'w', at: 3.2, w: 1.2 }, 'B001-E');
-      rowRooms(['A000-E', 'D006-E', 'D005-E', 'D004-E'], -C0, -VEST).forEach(([n, a, c]) => room(XE, a, XA, c, Y0, [{ side: 'w', at: 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.6 }], { name: n }));
-      rowRooms(['D001-O', 'D002-O', 'D003-O', 'D004-O'], VEST, C0).forEach(([n, a, c]) => room(XE, a, XA, c, Y0, [{ side: 'w', at: 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.6 }], { name: n }));
+      rowRooms(['A000-E', 'D006-E', 'D005-E', 'D004-E'], -C0, -VEST).forEach(([n, a, c], i) => room(XE, a, XA, c, Y0, [{ side: 'w', at: i === 1 ? 1.2 : 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.6 }], { name: n }));
+      rowRooms(['D001-O', 'D002-O', 'D003-O', 'D004-O'], VEST, C0).forEach(([n, a, c], i) => room(XE, a, XA, c, Y0, [{ side: 'w', at: i === 2 ? -1.2 : 0, w: 1.2 }], [{ side: 'e', at: 0, w: 1.6 }], { name: n }));
       aseos(XE, C0, XA, ANX, Y0, { side: 'w', at: -3.2, w: 1.2 }, 'B001-O');
       // Vestíbulo del ACCÉS (doble altura) con la escalera principal y la entrada acristalada (cerrada)
       floor(XE, -VEST, XA, VEST, 0xe2ddd2, Y0);
@@ -1550,11 +1571,26 @@
       aseos(XE, G2, 42, R1, Y2, { side: 'w', at: 0, w: 1.2 }, 'B202-O');
       // Galerías abiertas a los patios: antepecho y barandilla (se puede saltar al patio), pilares
       [-1, 1].forEach(s => {
-        gallery('x', s * G2 + s * 0.12, XC1, XC2, Y2); gallery('x', s * V2 - s * 0.12, XC1, XC2, Y2);
+        gallery('x', s * G2 + s * 0.12, XC1, XC2, Y2);
+        // Galería central de la 2ª: sala de estudio con cristaleras de suelo a techo hacia el patio, techo
+        // blanco, mesas de madera con patas verdes y sillas (como en la foto de arriba del todo)
+        const gz = s * V2 - s * 0.06;
+        b.aabb(XC1, Y2, gz - 0.04, XC2, Y2 + HF[Y2], gz + 0.04, 'glass');
+        for (let x = XC1; x <= XC2 + 0.01; x += 2.0) b.aabb(x - 0.05, Y2, gz - 0.07, x + 0.05, Y2 + HF[Y2], gz + 0.07, 'metalDark', { solid: false });
+        [0.05, 1.0, 2.4].forEach(y => b.aabb(XC1, Y2 + y, gz - 0.07, XC2, Y2 + y + 0.07, gz + 0.07, 'metalDark', { solid: false }));
+        for (let x = -27; x <= 27; x += 6) {
+          const tz = s * (V2 - 1.3);
+          b.aabb(x - 0.8, Y2 + 0.7, tz - 0.42, x + 0.8, Y2 + 0.76, tz + 0.42, 'wood');
+          [[-0.7, -0.35], [0.7, -0.35], [-0.7, 0.35], [0.7, 0.35]].forEach(([dx, dz]) => b.aabb(x + dx - 0.03, Y2, tz + dz - 0.03, x + dx + 0.03, Y2 + 0.7, tz + dz + 0.03, 'green', { solid: false }));
+          b.aabb(x - 0.75, Y2, tz - 0.4, x + 0.75, Y2 + 0.7, tz + 0.4, 'invisible');
+          [-0.45, 0.45].forEach(dx => { b.aabb(x + dx - 0.22, Y2 + 0.42, tz - s * 0.75 - 0.2, x + dx + 0.22, Y2 + 0.47, tz - s * 0.75 + 0.2, 'metalDark', { solid: false }); b.aabb(x + dx - 0.22, Y2 + 0.47, tz - s * 0.95 - 0.03, x + dx + 0.22, Y2 + 0.9, tz - s * 0.95 + 0.03, 'metalDark', { solid: false }); });
+        }
         const [a, c] = s < 0 ? [-G2, -V2] : [V2, G2];
-        gallery('z', XC1 - 0.12, a, c, Y2); gallery('z', XC2 + 0.12, a, c, Y2);
+        // en los lados, el antepecho se corta donde está la caja de la escalera (su muro hace de antepecho)
+        const [ha, hc] = s < 0 ? FL[0] : FL[1];
+        [[a, Math.max(a, ha)], [Math.min(c, hc), c]].forEach(([u, v]) => { if (v - u > 0.05) { gallery('z', XC1 - 0.12, u, v, Y2, true); gallery('z', XC2 + 0.12, u, v, Y2, true); } });
         // Antepecho escalonado (bloques más altos encima de cada pilar del porche) y canto crema del voladizo
-        for (let x = -30; x <= 30; x += 5) [[s * G2 + s * 0.12], [s * V2 - s * 0.12]].forEach(([z]) => b.aabb(x - 0.4, Y2, z - 0.2, x + 0.4, Y2 + 1.2, z + 0.2, 'cream'));
+        for (let x = -30; x <= 30; x += 5) b.aabb(x - 0.4, Y2, s * G2 + s * 0.12 - 0.2, x + 0.4, Y2 + 1.2, s * G2 + s * 0.12 + 0.2, 'cream');
         [s * G2 + s * 0.12, s * V2 - s * 0.12].forEach(z => b.aabb(XC1, Y2 - 0.45, z - 0.24, XC2, Y2 - T, z + 0.24, 'cream', { solid: false }));
       });
       // Splits del aire acondicionado junto a las aulas (como en la foto de la galería)
@@ -1566,7 +1602,7 @@
       // metálicas y cristal a dos aguas sobre todo el patio (galerías incluidas)
       const CL = 2.6, TOP = ROOF + CL;
       [-1, 1].forEach(s => {
-        const za = s * R1, zb = s * CB, cz = (za + zb) / 2, span = Math.abs(za - zb) + 0.6;
+        const za = s * R1, zb = s * V2, cz = (za + zb) / 2, span = Math.abs(za - zb) + 0.6;
         [[za + s * 0.15, -s], [zb - s * 0.15, s]].forEach(([z, f]) => {
           b.aabb(XC1, ROOF - T, z - 0.15, XC2, TOP, z + 0.15, 'cream', { solid: false });
           for (let x = -28.75; x <= 29; x += 5) b.aabb(x - 0.8, ROOF + 0.7, z + f * 0.17 - 0.02, x + 0.8, ROOF + 1.7, z + f * 0.17 + 0.02, 'metalDark', { solid: false });
@@ -1662,7 +1698,7 @@
     bombSites: [{ id: 'A', x: -21.8, y: 8.5, z: 31.4, r: 1.6 }, { id: 'B', x: 10, y: 0, z: -13.5, r: 3 }],
     grenadePacks: [{ x: -10, y: 0, z: -24 }, { x: 10, y: 0, z: 24 }, { x: 10, y: 4.5, z: -28.5 }, { x: -10, y: 4.5, z: 28.5 },
       { x: -20, y: 4.5, z: -16 }, { x: 20, y: 4.5, z: 16 }, { x: 10, y: 8.5, z: -27.5 }, { x: -10, y: 8.5, z: 27.5 }],
-    plan: { porch: [44.5, 48.7, 7], P1: 4.5, P2: 8.5, STX: { w: [-34.6, -32.2], e: [32.2, 34.6] }, FL: [[-24.5, -15.5], [15.5, 24.5]], MS: { x0: 35, x1: 43, z: -5.7 }, CST: [[-35.5, -4.45, Math.PI], [35.5, 4.45, 0]], X: [-47.5, 44.5], Z: 37 },
+    plan: { porch: [44.5, 48.7, 7], P1: 4.5, P2: 8.5, STX: { w: [-35.4, -32], e: [32, 35.4] }, FL: [[-23, -16.5], [16.5, 23]], U: true, MS: { x0: 35, x1: 43, z: -5.7 }, CST: [[-35.5, -4.45, Math.PI], [35.5, 4.45, 0]], X: [-47.5, 44.5], Z: 37 },
   };
 
 
