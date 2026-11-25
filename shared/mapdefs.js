@@ -1159,12 +1159,17 @@
       const sign = (text, x, y, z, rotY, w, bg) => b.decoAt('textsign', x, y, z, { text, rotY, w: w || Math.min(1.6, 0.3 + text.length * 0.11), h: 0.3, bg: bg || '#1f3d7a' });
       const floor = (x0, z0, x1, z1, color, y) => { if (x1 - x0 > 0.05 && z1 - z0 > 0.05) b.decoAt('plane', (x0 + x1) / 2, y + 0.03, (z0 + z1) / 2, { w: x1 - x0, d: z1 - z0, color }); };
       // Suelo de un pasillo vertical sin tapar los huecos de las escaleras
+      // Escaleras de la 2ª planta junto al bloque central (plano de evacuación): P1 → P2, pegadas a la fachada
+      const CST = { w: [-36.7, -34.7, '+z'], e: [34.7, 36.7, '-z'] }, CZ = [-4, 4];
       const corrFloor = (x0, x1, za, zb, Y, side, color) => {
+        const segs = FL.map(([a, c]) => [a, c, STX[side]]);
+        if (Y === P2) segs.push([CZ[0], CZ[1], CST[side]]);
+        segs.sort((p, q) => p[0] - q[0]);
         let z = za;
-        for (const [a, c] of FL) {
+        for (const [a, c, sx] of segs) {
           if (c <= za || a >= zb) continue;
           floor(x0, z, x1, a, color, Y);
-          const sx = STX[side]; floor(x0, a, sx[0], c, color, Y); floor(sx[1], a, x1, c, color, Y);
+          floor(x0, a, sx[0], c, color, Y); floor(sx[1], a, x1, c, color, Y);
           z = c;
         }
         floor(x0, z, x1, zb, color, Y);
@@ -1271,7 +1276,8 @@
       b.slab((XW + XE) / 2, 0, P1, XE - XW, Z1 - Z0, T, 'concrete', stairHoles.concat(vestHole.slice(1)));
       b.slab((XE + XA) / 2, 0, P1, XA - XE, 2 * ANX, T, 'concrete', vestHole.slice(0, 1));
       b.slab((XE + XA) / 2, 0, P2, XA - XE, 2 * VEST, T, 'concrete');                    // techo del vestíbulo (doble altura)
-      b.slab(0, 0, P2, XE - XWC, Z1 - Z0, T, 'marble', voids.concat(stairHoles));
+      const cHoles = ['w', 'e'].map(sd => ({ x: (CST[sd][0] + CST[sd][1]) / 2, z: 0, w: 2, d: CZ[1] - CZ[0] }));
+      b.slab(0, 0, P2, XE - XWC, Z1 - Z0, T, 'marble', voids.concat(stairHoles, cHoles));
       b.slab((XW + XWC) / 2, 0, P2, XWC - XW, Z1 - Z0, T, 'concrete');                  // azotea de la columna oeste
       [-1, 1].forEach(s => { b.slab((XE + XA) / 2, s * (ANX + 22.5) / 2, P2, XA - XE, ANX - 22.5, T, 'concrete'); b.slab((XE + 42) / 2, s * (R1 + G2) / 2, ROOF, 42 - XE, R1 - G2, T, 'concrete'); });   // cubiertas de los aseos del anexo
       b.slab(0, 0, ROOF, XE - XWC, Z1 - Z0, T, 'concrete', voids);
@@ -1295,6 +1301,12 @@
         rail(STX[side][0], lowZ - 0.05, STX[side][1], lowZ + 0.05, P2);
         sign(dir === '+z' ? '↓ ↑' : '↑ ↓', x, P1 + 2.4, lowZ + (dir === '+z' ? -0.2 : 0.2), dir === '+z' ? Math.PI : 0, 0.6, '#1d8f4e');
       }));
+      ['w', 'e'].forEach(sd => {
+        const [x0, x1, dir] = CST[sd], x = (x0 + x1) / 2, inner = sd === 'w' ? x1 : x0, foot = dir === '+z' ? CZ[0] : CZ[1];
+        b.stairs(x, 0, P1, 2, CZ[1] - CZ[0], P2 - P1, dir, 'marble');
+        rail(inner - 0.05, CZ[0], inner + 0.05, CZ[1], P2); rail(x0, foot - 0.05, x1, foot + 0.05, P2);
+        sign('↑ PLANTA 2', x, P1 + 2.3, foot + (dir === '+z' ? -0.2 : 0.2), dir === '+z' ? Math.PI : 0, 1.2, '#1d8f4e');
+      });
       // Escalera principal (vestíbulo → pasillo este de P1)
       b.stairs((MS.x0 + MS.x1) / 2, (MS.z0 + MS.z1) / 2, P0, MS.z1 - MS.z0, MS.x1 - MS.x0, P1, '-x', 'marble');
       b.aabb(MS.x0, P0, MS.z1 - 0.05, MS.x1, P1 + 1.0, MS.z1 + 0.05, 'rail', { solid: false });
@@ -1403,8 +1415,8 @@
       // Columna oeste: aseos B103/B104 y aulas A109-E…A111-E, A110-O…A108-O
       aseos(XW, -G1, XWC, -23.5, Y1, { side: 'e', at: 0, w: 1.2 }, 'B103-E');
       aseos(XW, -23.5, XWC, -20.7, Y1, { side: 'e', at: 0, w: 1.0 }, 'B104-E');
-      [['A109-E', -20.7, -13.7], ['A110-E', -13.7, -6.7], ['A111-E', -6.7, 0.3], ['A110-O', 0.3, 7.3], ['A109-O', 7.3, 14.3], ['A108-O', 14.3, 21.3]].forEach(([n, a, c]) => {
-        room(XW, a, XWC, c, Y1, [{ side: 'e', at: 1.6, w: 1.4 }], [{ side: 'w', at: -1.6, w: 1.8 }, { side: 'w', at: 1.6, w: 1.8 }], { floor: 0xd6cfbf, name: n });
+      [['A109-E', -20.7, -13.7, 1.6], ['A110-E', -13.7, -6.7, 1.6], ['A111-E', -6.7, 0.3, -2.4], ['A110-O', 0.3, 7.3, 2.4], ['A109-O', 7.3, 14.3, 1.6], ['A108-O', 14.3, 21.3, 1.6]].forEach(([n, a, c, da]) => {
+        room(XW, a, XWC, c, Y1, [{ side: 'e', at: da, w: 1.4 }], [{ side: 'w', at: -1.6, w: 1.8 }, { side: 'w', at: 1.6, w: 1.8 }], { floor: 0xd6cfbf, name: n });
         b.decoAt('board', XW + 0.38, Y1 + 1.55, (a + c) / 2, { rotY: Math.PI / 2, w: 2.6, text: n });
         for (const x of [-44.2, -42.2, -40.2]) for (let z = a + 1.3; z < c - 1.0; z += 2.0) { b.decoAt('desk', x, Y1, z, { color: 0x2f6fb5, rotY: Math.PI }); b.box(x - 0.25, Y1, z, 1.2, 0.76, 1.15, 'invisible'); }
       });
@@ -1577,11 +1589,11 @@
     },
     coops: [{ x: 10, y: 0, z: -13.5, r: 3 }, { x: 0, y: 4.5, z: -16, r: 2.6 }, { x: 0, y: 4.5, z: 16, r: 2.6 }, { x: 0, y: 8.5, z: -9, r: 1.3 }, { x: -14, y: 0, z: 2.2, r: 1.8 }],
     spatula: { x: 0, y: 4.5, z: -16 },
-    bases: { red: { x: -35, y: 4.5, z: 0, r: 1.6 }, blue: { x: 41, y: 4.5, z: 14, r: 1.6 } },
+    bases: { red: { x: -34.5, y: 4.5, z: 9.5, r: 1.6 }, blue: { x: 41, y: 4.5, z: 14, r: 1.6 } },
     bombSites: [{ id: 'A', x: -21.8, y: 8.5, z: 31.4, r: 1.6 }, { id: 'B', x: 10, y: 0, z: -13.5, r: 3 }],
     grenadePacks: [{ x: -10, y: 0, z: -24 }, { x: 10, y: 0, z: 24 }, { x: 10, y: 4.5, z: -28.5 }, { x: -10, y: 4.5, z: 28.5 },
       { x: -20, y: 4.5, z: -16 }, { x: 20, y: 4.5, z: 16 }, { x: 10, y: 8.5, z: -27.5 }, { x: -10, y: 8.5, z: 27.5 }],
-    plan: { P1: 4.5, P2: 8.5, STX: { w: [-34.2, -32.2], e: [32.2, 34.2] }, FL: [[-24.5, -15.5], [15.5, 24.5]], MS: { x0: 35, x1: 43, z: -6 }, X: [-47.5, 44.5], Z: 37 },
+    plan: { P1: 4.5, P2: 8.5, STX: { w: [-34.2, -32.2], e: [32.2, 34.2] }, FL: [[-24.5, -15.5], [15.5, 24.5]], MS: { x0: 35, x1: 43, z: -6 }, CST: [[-35.7, -4.45, Math.PI], [35.7, 4.45, 0]], X: [-47.5, 44.5], Z: 37 },
   };
 
 

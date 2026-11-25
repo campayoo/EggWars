@@ -17,6 +17,7 @@ for (const side of ['w', 'e']) {
   ok(climb(sx, PL.P1, sb + 0.8, 0, PL.P2), `escalera sur ${nm}: 1ª → 2ª`);
 }
 ok(climb(PL.MS.x1 + 0.8, 0, PL.MS.z, Math.PI / 2, PL.P1), 'escalera principal del vestíbulo: planta baja → 1ª');
+PL.CST.forEach(([x, z, yaw], i) => ok(climb(x, PL.P1, z, yaw, PL.P2), `escalera del bloque central ${i ? 'este' : 'oeste'}: 1ª → 2ª`));
 // 2) Desde las galerías de la 2ª planta se salta al patio
 for (const [x, z, yaw, nm] of [[5, -26, Math.PI, 'patio Cavanilles desde la galería norte'], [-6, 9, Math.PI, 'patio Sánchez Ayuso desde la galería central'], [6, -9, 0, 'patio Cavanilles desde la galería central'], [6, 26, 0, 'patio Sánchez Ayuso desde la galería sur'], [-35, -13, -Math.PI / 2, 'patio Cavanilles desde el pasillo oeste']]) {
   const st = run(x, PL.P2, z, i => ({ fwd: i < 90 ? 1 : 0, yaw, jump: i < 60 && i % 20 === 0 }));
